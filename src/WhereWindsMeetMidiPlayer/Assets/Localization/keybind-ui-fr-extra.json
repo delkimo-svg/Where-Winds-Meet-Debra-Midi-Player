@@ -1,0 +1,18 @@
+{
+    "Settings_EditKeybinds": "Modifier la disposition des touches…",
+    "KeybindEditor_Title": "Éditeur de disposition",
+    "KeybindEditor_Subtitle": "Alignez les touches affichées dans Where Winds Meet. Cliquez sur une case, puis appuyez sur la touche utilisée en jeu. Enregistrez un modèle à la fin.",
+    "KeybindEditor_LowPitch": "Grave",
+    "KeybindEditor_MidPitch": "Médium",
+    "KeybindEditor_HighPitch": "Aigu",
+    "KeybindEditor_TemplateName": "Nom du modèle",
+    "KeybindEditor_Save": "Enregistrer le modèle",
+    "KeybindEditor_Reset": "Réinitialiser",
+    "KeybindEditor_Close": "Fermer",
+    "KeybindEditor_ListenHint": "Cliquez sur une case ci-dessous, puis appuyez sur la touche correspondante.",
+    "KeybindEditor_PressKey": "Appuyez sur une touche… (Échap pour annuler)",
+    "KeybindEditor_ResetDone": "Disposition Where Winds Meet par défaut restaurée.",
+    "KeybindEditor_NameRequired": "Saisissez un nom de modèle.",
+    "KeybindEditor_Saved": "Modèle enregistré : {0}",
+    "Chrome_EditKeybinds": "Modifier les touches"
+}

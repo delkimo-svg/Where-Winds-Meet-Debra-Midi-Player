@@ -1,0 +1,103 @@
+<UserControl x:Class="WhereWindsMeetMidiPlayer.Controls.DebraNowPlayingArt"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:asset="clr-namespace:WhereWindsMeetMidiPlayer.Helpers"
+             xmlns:controls="clr-namespace:WhereWindsMeetMidiPlayer.Controls"
+             x:Name="Root"
+             HorizontalAlignment="Stretch"
+             VerticalAlignment="Stretch"
+             MinWidth="200">
+
+    <UserControl.Resources>
+        <Style x:Key="NowPlayingStatLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="8.5"/>
+            <Setter Property="FontFamily" Value="Georgia"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Gold}"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="NowPlayingStatValue" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontFamily" Value="Georgia"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.GoldBright}"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Border Background="{DynamicResource Brush.NowPlayingCard}" CornerRadius="12" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1"
+            Padding="14,12" ClipToBounds="False">
+        <DockPanel LastChildFill="True">
+            <TextBlock DockPanel.Dock="Top"
+                       Text="{Binding DataContext.Ui.NowPlayingSection, RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}"
+                       Style="{StaticResource Text.SectionHeader}"
+                       Margin="0,0,0,6"/>
+
+            <!-- Stats -->
+            <Border DockPanel.Dock="Bottom" Background="{DynamicResource Brush.BgElevated}" CornerRadius="10" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1"
+                    Padding="6,8" Margin="0,8,0,0">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="1"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="1"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="{Binding DataContext.Ui.NowPlayingDuration, RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}"
+                                   Style="{StaticResource NowPlayingStatLabel}"/>
+                        <TextBlock Text="{Binding NowPlayingDurationDisplay, ElementName=Root}" Style="{StaticResource NowPlayingStatValue}"/>
+                    </StackPanel>
+                    <Border Grid.Column="1" Background="{DynamicResource Brush.Border}" Opacity="0.55" Margin="0,2"/>
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="{Binding DataContext.Ui.NowPlayingNotes, RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}"
+                                   Style="{StaticResource NowPlayingStatLabel}"/>
+                        <TextBlock Text="{Binding NowPlayingNotesDisplay, ElementName=Root}" Style="{StaticResource NowPlayingStatValue}"/>
+                    </StackPanel>
+                    <Border Grid.Column="3" Background="{DynamicResource Brush.Border}" Opacity="0.55" Margin="0,2"/>
+                    <StackPanel Grid.Column="4">
+                        <TextBlock Text="{Binding DataContext.Ui.NowPlayingRange, RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}"
+                                   Style="{StaticResource NowPlayingStatLabel}"/>
+                        <TextBlock Text="{Binding NowPlayingRange, ElementName=Root}" Style="{StaticResource NowPlayingStatValue}"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Song title: auto marquee when longer than card (raised 100px) -->
+            <controls:MarqueeText DockPanel.Dock="Bottom" Margin="8,-100,8,8"
+                                  Text="{Binding NowPlayingTitle, ElementName=Root}"
+                                  FontFamily="Georgia" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource Brush.GoldBright}"
+                                  HorizontalAlignment="Stretch" VerticalAlignment="Center"
+                                  AutoScrollWhenOverflow="True" StripDebraPrefix="False" MarqueeGap="48"/>
+
+            <!-- Hero -->
+            <Grid Margin="0,0,0,4" MinHeight="280">
+                <Viewbox Stretch="Uniform" StretchDirection="DownOnly"
+                         HorizontalAlignment="Center" VerticalAlignment="Top" MaxWidth="460">
+                    <Canvas Width="430" Height="430" ClipToBounds="False">
+                    <!-- Portrait (−10% size, raised 100px) -->
+                    <Grid Canvas.Left="37" Canvas.Top="0" Width="356" Height="356" Panel.ZIndex="2">
+                        <Ellipse Width="356" Height="356" Stroke="{DynamicResource Brush.Ring}" StrokeThickness="9"/>
+                        <Ellipse Width="333" Height="333" Stroke="{DynamicResource Brush.OnGold}" StrokeThickness="3" Opacity="0.7"/>
+                        <Ellipse x:Name="HeroPortrait" Width="306" Height="306" ClipToBounds="True"/>
+                        <Border Width="29" Height="29" CornerRadius="14" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,5,0,0"
+                                Background="{DynamicResource Brush.AccentPink}" BorderBrush="{DynamicResource Brush.OnGold}" BorderThickness="1" Panel.ZIndex="3"/>
+                    </Grid>
+
+                    <!-- Left branch (+30% size) — top-aligned, covers left arc -->
+                    <Image x:Name="BranchLeft"
+                           Width="520" Height="547" Canvas.Left="-53" Canvas.Top="-85"
+                           Stretch="Uniform" IsHitTestVisible="False" Panel.ZIndex="4"
+                           RenderOptions.BitmapScalingMode="HighQuality"/>
+
+                    <!-- Right branch (+30%) — top-aligned at card top band -->
+                    <Image x:Name="BranchRight"
+                           Width="539" Height="578" Canvas.Left="-70" Canvas.Top="-175"
+                           Stretch="Uniform" IsHitTestVisible="False" Panel.ZIndex="4"
+                           RenderOptions.BitmapScalingMode="HighQuality"/>
+                    </Canvas>
+                </Viewbox>
+            </Grid>
+        </DockPanel>
+    </Border>
+</UserControl>

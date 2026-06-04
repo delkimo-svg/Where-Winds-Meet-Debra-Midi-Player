@@ -1,0 +1,6 @@
+<UserControl x:Class="WhereWindsMeetMidiPlayer.Controls.SpectrumVisualizer"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Height="28" MinHeight="22" ClipToBounds="True" IsHitTestVisible="False">
+    <UniformGrid x:Name="BarsHost" Rows="1" VerticalAlignment="Bottom"/>
+</UserControl>

@@ -1,0 +1,24 @@
+<UserControl x:Class="WhereWindsMeetMidiPlayer.Controls.MarqueeText"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             FontFamily="Microsoft YaHei UI, Yu Gothic UI, Meiryo UI, Malgun Gothic, SimSun, Segoe UI"
+             ClipToBounds="True" MinHeight="16" HorizontalAlignment="Stretch"
+             TextOptions.TextFormattingMode="Display"
+             MouseEnter="MarqueeText_OnMouseEnter"
+             MouseLeave="MarqueeText_OnMouseLeave">
+    <ScrollViewer x:Name="Scroller"
+                  HorizontalScrollBarVisibility="Hidden"
+                  VerticalScrollBarVisibility="Disabled"
+                  VerticalAlignment="Center"
+                  PanningMode="None"
+                  Focusable="False"
+                  IsHitTestVisible="False"
+                  CanContentScroll="False">
+        <StackPanel x:Name="TrackPanel" Orientation="Horizontal">
+            <TextBlock x:Name="PrimaryText" VerticalAlignment="Center" TextTrimming="None" TextWrapping="NoWrap"/>
+            <Border x:Name="GapSpacer" Width="48"/>
+            <TextBlock x:Name="SecondaryText" VerticalAlignment="Center" TextTrimming="None" TextWrapping="NoWrap"
+                       Visibility="Collapsed"/>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

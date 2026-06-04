@@ -1,0 +1,148 @@
+<Window x:Class="WhereWindsMeetMidiPlayer.Windows.KeybindEditorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:WhereWindsMeetMidiPlayer.ViewModels"
+        Title="Keybind layout"
+        Width="980" Height="560"
+        MinWidth="860" MinHeight="480"
+        WindowStartupLocation="CenterOwner"
+        Background="Transparent"
+        AllowsTransparency="True"
+        WindowStyle="None"
+        ResizeMode="CanResizeWithGrip"
+        PreviewKeyDown="Window_OnPreviewKeyDown">
+    <Border x:Name="RootBorder" CornerRadius="20" BorderThickness="2"
+            BorderBrush="{DynamicResource Brush.KeybindOverlayBorder}"
+            Background="{DynamicResource Brush.KeybindOverlayBackground}"
+            Padding="0">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="28" ShadowDepth="0" Opacity="0.55"
+                              Color="{DynamicResource KeybindOverlayShadowColor}"/>
+        </Border.Effect>
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <Border Grid.Row="0" CornerRadius="18,18,0,0" Padding="22,16,22,12"
+                    Background="{DynamicResource Brush.KeybindOverlayHeader}"
+                    MouseLeftButtonDown="Header_OnMouseLeftButtonDown">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="{Binding TitleText}" FontSize="20" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource Brush.GoldBright}" FontFamily="Georgia"/>
+                        <TextBlock Text="{Binding SubtitleText}" FontSize="11" Margin="0,4,0,0"
+                                   Foreground="{DynamicResource Brush.TextMuted}" TextWrapping="Wrap" MaxWidth="720"/>
+                    </StackPanel>
+                    <Button Grid.Column="1" Content="✕" Width="32" Height="32" VerticalAlignment="Top"
+                            Style="{StaticResource KeybindEditor.CloseButton}" Click="CloseButton_OnClick"/>
+                </Grid>
+            </Border>
+
+            <!-- Grid body -->
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                          Padding="18,8,18,8">
+                <ItemsControl ItemsSource="{Binding Rows}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:KeybindRowViewModel}">
+                            <Grid Margin="0,0,0,14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="88"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{Binding PitchLabel}" VerticalAlignment="Center"
+                                           FontFamily="Georgia" FontSize="13" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource Brush.Gold}"
+                                           TextWrapping="Wrap" TextAlignment="Right" Margin="0,0,10,0"/>
+                                <ItemsControl Grid.Column="1" ItemsSource="{Binding Cells}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <UniformGrid Rows="1" Columns="12"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type vm:KeybindCellViewModel}">
+                                            <Border Margin="2,0" Padding="4,6" CornerRadius="10"
+                                                    Background="{DynamicResource Brush.KeybindCellBackground}"
+                                                    BorderBrush="{DynamicResource Brush.KeybindCellBorder}"
+                                                    BorderThickness="1">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsListening}" Value="True">
+                                                                <Setter Property="BorderBrush" Value="{DynamicResource Brush.GoldBright}"/>
+                                                                <Setter Property="BorderThickness" Value="2"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <StackPanel HorizontalAlignment="Center">
+                                                    <Border Width="36" Height="36" CornerRadius="18"
+                                                            Background="{DynamicResource Brush.KeybindNoteCircle}"
+                                                            BorderBrush="{DynamicResource Brush.GoldDim}"
+                                                            BorderThickness="1.5">
+                                                        <TextBlock Text="{Binding NoteLabel}" HorizontalAlignment="Center"
+                                                                   VerticalAlignment="Center" FontSize="13"
+                                                                   FontFamily="Georgia" FontStyle="Italic"
+                                                                   Foreground="{DynamicResource Brush.TextPrimary}"/>
+                                                    </Border>
+                                                    <Button Content="{Binding KeyDisplay}" Margin="0,6,0,0"
+                                                            MinWidth="44" Height="22" Padding="4,0"
+                                                            FontSize="10" FontWeight="SemiBold"
+                                                            Style="{StaticResource KeybindEditor.KeyButton}"
+                                                            Tag="{Binding}"
+                                                            Click="KeyButton_OnClick"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+            <!-- Footer -->
+            <Border Grid.Row="2" CornerRadius="0,0,18,18" Padding="20,12,20,16"
+                    Background="{DynamicResource Brush.KeybindOverlayFooter}"
+                    BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="{Binding StatusText}" FontSize="10"
+                               Foreground="{DynamicResource Brush.TextMuted}" Margin="0,0,0,10"/>
+                    <Grid Grid.Row="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding TemplateLabel}" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource Brush.TextMuted}" Margin="0,0,8,0"/>
+                        <TextBox Grid.Column="1" Text="{Binding TemplateName, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource TextBox.Search}" MaxWidth="280" HorizontalAlignment="Left"
+                                 MinWidth="180"/>
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Content="{Binding ResetLabel}" Style="{StaticResource Button.Ghost}"
+                                    Margin="0,0,8,0" Command="{Binding ResetToDefaultCommand}"/>
+                            <Button Content="{Binding SaveLabel}" Style="{StaticResource Button.Gold}"
+                                    Margin="0,0,8,0" Command="{Binding SaveTemplateCommand}"/>
+                            <Button Content="{Binding CloseLabel}" Style="{StaticResource Button.Ghost}"
+                                    Click="CloseButton_OnClick"/>
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+    </Border>
+</Window>

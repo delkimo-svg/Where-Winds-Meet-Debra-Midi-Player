@@ -1,0 +1,18 @@
+{
+    "Settings_EditKeybinds": "Edit key layout…",
+    "KeybindEditor_Title": "Key layout editor",
+    "KeybindEditor_Subtitle": "Match the keys shown in Where Winds Meet. Click a key slot, then press the key you use in-game. Save as a template when done.",
+    "KeybindEditor_LowPitch": "Low pitch",
+    "KeybindEditor_MidPitch": "Medium pitch",
+    "KeybindEditor_HighPitch": "High pitch",
+    "KeybindEditor_TemplateName": "Template name",
+    "KeybindEditor_Save": "Save template",
+    "KeybindEditor_Reset": "Reset to default",
+    "KeybindEditor_Close": "Close",
+    "KeybindEditor_ListenHint": "Click any key box below, then press the matching key on your keyboard.",
+    "KeybindEditor_PressKey": "Press a key… (Esc to cancel)",
+    "KeybindEditor_ResetDone": "Restored default Where Winds Meet layout.",
+    "KeybindEditor_NameRequired": "Enter a template name.",
+    "KeybindEditor_Saved": "Saved template: {0}",
+    "Chrome_EditKeybinds": "Edit key layout"
+}

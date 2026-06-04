@@ -1,0 +1,109 @@
+namespace WhereWindsMeetMidiPlayer.Help;
+
+public static class HelpContent
+{
+    public static IReadOnlyList<HelpSection> Sections { get; } =
+    [
+        new("Welcome",
+        [
+            "Debra MIDI Player turns MIDI files into keyboard input for the instrument mode in Where Winds Meet.",
+            "You build a library of songs, organize playlists, browse the live Discord catalogue, and play back notes automatically while the game receives the correct keys."
+        ]),
+        new("Before you start",
+        [
+            "Run the portable folder as extracted: keep WhereWindsMeetMidiPlayer.exe, the Assets folder, and discord-catalogue.json together.",
+            "The app requests administrator rights so it can send keys to the game reliably.",
+            "In-game, open the instrument / music mode before playing. Local mode can send keys in the background; cloud gaming mode needs the game focused."
+        ],
+        [
+            "Start Where Winds Meet (wwm.exe by default).",
+            "Open the instrument UI in-game.",
+            "Pick a song in Debra and press Play; use the countdown to switch to the game if needed."
+        ]),
+        new("Navigation (left sidebar)",
+        [
+            "Use the sidebar to switch main panels. Settings opens in the center; other sections show library or catalogue, playlist, and now playing art."
+        ],
+        [
+            "Library - your imported .mid / .midi files on this PC.",
+            "Catalogue - live Discord MIDI library (requires discord-catalogue.json).",
+            "Playlists - build and save song lists; auto-saves when you edit.",
+            "History - songs you played recently; double-click to play again.",
+            "Settings - game connection, transpose, delays, key layout."
+        ]),
+        new("Library",
+        [
+            "Import MIDI files or entire folders with the Import button (MIDI files or Folder). You can also drag .mid / .midi files or folders from Windows Explorer onto the library panel.",
+            "Search filters the list. Double-click a song to play it immediately; it is not added to the playlist automatically.",
+            "Select a song and use the transport Play button to start it. Use Add in the playlist column to put the selected library song on the playlist."
+        ]),
+        new("Discord catalogue",
+        [
+            "The catalogue loads tracks from your configured Discord server. Press Refresh to sync. Search and the style filter narrow the list.",
+            "Play downloads if needed and starts the track. Add to playlist adds it to the current playlist.",
+            "Drag a catalogue row onto the playlist to insert it at the drop position (same as library drag-and-drop)."
+        ],
+        [
+            "Place discord-catalogue.json next to the .exe (see discord-catalogue.json.example).",
+            "Catalogue needs network access and valid bot credentials."
+        ]),
+        new("Playlists",
+        [
+            "Playlists are saved as JSON under your app data Playlists folder. Changes auto-save shortly after you add, remove, reorder, or drag songs.",
+            "Type a name in the dropdown, then press Enter or + to create a new empty saved playlist with that name. The header + makes a new blank unsaved playlist.",
+            "Pick a saved name from the dropdown to load it. The trash button deletes the saved file after confirmation.",
+            "Drag from Library or Catalogue into the playlist to add; drag within the playlist to reorder. Use up/down or Remove for fine control.",
+            "Favorites filter on the playlist shows only liked songs. The heart on the player bar toggles favorite on the current song."
+        ],
+        [
+            "Double-click a playlist row to play.",
+            "Select a row and press Play on the transport bar.",
+            "Shuffle and Repeat affect playlist playback order."
+        ]),
+        new("Playback bar (bottom)",
+        [
+            "Transport: shuffle, previous, play/pause, stop, next, repeat, and favorite.",
+            "Progress shows position in the current song. The spectrum animates while playing.",
+            "Volume slider controls Windows master volume (game / PC audio), not MIDI velocity.",
+            "Keyboard button opens the keymaps folder. Gear jumps to Settings."
+        ],
+        [
+            "F3 - play / pause in-game while a song is active.",
+            "F4 - stop, F5 - previous, F6 - next (game window focused).",
+            "Previous / Next - move through the current playlist when applicable."
+        ]),
+        new("Now playing (right panel)",
+        [
+            "Shows the current title, duration, note count, and playable range. The portrait and stats update when a song starts."
+        ]),
+        new("History",
+        [
+            "Every completed or attempted play is listed with time. Double-click an entry to play again. Clear removes all history after confirmation."
+        ]),
+        new("Settings",
+        [
+            "Target executable - process name of the game (default wwm.exe). Reset restores the default.",
+            "Cloud gaming mode - uses SendInput; the game must stay focused. Off uses PostMessage to the game window (background-friendly).",
+            "Window title contains - extra filter to find the game window.",
+            "Test key, Focus game, and Detect - diagnose connection before playing.",
+            "Smart Transpose - shifts MIDI into the playable range. Strict note range - drops out-of-range notes instead of clamping.",
+            "Note delay and chord roll - timing between notes and rolled chords.",
+            "Key layout - choose the in-game mapping (e.g. Debra 36 Keys). Open keymaps to edit JSON files."
+        ]),
+        new("Drag and drop summary",
+        [
+            "From Explorer onto the library: import .mid / .midi files or folders.",
+            "From library onto playlist: add song at drop index.",
+            "From catalogue onto playlist: download if needed, then add at drop index.",
+            "Within playlist: reorder tracks."
+        ]),
+        new("Troubleshooting",
+        [
+            "No sound in-game - open instrument mode, run as admin, try Test key in Settings, confirm wwm.exe is running.",
+            "Keys sent but wrong notes - enable Smart Transpose, check key layout matches your in-game mode.",
+            "Catalogue empty - check discord-catalogue.json, network, and Refresh.",
+            "Images or UI missing - run from the full portable folder with Assets beside the exe.",
+            "Crash log: %AppData%\\WhereWindsMeetMidiPlayer\\crash.log"
+        ])
+    ];
+}

@@ -1,0 +1,238 @@
+<UserControl x:Class="WhereWindsMeetMidiPlayer.Controls.DebraSidebar"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:WhereWindsMeetMidiPlayer.ViewModels"
+             xmlns:asset="clr-namespace:WhereWindsMeetMidiPlayer.Helpers"
+             HorizontalAlignment="Left"
+             VerticalAlignment="Stretch"
+             ClipToBounds="True">
+
+    <UserControl.Resources>
+
+        <DataTemplate x:Key="NavItemTemplate" DataType="{x:Type vm:NavItemViewModel}">
+            <Grid Margin="1,0,1,0"
+                  HorizontalAlignment="Stretch"
+                  VerticalAlignment="Stretch">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <Button Grid.Row="0"
+                        Command="{Binding DataContext.NavigateCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                        CommandParameter="{Binding Section}"
+                        Cursor="Hand" Padding="0" BorderThickness="0"
+                        Background="Transparent"
+                        HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                        HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="Transparent"
+                                    HorizontalAlignment="Stretch"
+                                    VerticalAlignment="Stretch"
+                                    Padding="{TemplateBinding Padding}">
+                            <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                                        <Border x:Name="HighlightHost"
+                                        Background="Transparent"
+                                        CornerRadius="6"
+                                        Opacity="0"
+                                        IsHitTestVisible="False"
+                                        HorizontalAlignment="Stretch"
+                                        VerticalAlignment="Stretch"
+                                        Margin="0">
+                                    <Grid>
+                                        <Border Background="{DynamicResource Brush.NavHighlightFill}" CornerRadius="6"
+                                                HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+                                        <Image x:Name="HighlightAccent"
+                                               Source="{asset:LocalAsset debra-nav-item-highlight.png}"
+                                               HorizontalAlignment="Left" VerticalAlignment="Stretch"
+                                               Width="18" Stretch="Fill"
+                                               Opacity="0.85"
+                                               RenderOptions.BitmapScalingMode="HighQuality"/>
+                                    </Grid>
+                                </Border>
+
+                                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,1,0,0">
+                                    <Path x:Name="IconPath" Width="21" Height="21" Stretch="Uniform"
+                                          Fill="Transparent" Stroke="{DynamicResource Brush.NavIcon}"
+                                          StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                          StrokeLineJoin="Round" HorizontalAlignment="Center" Margin="0,0,0,6"/>
+                                    <TextBlock x:Name="LabelText" Text="{Binding Label}" FontSize="10.5" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource Brush.NavText}" HorizontalAlignment="Center"
+                                               TextAlignment="Center" TextWrapping="Wrap" MaxWidth="76">
+                                        <TextBlock.Effect>
+                                            <DropShadowEffect Color="#F8FFFFFF" BlurRadius="3" ShadowDepth="0" Opacity="0.85"/>
+                                        </TextBlock.Effect>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Grid>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="HighlightHost" Property="Opacity" Value="0.6"/>
+                                </Trigger>
+                                <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                    <Setter TargetName="HighlightHost" Property="Opacity" Value="0.6"/>
+                                    <Setter TargetName="LabelText" Property="FontWeight" Value="Bold"/>
+                                    <Setter TargetName="IconPath" Property="StrokeThickness" Value="2.25"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding Section}" Value="{x:Static vm:NavigationSection.Library}">
+                                    <Setter TargetName="IconPath" Property="Data" Value="{StaticResource Icon.Library}"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding Section}" Value="{x:Static vm:NavigationSection.Catalogue}">
+                                    <Setter TargetName="IconPath" Property="Data" Value="{StaticResource Icon.Catalogue}"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding Section}" Value="{x:Static vm:NavigationSection.Favorites}">
+                                    <Setter TargetName="IconPath" Property="Data" Value="{StaticResource Icon.Favorite}"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding Section}" Value="{x:Static vm:NavigationSection.History}">
+                                    <Setter TargetName="IconPath" Property="Data" Value="{StaticResource Icon.History}"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding Section}" Value="{x:Static vm:NavigationSection.Settings}">
+                                    <Setter TargetName="IconPath" Property="Data" Value="{StaticResource Icon.Settings}"/>
+                                </DataTrigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+
+                <Border Grid.Row="1" Height="1" Margin="10,4,10,0"
+                        Background="{DynamicResource Brush.NavDivider}"
+                        SnapsToDevicePixels="True"
+                        IsHitTestVisible="False"/>
+            </Grid>
+        </DataTemplate>
+
+        <!-- Wuxia: centered gold fill only (no pink left accent strip). -->
+        <DataTemplate x:Key="NavItemTemplateWuxia" DataType="{x:Type vm:NavItemViewModel}">
+            <Grid Margin="1,0,1,0"
+                  HorizontalAlignment="Stretch"
+                  VerticalAlignment="Stretch">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Button Grid.Row="0"
+                        Command="{Binding DataContext.NavigateCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                        CommandParameter="{Binding Section}"
+                        Cursor="Hand" Padding="0" BorderThickness="0"
+                        Background="Transparent"
+                        HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                        HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="Transparent"
+                                    HorizontalAlignment="Stretch"
+                                    VerticalAlignment="Stretch"
+                                    Padding="{TemplateBinding Padding}">
+                            <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                                <Border x:Name="HighlightHost"
+                                        Background="Transparent"
+                                        CornerRadius="6"
+                                        Opacity="0"
+                                        IsHitTestVisible="False"
+                                        HorizontalAlignment="Stretch"
+                                        VerticalAlignment="Stretch"
+                                        Margin="0">
+                                    <Border Background="{DynamicResource Brush.NavHighlightFill}" CornerRadius="6"
+                                            HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+                                </Border>
+                                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,1,0,0">
+                                    <Path x:Name="IconPath" Width="21" Height="21" Stretch="Uniform"
+                                          Fill="Transparent" Stroke="{DynamicResource Brush.NavIcon}"
+                                          StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                          StrokeLineJoin="Round" HorizontalAlignment="Center" Margin="0,0,0,6"/>
+                                    <TextBlock x:Name="LabelText" Text="{Binding Label}" FontSize="10.5" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource Brush.NavText}" HorizontalAlignment="Center"
+                                               TextAlignment="Center" TextWrapping="Wrap" MaxWidth="68">
+                                        <TextBlock.Effect>
+                                            <DropShadowEffect Color="#40201810" BlurRadius="2" ShadowDepth="0" Opacity="0.6"/>
+                                        </TextBlock.Effect>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Grid>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="HighlightHost" Property="Opacity" Value="0.6"/>
+                                </Trigger>
+                                <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                    <Setter TargetName="HighlightHost" Property="Opacity" Value="0.6"/>
+                                    <Setter TargetName="LabelText" Property="FontWeight" Value="Bold"/>
+                                    <Setter TargetName="IconPath" Property="StrokeThickness" Value="2.25"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding Section}" Value="{x:Static vm:NavigationSection.Library}">
+                                    <Setter TargetName="IconPath" Property="Data" Value="{StaticResource Icon.Library}"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding Section}" Value="{x:Static vm:NavigationSection.Catalogue}">
+                                    <Setter TargetName="IconPath" Property="Data" Value="{StaticResource Icon.Catalogue}"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding Section}" Value="{x:Static vm:NavigationSection.Favorites}">
+                                    <Setter TargetName="IconPath" Property="Data" Value="{StaticResource Icon.Favorite}"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding Section}" Value="{x:Static vm:NavigationSection.History}">
+                                    <Setter TargetName="IconPath" Property="Data" Value="{StaticResource Icon.History}"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding Section}" Value="{x:Static vm:NavigationSection.Settings}">
+                                    <Setter TargetName="IconPath" Property="Data" Value="{StaticResource Icon.Settings}"/>
+                                </DataTrigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+                <Border Grid.Row="1" Height="1" Margin="8,4,8,0"
+                        Background="{DynamicResource Brush.NavDivider}"
+                        SnapsToDevicePixels="True"
+                        IsHitTestVisible="False"/>
+            </Grid>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <Grid x:Name="SidebarRoot" HorizontalAlignment="Left" VerticalAlignment="Stretch" ClipToBounds="True">
+        <Grid x:Name="BannerHost"
+              HorizontalAlignment="Left"
+              VerticalAlignment="Stretch"
+              Panel.ZIndex="0"
+              ClipToBounds="True">
+            <Border CornerRadius="0,0,14,14"
+                    ClipToBounds="True"
+                    VerticalAlignment="Stretch"
+                    HorizontalAlignment="Stretch"
+                    Background="Transparent">
+                <Image x:Name="BannerArt"
+                       Stretch="Uniform"
+                       VerticalAlignment="Stretch"
+                       HorizontalAlignment="Center"
+                       Opacity="0.8"
+                       IsHitTestVisible="False"
+                       RenderOptions.BitmapScalingMode="HighQuality"/>
+            </Border>
+
+            <Grid x:Name="NavOverlay"
+                  Panel.ZIndex="2"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Top"
+                  ClipToBounds="False"
+                  Background="Transparent">
+                <ItemsControl x:Name="NavHost"
+                              ItemsSource="{Binding NavItems, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                              ItemTemplate="{StaticResource NavItemTemplate}"
+                              HorizontalAlignment="Stretch"
+                              VerticalAlignment="Stretch"
+                              IsHitTestVisible="True">
+                    <ItemsControl.ItemContainerStyle>
+                        <Style TargetType="ContentPresenter">
+                            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+                            <Setter Property="VerticalAlignment" Value="Stretch"/>
+                        </Style>
+                    </ItemsControl.ItemContainerStyle>
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <UniformGrid Rows="5" Columns="1" Margin="0,4,0,4"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+            </Grid>
+        </Grid>
+    </Grid>
+</UserControl>

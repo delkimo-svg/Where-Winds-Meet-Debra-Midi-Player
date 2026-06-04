@@ -1,0 +1,18 @@
+{
+    "Settings_EditKeybinds": "تعديل تخطيط المفاتيح…",
+    "KeybindEditor_Title": "محرر تخطيط المفاتيح",
+    "KeybindEditor_Subtitle": "طابق المفاتيح المعروضة في Where Winds Meet. انقر على خانة ثم اضغط المفتاح المستخدم في اللعبة. احفظ قالبًا عند الانتهاء.",
+    "KeybindEditor_LowPitch": "طبقة منخفضة",
+    "KeybindEditor_MidPitch": "طبقة متوسطة",
+    "KeybindEditor_HighPitch": "طبقة عالية",
+    "KeybindEditor_TemplateName": "اسم القالب",
+    "KeybindEditor_Save": "حفظ القالب",
+    "KeybindEditor_Reset": "استعادة الافتراضي",
+    "KeybindEditor_Close": "إغلاق",
+    "KeybindEditor_ListenHint": "انقر على أي خانة أدناه ثم اضغط المفتاح المطابق على لوحة المفاتيح.",
+    "KeybindEditor_PressKey": "اضغط مفتاحًا… (Esc للإلغاء)",
+    "KeybindEditor_ResetDone": "تم استعادة تخطيط Where Winds Meet الافتراضي.",
+    "KeybindEditor_NameRequired": "أدخل اسم القالب.",
+    "KeybindEditor_Saved": "تم حفظ القالب: {0}",
+    "Chrome_EditKeybinds": "تعديل المفاتيح"
+}

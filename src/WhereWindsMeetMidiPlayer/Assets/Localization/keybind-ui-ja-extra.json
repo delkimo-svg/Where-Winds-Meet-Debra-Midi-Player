@@ -1,0 +1,18 @@
+{
+    "Settings_EditKeybinds": "キー配置を編集…",
+    "KeybindEditor_Title": "キー配置エディター",
+    "KeybindEditor_Subtitle": "Where Winds Meet の表示に合わせます。スロットをクリックし、ゲームで使うキーを押してください。完了したらテンプレートを保存します。",
+    "KeybindEditor_LowPitch": "低音",
+    "KeybindEditor_MidPitch": "中音",
+    "KeybindEditor_HighPitch": "高音",
+    "KeybindEditor_TemplateName": "テンプレート名",
+    "KeybindEditor_Save": "テンプレートを保存",
+    "KeybindEditor_Reset": "既定に戻す",
+    "KeybindEditor_Close": "閉じる",
+    "KeybindEditor_ListenHint": "下のボックスをクリックし、キーボードの対応するキーを押してください。",
+    "KeybindEditor_PressKey": "キーを押してください…（Esc でキャンセル）",
+    "KeybindEditor_ResetDone": "Where Winds Meet の既定配置に戻しました。",
+    "KeybindEditor_NameRequired": "テンプレート名を入力してください。",
+    "KeybindEditor_Saved": "テンプレートを保存しました: {0}",
+    "Chrome_EditKeybinds": "キー配置を編集"
+}

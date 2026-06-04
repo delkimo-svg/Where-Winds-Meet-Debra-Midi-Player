@@ -1,0 +1,41 @@
+# Build
+bin/
+obj/
+.vs/
+*.user
+*.suo
+.idea/
+[Dd]ebug/
+[Rr]elease/
+
+# Published / distributable (build locally)
+publish/
+publish-*/
+release/
+dist/
+WhereWindsMeetMidiPlayer.exe
+catalogue-export/
+shared-catalogue.json
+catalogue-pack/
+discord-catalogue.json
+**/discord-catalogue.json
+!discord-catalogue.json.example
+
+# Secrets & local user data (never commit)
+**/discord-credentials.dat
+**/settings.json
+**/history.json
+**/catalogue-index.json
+**/crash.log
+*.pfx
+*.p12
+.env
+.env.*
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Cursor / IDE
+.agent-transcripts/

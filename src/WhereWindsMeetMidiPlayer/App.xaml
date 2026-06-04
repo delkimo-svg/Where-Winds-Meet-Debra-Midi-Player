@@ -1,0 +1,15 @@
+<Application x:Class="WhereWindsMeetMidiPlayer.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+>
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Themes/DebraPaletteSakura.xaml"/>
+                <ResourceDictionary Source="/Themes/DebraTheme.xaml"/>
+                <ResourceDictionary Source="/Themes/KeybindEditorStyles.xaml"/>
+                <ResourceDictionary Source="/Themes/DebraIcons.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

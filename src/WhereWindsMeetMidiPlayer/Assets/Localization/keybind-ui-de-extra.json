@@ -1,0 +1,18 @@
+{
+    "Settings_EditKeybinds": "Tastenbelegung bearbeiten…",
+    "KeybindEditor_Title": "Tastenlayout-Editor",
+    "KeybindEditor_Subtitle": "Passen Sie die Tasten in Where Winds Meet an. Klicken Sie auf ein Feld und drücken Sie die Taste im Spiel. Speichern Sie anschließend eine Vorlage.",
+    "KeybindEditor_LowPitch": "Tief",
+    "KeybindEditor_MidPitch": "Mittel",
+    "KeybindEditor_HighPitch": "Hoch",
+    "KeybindEditor_TemplateName": "Vorlagenname",
+    "KeybindEditor_Save": "Vorlage speichern",
+    "KeybindEditor_Reset": "Standard wiederherstellen",
+    "KeybindEditor_Close": "Schließen",
+    "KeybindEditor_ListenHint": "Klicken Sie unten auf ein Feld und drücken Sie die entsprechende Taste.",
+    "KeybindEditor_PressKey": "Taste drücken… (Esc zum Abbrechen)",
+    "KeybindEditor_ResetDone": "Standard-Where-Winds-Meet-Layout wiederhergestellt.",
+    "KeybindEditor_NameRequired": "Bitte einen Vorlagennamen eingeben.",
+    "KeybindEditor_Saved": "Vorlage gespeichert: {0}",
+    "Chrome_EditKeybinds": "Tastenlayout bearbeiten"
+}

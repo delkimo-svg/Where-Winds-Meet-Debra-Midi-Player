@@ -1,0 +1,18 @@
+{
+    "Settings_EditKeybinds": "Modifica layout tasti…",
+    "KeybindEditor_Title": "Editor layout tasti",
+    "KeybindEditor_Subtitle": "Allinea le tasti mostrati in Where Winds Meet. Clicca uno slot e premi il tasto usato nel gioco. Salva un modello al termine.",
+    "KeybindEditor_LowPitch": "Grave",
+    "KeybindEditor_MidPitch": "Medio",
+    "KeybindEditor_HighPitch": "Acuto",
+    "KeybindEditor_TemplateName": "Nome modello",
+    "KeybindEditor_Save": "Salva modello",
+    "KeybindEditor_Reset": "Ripristina predefinito",
+    "KeybindEditor_Close": "Chiudi",
+    "KeybindEditor_ListenHint": "Clicca una casella sotto e premi il tasto corrispondente.",
+    "KeybindEditor_PressKey": "Premi un tasto… (Esc per annullare)",
+    "KeybindEditor_ResetDone": "Layout Where Winds Meet predefinito ripristinato.",
+    "KeybindEditor_NameRequired": "Inserisci un nome modello.",
+    "KeybindEditor_Saved": "Modello salvato: {0}",
+    "Chrome_EditKeybinds": "Modifica tasti"
+}

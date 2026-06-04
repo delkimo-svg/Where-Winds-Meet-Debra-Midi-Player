@@ -1,0 +1,18 @@
+{
+    "Settings_EditKeybinds": "Editar disposición de teclas…",
+    "KeybindEditor_Title": "Editor de teclas",
+    "KeybindEditor_Subtitle": "Coincide con las teclas de Where Winds Meet. Haz clic en una casilla y pulsa la tecla que usas en el juego. Guarda una plantilla al terminar.",
+    "KeybindEditor_LowPitch": "Grave",
+    "KeybindEditor_MidPitch": "Medio",
+    "KeybindEditor_HighPitch": "Agudo",
+    "KeybindEditor_TemplateName": "Nombre de plantilla",
+    "KeybindEditor_Save": "Guardar plantilla",
+    "KeybindEditor_Reset": "Restablecer",
+    "KeybindEditor_Close": "Cerrar",
+    "KeybindEditor_ListenHint": "Haz clic en una casilla y pulsa la tecla correspondiente.",
+    "KeybindEditor_PressKey": "Pulsa una tecla… (Esc para cancelar)",
+    "KeybindEditor_ResetDone": "Disposición predeterminada de Where Winds Meet restaurada.",
+    "KeybindEditor_NameRequired": "Introduce un nombre de plantilla.",
+    "KeybindEditor_Saved": "Plantilla guardada: {0}",
+    "Chrome_EditKeybinds": "Editar teclas"
+}

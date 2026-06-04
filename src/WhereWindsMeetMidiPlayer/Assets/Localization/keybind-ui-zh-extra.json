@@ -1,0 +1,18 @@
+{
+    "Settings_EditKeybinds": "编辑键位布局…",
+    "KeybindEditor_Title": "键位布局编辑器",
+    "KeybindEditor_Subtitle": "与 Where Winds Meet 中显示的键位一致。点击键位框，然后按下游戏中使用的键。完成后保存为模板。",
+    "KeybindEditor_LowPitch": "低音",
+    "KeybindEditor_MidPitch": "中音",
+    "KeybindEditor_HighPitch": "高音",
+    "KeybindEditor_TemplateName": "模板名称",
+    "KeybindEditor_Save": "保存模板",
+    "KeybindEditor_Reset": "恢复默认",
+    "KeybindEditor_Close": "关闭",
+    "KeybindEditor_ListenHint": "点击下方键位框，然后按下键盘上对应的键。",
+    "KeybindEditor_PressKey": "请按键…（Esc 取消）",
+    "KeybindEditor_ResetDone": "已恢复 Where Winds Meet 默认布局。",
+    "KeybindEditor_NameRequired": "请输入模板名称。",
+    "KeybindEditor_Saved": "已保存模板：{0}",
+    "Chrome_EditKeybinds": "编辑键位"
+}
