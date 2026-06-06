@@ -1,3 +1,13 @@
+## Debra Midi Player 1.1.1
+
+Quality-of-life update for **Where Winds Meet** — playback, library, and updater fixes.
+
+### Updater (1.1.1)
+- **Pulsing Update button** in the header when a newer build is available (was missing in 1.1.0).
+- **Manifest IDs** from `discord-catalogue.json` are merged into cached credentials (fixes v1.0 installs that could not see updates).
+
+---
+
 ## Debra Midi Player 1.1.0
 
 Quality-of-life update for **Where Winds Meet** — playback, library, and updater fixes.

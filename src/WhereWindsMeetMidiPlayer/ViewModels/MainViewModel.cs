@@ -525,13 +525,22 @@ public partial class MainViewModel : ObservableObject, IDisposable
     }
 
     [RelayCommand]
-    private async Task CheckForUpdates() => await RefreshUpdateAvailabilityAsync().ConfigureAwait(true);
+    private async Task CheckForUpdates()
+    {
+        await RefreshUpdateAvailabilityAsync().ConfigureAwait(true);
+        if (IsUpdateAvailable)
+            ShowUpdateOverlay();
+    }
 
     private async Task RefreshUpdateAvailabilityAsync()
     {
         var manifest = await _appUpdate.ResolveManifestAsync(_settings.Settings, _discordCredentials)
             .ConfigureAwait(false);
         var available = _appUpdate.IsUpdateAvailable(manifest, _settings.Settings.LastDismissedUpdateVersion);
+
+        if (manifest is null)
+            AppPaths.WriteDiagnosticLog("update-check", new InvalidOperationException(
+                "No release manifest resolved. Ensure discord-catalogue.json includes releaseManifestChannelId and releaseManifestMessageId, or set a manifest URL in Settings."));
 
         await UiDispatcher.RunAsync(() =>
         {

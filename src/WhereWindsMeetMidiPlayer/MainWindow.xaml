@@ -178,6 +178,11 @@
                     </StackPanel>
                     <StackPanel x:Name="TourTarget_Header" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center"
                                 HorizontalAlignment="Right" Margin="8,0,8,0">
+                        <Button Content="{Binding Ui.HeaderUpdate}" Style="{StaticResource Button.UpdatePulse}"
+                                Command="{Binding ShowUpdateOverlayCommand}"
+                                ToolTip="{Binding Ui.HeaderUpdateTooltip}"
+                                Visibility="{Binding IsUpdateAvailable, Converter={StaticResource BoolToVis}}"
+                                FontSize="11" Margin="0,0,8,0"/>
                         <Button Content="{Binding Ui.HeaderPatreon}" Style="{StaticResource Button.Gold}" Padding="12,5"
                                 Command="{Binding ShowPatreonRewardsCommand}" ToolTip="{Binding Ui.HeaderPatreonTooltip}"
                                 FontSize="11" Margin="0,0,8,0"/>

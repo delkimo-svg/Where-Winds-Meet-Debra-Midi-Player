@@ -37,11 +37,18 @@ public static class DiscordCredentialStore
 
     public static DiscordCredentials? Load()
     {
+        var bundled = LoadBundled();
         var fromProtected = LoadProtected();
         if (fromProtected is not null)
-            return fromProtected;
+        {
+            if (bundled is not null && MergeReleaseFields(fromProtected, bundled))
+            {
+                try { Save(fromProtected); } catch { /* use merged in memory */ }
+            }
 
-        var bundled = LoadBundled();
+            return fromProtected;
+        }
+
         if (bundled is not null)
         {
             try { Save(bundled); } catch { /* use bundled only */ }
@@ -49,6 +56,35 @@ public static class DiscordCredentialStore
         }
 
         return null;
+    }
+
+    /// <summary>Fills manifest/release IDs from a newer bundled json (v1.0 DPAPI cache often lacks these).</summary>
+    private static bool MergeReleaseFields(DiscordCredentials target, DiscordCredentials bundled)
+    {
+        var changed = false;
+
+        if (string.IsNullOrWhiteSpace(target.ReleaseChannelId) &&
+            !string.IsNullOrWhiteSpace(bundled.ReleaseChannelId))
+        {
+            target.ReleaseChannelId = bundled.ReleaseChannelId;
+            changed = true;
+        }
+
+        if (string.IsNullOrWhiteSpace(target.ReleaseManifestChannelId) &&
+            !string.IsNullOrWhiteSpace(bundled.ReleaseManifestChannelId))
+        {
+            target.ReleaseManifestChannelId = bundled.ReleaseManifestChannelId;
+            changed = true;
+        }
+
+        if (string.IsNullOrWhiteSpace(target.ReleaseManifestMessageId) &&
+            !string.IsNullOrWhiteSpace(bundled.ReleaseManifestMessageId))
+        {
+            target.ReleaseManifestMessageId = bundled.ReleaseManifestMessageId;
+            changed = true;
+        }
+
+        return changed;
     }
 
     public static void Save(DiscordCredentials credentials)
