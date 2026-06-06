@@ -12,6 +12,8 @@ public sealed class Song : INotifyPropertyChanged
     /// <summary>Title without Debra / Debra Yume / DebraYume prefix for display.</summary>
     public string DisplayTitle => CatalogueTitleHelper.GetDisplayTitle(Title, FilePath);
     public string FilePath { get; set; } = string.Empty;
+    /// <summary>UTC time when the song was added to the library or playlist.</summary>
+    public DateTime AddedAt { get; set; }
     public long DurationMs { get; set; }
     public string? DetectedKey { get; set; }
     public int NoteCount { get; set; }
@@ -29,6 +31,19 @@ public sealed class Song : INotifyPropertyChanged
             OnPropertyChanged();
         }
     }
+
+    /// <summary>Independent copy for playlist storage (decoupled from library entries).</summary>
+    public Song CloneForPlaylist() => new()
+    {
+        Title = Title,
+        FilePath = FilePath,
+        AddedAt = AddedAt == default ? DateTime.UtcNow : AddedAt,
+        DurationMs = DurationMs,
+        DetectedKey = DetectedKey,
+        NoteCount = NoteCount,
+        OutOfRangeNoteCount = OutOfRangeNoteCount,
+        IsFavorite = IsFavorite
+    };
 
     public event PropertyChangedEventHandler? PropertyChanged;
 

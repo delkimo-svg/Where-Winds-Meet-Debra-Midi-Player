@@ -233,5 +233,13 @@
   "KeybindEditor_ResetDone": "تم استعادة تخطيط Where Winds Meet الافتراضي.",
   "KeybindEditor_NameRequired": "أدخل اسم القالب.",
   "KeybindEditor_Saved": "تم حفظ القالب: {0}",
-  "Chrome_EditKeybinds": "تعديل المفاتيح"
+  "Chrome_EditKeybinds": "تعديل المفاتيح",
+  "Sort_Label": "ترتيب",
+  "Sort_Manual": "ترتيب مخصص",
+  "Sort_Name": "الاسم (أ–ي)",
+  "Sort_TimeAddedNewest": "الأحدث أولاً",
+  "Sort_TimeAddedOldest": "الأقدم أولاً",
+  "Catalogue_NewBadge": "جديد",
+  "Sort_CataloguePublishingDate": "تاريخ النشر",
+  "Sort_CatalogueAlphabetical": "أبجدي (أ–ي)"
 }

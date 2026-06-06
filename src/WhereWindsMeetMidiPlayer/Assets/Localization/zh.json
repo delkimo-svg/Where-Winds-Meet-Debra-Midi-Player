@@ -233,5 +233,13 @@
   "KeybindEditor_ResetDone": "已恢复 Where Winds Meet 默认布局。",
   "KeybindEditor_NameRequired": "请输入模板名称。",
   "KeybindEditor_Saved": "已保存模板：{0}",
-  "Chrome_EditKeybinds": "编辑键位"
+  "Chrome_EditKeybinds": "编辑键位",
+  "Sort_Label": "排序",
+  "Sort_Manual": "自定义顺序",
+  "Sort_Name": "名称 (A–Z)",
+  "Sort_TimeAddedNewest": "最新优先",
+  "Sort_TimeAddedOldest": "最早优先",
+  "Catalogue_NewBadge": "新",
+  "Sort_CataloguePublishingDate": "发布日期",
+  "Sort_CatalogueAlphabetical": "字母顺序 (A–Z)"
 }

@@ -69,4 +69,25 @@ public sealed class AppSettings
 
     /// <summary>UI theme: sakura (pink) or wuxia (dark gold).</summary>
     public string UiTheme { get; set; } = "sakura";
+
+    /// <summary>Library list sort: Manual, Name, TimeAddedNewest, TimeAddedOldest.</summary>
+    public string LibrarySortMode { get; set; } = nameof(SongListSortMode.Manual);
+
+    /// <summary>Playlist list sort: Manual, Name, TimeAddedNewest, TimeAddedOldest.</summary>
+    public string PlaylistSortMode { get; set; } = nameof(SongListSortMode.Manual);
+
+    /// <summary>Catalogue list sort: PublishingDate, Alphabetical.</summary>
+    public string CatalogueSortMode { get; set; } = "PublishingDate";
+
+    /// <summary>Win32 virtual-key code for play/pause (default F3 = 0x72).</summary>
+    public int PlaybackHotkeyPlayPause { get; set; } = PlaybackHotkeyDefaults.PlayPause;
+
+    /// <summary>Win32 virtual-key code for stop (default F4).</summary>
+    public int PlaybackHotkeyStop { get; set; } = PlaybackHotkeyDefaults.Stop;
+
+    /// <summary>Win32 virtual-key code for previous track (default F5).</summary>
+    public int PlaybackHotkeyPrevious { get; set; } = PlaybackHotkeyDefaults.Previous;
+
+    /// <summary>Win32 virtual-key code for next track (default F6).</summary>
+    public int PlaybackHotkeyNext { get; set; } = PlaybackHotkeyDefaults.Next;
 }

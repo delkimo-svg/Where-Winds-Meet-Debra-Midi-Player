@@ -10,6 +10,7 @@ static void PrintUsage()
     Console.WriteLine("  PublishDebraRelease --version <semver> --notes <file|text>");
     Console.WriteLine("      [--archive <path.zip>] [--download-url <https://...>]");
     Console.WriteLine("      [--config <discord-catalogue.json>] [--update-config]");
+    Console.WriteLine("      [--manifest-only]  (requires --download-url; updates manifest only, no announcement)");
     Console.WriteLine();
     Console.WriteLine("Large builds (~69 MB): upload ZIP elsewhere, then pass --download-url (Discord bot limit ~25 MB).");
     Console.WriteLine();
@@ -40,6 +41,13 @@ var notesArg = Get("--notes");
 var downloadUrl = Get("--download-url");
 var configPath = Get("--config");
 var updateConfig = argsList.Contains("--update-config");
+var manifestOnly = argsList.Contains("--manifest-only");
+
+if (manifestOnly && string.IsNullOrWhiteSpace(downloadUrl))
+{
+    Console.Error.WriteLine("--manifest-only requires --download-url.");
+    return 1;
+}
 
 if (string.IsNullOrWhiteSpace(version) || string.IsNullOrWhiteSpace(notesArg))
 {
@@ -100,13 +108,15 @@ try
             ArchivePath = string.IsNullOrWhiteSpace(archive) ? null : Path.GetFullPath(archive),
             DownloadUrl = downloadUrl,
             Version = version,
-            ReleaseNotes = releaseNotes
+            ReleaseNotes = releaseNotes,
+            ManifestOnly = manifestOnly
         },
         progress);
 
     Console.WriteLine();
-    Console.WriteLine("Published successfully.");
-    Console.WriteLine($"  Announcement: channel {result.AnnouncementChannelId} message {result.AnnouncementMessageId}");
+    Console.WriteLine(manifestOnly ? "Manifest updated successfully." : "Published successfully.");
+    if (!string.IsNullOrWhiteSpace(result.AnnouncementMessageId))
+        Console.WriteLine($"  Announcement: channel {result.AnnouncementChannelId} message {result.AnnouncementMessageId}");
     Console.WriteLine($"  Manifest:     channel {result.ManifestChannelId} message {result.ManifestMessageId}");
     Console.WriteLine($"  Download URL: {result.ArchiveAttachmentUrl}");
 

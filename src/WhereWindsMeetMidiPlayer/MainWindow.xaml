@@ -19,8 +19,10 @@
         Closing="Window_OnClosing"
         MouseLeftButtonDown="TitleBar_OnMouseDown"
         PreviewDragOver="Window_PreviewDragOver"
+        DragOver="Window_DragOver"
         PreviewDragLeave="Window_PreviewDragLeave"
-        PreviewDrop="Window_PreviewDrop">
+        PreviewDrop="Window_PreviewDrop"
+        PreviewKeyDown="Window_OnPreviewKeyDown">
 
     <Window.Resources>
         <conv:EnumEqualsConverter x:Key="EnumEquals"/>
@@ -43,14 +45,21 @@
         <DataTemplate x:Key="CatalogueTrackTemplate" DataType="{x:Type models:CatalogueTrack}">
             <Grid VerticalAlignment="Stretch" Background="Transparent">
                 <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <controls:MarqueeText Grid.Column="0" Text="{Binding DisplayTitle}" FontSize="13"
+                <Border Grid.Column="0" Background="{DynamicResource Brush.NewBadge}" CornerRadius="4"
+                        Padding="5,1" Margin="0,0,6,0" VerticalAlignment="Center"
+                        Visibility="{Binding IsNew, Converter={StaticResource BoolToVis}}">
+                    <TextBlock Text="{Binding DataContext.Ui.CatalogueNewBadge, RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}"
+                               FontSize="9" FontWeight="Bold" Foreground="{DynamicResource Brush.NewBadgeText}"/>
+                </Border>
+                <controls:MarqueeText Grid.Column="1" Text="{Binding DisplayTitle}" FontSize="13"
                                       Foreground="{DynamicResource Brush.TextPrimary}"
                                       VerticalAlignment="Center" HorizontalAlignment="Stretch"
                                       StripDebraPrefix="False"/>
-                <Button Grid.Column="1" Content="▶" Style="{StaticResource Button.Icon.Row}" VerticalAlignment="Center"
+                <Button Grid.Column="2" Content="▶" Style="{StaticResource Button.Icon.Row}" VerticalAlignment="Center"
                         CommandParameter="{Binding}"
                         ToolTip="{Binding DataContext.Ui.PlayTooltip, RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}"
                         Click="SongRowPlay_OnClick"/>
@@ -232,6 +241,47 @@
                                         <Button Content="{Binding Ui.SettingsDetect}" Style="{StaticResource Button.Ghost}" Command="{Binding DetectGameWindowsCommand}"/>
                                     </StackPanel>
                                     <TextBlock Text="{Binding Ui.SettingsPlayback}" Style="{StaticResource Text.Title}" Margin="0,20,0,8"/>
+                                    <TextBlock Text="{Binding Ui.SettingsPlayerHotkeys}" Style="{StaticResource Text.Title}" Margin="0,16,0,4"/>
+                                    <TextBlock Text="{Binding Ui.SettingsPlayerHotkeysHint}" Style="{StaticResource Text.Muted}" FontSize="9" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                                    <Grid Margin="0,0,0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="88"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding Ui.SettingsHotkeyPlayPause}" Style="{StaticResource Text.Muted}" VerticalAlignment="Center"/>
+                                        <Button Grid.Column="1" Content="{Binding PlaybackHotkeyPlayPauseLabel}" Style="{StaticResource Button.Ghost}"
+                                                Command="{Binding BeginCapturePlaybackHotkeyCommand}" CommandParameter="{x:Static models:PlaybackHotkeyRole.PlayPause}"/>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="88"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding Ui.SettingsHotkeyStop}" Style="{StaticResource Text.Muted}" VerticalAlignment="Center"/>
+                                        <Button Grid.Column="1" Content="{Binding PlaybackHotkeyStopLabel}" Style="{StaticResource Button.Ghost}"
+                                                Command="{Binding BeginCapturePlaybackHotkeyCommand}" CommandParameter="{x:Static models:PlaybackHotkeyRole.Stop}"/>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="88"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding Ui.SettingsHotkeyPrevious}" Style="{StaticResource Text.Muted}" VerticalAlignment="Center"/>
+                                        <Button Grid.Column="1" Content="{Binding PlaybackHotkeyPreviousLabel}" Style="{StaticResource Button.Ghost}"
+                                                Command="{Binding BeginCapturePlaybackHotkeyCommand}" CommandParameter="{x:Static models:PlaybackHotkeyRole.Previous}"/>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="88"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding Ui.SettingsHotkeyNext}" Style="{StaticResource Text.Muted}" VerticalAlignment="Center"/>
+                                        <Button Grid.Column="1" Content="{Binding PlaybackHotkeyNextLabel}" Style="{StaticResource Button.Ghost}"
+                                                Command="{Binding BeginCapturePlaybackHotkeyCommand}" CommandParameter="{x:Static models:PlaybackHotkeyRole.Next}"/>
+                                    </Grid>
+                                    <TextBlock Text="{Binding PlaybackHotkeyCaptureStatus}" Style="{StaticResource Text.Muted}" FontSize="9" Margin="0,0,0,6"/>
+                                    <Button Content="{Binding Ui.SettingsHotkeyReset}" Style="{StaticResource Button.Ghost}" HorizontalAlignment="Left"
+                                            Command="{Binding ResetPlaybackHotkeysCommand}" Margin="0,0,0,8"/>
                                     <Grid Margin="0,0,0,6">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
@@ -268,6 +318,9 @@
                             <Border x:Name="LibraryDropTarget" Grid.Column="0" Background="{DynamicResource Brush.CardBackground}" CornerRadius="14"
                                     BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" Margin="0,0,6,0" Padding="14,12"
                                     HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                    AllowDrop="True"
+                                    DragOver="LibraryDropTarget_OnDragOver"
+                                    DragLeave="LibraryDropTarget_OnDragLeave"
                                     Visibility="{Binding ShowLibraryPanel, Converter={StaticResource BoolToVis}}">
                                 <Border.Effect>
                                     <DropShadowEffect Color="{DynamicResource PanelShadow}" BlurRadius="14" ShadowDepth="2" Opacity="0.25"/>
@@ -283,6 +336,18 @@
                                                 <TextBlock Text="🔍" Margin="0,0,6,0" Foreground="{DynamicResource Brush.GoldDim}"/>
                                                 <TextBlock Text="{Binding Ui.LibrarySearch}" Foreground="{DynamicResource Brush.TextMuted}"/>
                                             </StackPanel>
+                                        </Grid>
+                                        <Grid Margin="0,0,0,6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="{Binding Ui.SortLabel}" VerticalAlignment="Center" Margin="0,0,8,0"
+                                                       Foreground="{DynamicResource Brush.TextMuted}" FontSize="11"/>
+                                            <controls:DebraFastDropdown Grid.Column="1"
+                                                                        ItemsSource="{Binding LibrarySortOptions}"
+                                                                        SelectedItem="{Binding SelectedLibrarySortOption, Mode=TwoWay}"
+                                                                        DisplayMemberPath="Label"/>
                                         </Grid>
                                         <StackPanel Orientation="Horizontal">
                                             <Button Content="{Binding Ui.LibraryImport}" Style="{StaticResource Button.Gold}"
@@ -385,6 +450,18 @@
                                             <TextBlock Text="🔍" Margin="0,0,6,0" Foreground="{DynamicResource Brush.GoldDim}"/>
                                             <TextBlock Text="{Binding Ui.CatalogueSearch}" Foreground="{DynamicResource Brush.TextMuted}"/>
                                         </StackPanel>
+                                    </Grid>
+                                    <Grid DockPanel.Dock="Top" Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding Ui.SortLabel}" VerticalAlignment="Center" Margin="0,0,8,0"
+                                                   Foreground="{DynamicResource Brush.TextMuted}" FontSize="11"/>
+                                        <controls:DebraFastDropdown Grid.Column="1"
+                                                                    ItemsSource="{Binding CatalogueSortOptions}"
+                                                                    SelectedItem="{Binding SelectedCatalogueSortOption, Mode=TwoWay}"
+                                                                    DisplayMemberPath="Label"/>
                                     </Grid>
                                     <controls:DebraFastDropdown DockPanel.Dock="Top" Margin="0,0,0,8"
                                                                 ItemsSource="{Binding CatalogueStyles}"
@@ -510,10 +587,24 @@
                                         <ToggleButton Content="{Binding Ui.PlaylistFavoritesOnly}" Style="{StaticResource Toggle.DebraPill}" IsChecked="{Binding PlaylistFavoritesOnly}" Margin="0,0,4,4"
                                                       ToolTip="{Binding Ui.PlaylistFavoritesOnlyTip}"/>
                                     </WrapPanel>
+                                    <Grid DockPanel.Dock="Top" Margin="0,0,0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding Ui.SortLabel}" VerticalAlignment="Center" Margin="0,0,8,0"
+                                                   Foreground="{DynamicResource Brush.TextMuted}" FontSize="11"/>
+                                        <controls:DebraFastDropdown Grid.Column="1"
+                                                                    ItemsSource="{Binding PlaylistSortOptions}"
+                                                                    SelectedItem="{Binding SelectedPlaylistSortOption, Mode=TwoWay}"
+                                                                    DisplayMemberPath="Label"/>
+                                    </Grid>
                                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
                                         <Button Content="{Binding Ui.PlaylistAdd}" Style="{StaticResource Button.Ghost}" Command="{Binding AddToPlaylistCommand}" Margin="0,0,4,0"/>
-                                        <Button Content="▲" Style="{StaticResource Button.Ghost}" Command="{Binding MovePlaylistSongUpCommand}" Margin="0,0,2,0" ToolTip="{Binding Ui.PlaylistMoveUp}"/>
-                                        <Button Content="▼" Style="{StaticResource Button.Ghost}" Command="{Binding MovePlaylistSongDownCommand}" Margin="0,0,4,0" ToolTip="{Binding Ui.PlaylistMoveDown}"/>
+                                        <Button Content="▲" Style="{StaticResource Button.Ghost}" Command="{Binding MovePlaylistSongUpCommand}" Margin="0,0,2,0" ToolTip="{Binding Ui.PlaylistMoveUp}"
+                                                IsEnabled="{Binding IsPlaylistManualSort}"/>
+                                        <Button Content="▼" Style="{StaticResource Button.Ghost}" Command="{Binding MovePlaylistSongDownCommand}" Margin="0,0,4,0" ToolTip="{Binding Ui.PlaylistMoveDown}"
+                                                IsEnabled="{Binding IsPlaylistManualSort}"/>
                                         <controls:SongTrashBin Command="{Binding RemoveFromPlaylistCommand}"
                                                                CommandParameter="{Binding SelectedPlaylistSong}"/>
                                     </StackPanel>

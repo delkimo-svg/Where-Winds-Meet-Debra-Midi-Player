@@ -205,6 +205,12 @@ public partial class MainWindow : Window
         _viewModel.Dispose();
     }
 
+    private void Window_OnPreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (_viewModel?.TryHandlePlaybackHotkeyCapture(e.Key) == true)
+            e.Handled = true;
+    }
+
     private void Library_OnDoubleClick(object sender, MouseButtonEventArgs e)
     {
         if (sender is ListBox { SelectedItem: Song song })
@@ -324,11 +330,10 @@ public partial class MainWindow : Window
         if (_viewModel is null)
             return;
 
-        if (e.Data.GetDataPresent(DebraDialogs.SongDragFormat)
-            || e.Data.GetDataPresent(DebraDialogs.CatalogueTrackDragFormat))
+        if (IsInternalAppDrag(e.Data))
             return;
 
-        if (!TryExtractFileDropPaths(e.Data, out _))
+        if (!IsExternalFileDrag(e.Data))
         {
             e.Effects = DragDropEffects.None;
             return;
@@ -350,6 +355,20 @@ public partial class MainWindow : Window
             SetLibraryDropHighlight(false);
     }
 
+    private void Window_DragOver(object sender, DragEventArgs e)
+    {
+        if (_viewModel is null || IsInternalAppDrag(e.Data) || !IsExternalFileDrag(e.Data))
+            return;
+
+        if (IsOverTitleBar(e))
+        {
+            e.Effects = DragDropEffects.None;
+            return;
+        }
+
+        e.Effects = DragDropEffects.Copy;
+    }
+
     private void Window_PreviewDragLeave(object sender, DragEventArgs e)
     {
         if (_libraryDropHighlight)
@@ -361,19 +380,41 @@ public partial class MainWindow : Window
         if (_viewModel is null)
             return;
 
-        if (e.Data.GetDataPresent(DebraDialogs.SongDragFormat)
-            || e.Data.GetDataPresent(DebraDialogs.CatalogueTrackDragFormat))
+        if (IsInternalAppDrag(e.Data))
             return;
 
         SetLibraryDropHighlight(false);
 
-        if (!TryExtractFileDropPaths(e.Data, out var paths))
-            return;
-
         if (IsOverTitleBar(e))
             return;
 
+        if (!TryImportExternalFileDrop(e))
+            return;
+
         e.Handled = true;
+    }
+
+    private void LibraryDropTarget_OnDragOver(object sender, DragEventArgs e)
+    {
+        if (_viewModel is null || !IsExternalFileDrag(e.Data))
+            return;
+
+        e.Effects = DragDropEffects.Copy;
+        e.Handled = true;
+        SetLibraryDropHighlight(true);
+    }
+
+    private void LibraryDropTarget_OnDragLeave(object sender, DragEventArgs e)
+    {
+        if (_libraryDropHighlight)
+            SetLibraryDropHighlight(false);
+    }
+
+    private bool TryImportExternalFileDrop(DragEventArgs e)
+    {
+        if (_viewModel is null || !TryExtractFileDropPaths(e.Data, out var paths))
+            return false;
+
         var added = _viewModel.ImportDroppedPaths(paths);
 
         if (added > 0)
@@ -385,7 +426,16 @@ public partial class MainWindow : Window
         {
             SetLibraryDropMessage("Aucun fichier .mid / .midi — glissez des MIDI ici");
         }
+
+        return true;
     }
+
+    private static bool IsInternalAppDrag(IDataObject data) =>
+        data.GetDataPresent(DebraDialogs.SongDragFormat)
+        || data.GetDataPresent(DebraDialogs.CatalogueTrackDragFormat);
+
+    private static bool IsExternalFileDrag(IDataObject data) =>
+        data.GetDataPresent(DataFormats.FileDrop);
 
     private UIElement? GetLayoutRoot()
     {
@@ -649,8 +699,10 @@ public partial class MainWindow : Window
 
     private void PlaylistList_OnDragOver(object sender, DragEventArgs e)
     {
-        if (!e.Data.GetDataPresent(DebraDialogs.SongDragFormat)
-            && !e.Data.GetDataPresent(DebraDialogs.CatalogueTrackDragFormat))
+        if (IsExternalFileDrag(e.Data))
+            return;
+
+        if (!IsInternalAppDrag(e.Data))
         {
             e.Effects = DragDropEffects.None;
             return;

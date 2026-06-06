@@ -233,5 +233,13 @@
   "KeybindEditor_ResetDone": "Where Winds Meet の既定配置に戻しました。",
   "KeybindEditor_NameRequired": "テンプレート名を入力してください。",
   "KeybindEditor_Saved": "テンプレートを保存しました: {0}",
-  "Chrome_EditKeybinds": "キー配置を編集"
+  "Chrome_EditKeybinds": "キー配置を編集",
+  "Sort_Label": "並べ替え",
+  "Sort_Manual": "カスタム順",
+  "Sort_Name": "名前 (A–Z)",
+  "Sort_TimeAddedNewest": "新しい順",
+  "Sort_TimeAddedOldest": "古い順",
+  "Catalogue_NewBadge": "新着",
+  "Sort_CataloguePublishingDate": "公開日",
+  "Sort_CatalogueAlphabetical": "アルファベット順 (A–Z)"
 }

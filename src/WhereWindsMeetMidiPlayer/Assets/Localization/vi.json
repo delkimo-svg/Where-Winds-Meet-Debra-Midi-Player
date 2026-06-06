@@ -245,5 +245,13 @@
     "Help_S14_P1": "Không có phím trong game: chạy quản trị viên, mở chế độ nhạc cụ, Thử phím trong Cài đặt.",
     "Help_S14_P2": "Sai nốt: bật Chuyển giọng thông minh; xác nhận bố cục phím khớp game.",
     "Help_S14_P3": "Danh mục trống: kiểm tra discord-catalogue.json và mạng; nhấn Làm mới.",
-    "Help_S14_P4": "Thiếu ảnh: giữ đủ thư mục Assets cạnh exe."
+    "Help_S14_P4": "Thiếu ảnh: giữ đủ thư mục Assets cạnh exe.",
+    "Sort_Label": "Sắp xếp",
+    "Sort_Manual": "Thứ tự tùy chỉnh",
+    "Sort_Name": "Tên (A–Z)",
+    "Sort_TimeAddedNewest": "Mới nhất trước",
+    "Sort_TimeAddedOldest": "Cũ nhất trước",
+    "Catalogue_NewBadge": "MỚI",
+    "Sort_CataloguePublishingDate": "Ngày đăng",
+    "Sort_CatalogueAlphabetical": "Theo bảng chữ cái (A–Z)"
 }

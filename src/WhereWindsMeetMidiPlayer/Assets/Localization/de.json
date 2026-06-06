@@ -233,5 +233,13 @@
   "KeybindEditor_ResetDone": "Standard-Where-Winds-Meet-Layout wiederhergestellt.",
   "KeybindEditor_NameRequired": "Bitte einen Vorlagennamen eingeben.",
   "KeybindEditor_Saved": "Vorlage gespeichert: {0}",
-  "Chrome_EditKeybinds": "Tastenlayout bearbeiten"
+  "Chrome_EditKeybinds": "Tastenlayout bearbeiten",
+  "Sort_Label": "Sortieren",
+  "Sort_Manual": "Eigene Reihenfolge",
+  "Sort_Name": "Name (A–Z)",
+  "Sort_TimeAddedNewest": "Neueste zuerst",
+  "Sort_TimeAddedOldest": "Älteste zuerst",
+  "Catalogue_NewBadge": "NEU",
+  "Sort_CataloguePublishingDate": "Veröffentlichungsdatum",
+  "Sort_CatalogueAlphabetical": "Alphabetisch (A–Z)"
 }

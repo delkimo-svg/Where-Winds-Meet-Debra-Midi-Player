@@ -131,6 +131,9 @@ public partial class SongTrashBin : UserControl
         var song = GetSongFromDrag(e);
         if (song is null || !CanExecuteFor(song))
         {
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+                return;
+
             e.Effects = DragDropEffects.None;
             SetDragHighlight(false);
             return;

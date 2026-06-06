@@ -21,7 +21,7 @@ public sealed class DiscordCatalogueService
         @"https?://[^\s<>""']+\.(?:mid|midi)(?:\?[^\s<>""']*)?",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-    private readonly HttpClient _http = new();
+    private readonly HttpClient _http = DiscordApiHttp.Create();
 
     public async Task<IReadOnlyList<CatalogueTrack>> FetchCatalogueAsync(
         string botToken,

@@ -27,6 +27,7 @@ public sealed class PlaylistService
         if (playlist.Songs.Any(s => s.FilePath.Equals(song.FilePath, StringComparison.OrdinalIgnoreCase)))
             return;
 
+        EnsureAddedAt(song);
         playlist.Songs.Add(song);
         playlist.UpdatedAt = DateTime.UtcNow;
     }
@@ -55,6 +56,7 @@ public sealed class PlaylistService
             return;
 
         index = Math.Clamp(index, 0, playlist.Songs.Count);
+        EnsureAddedAt(song);
         playlist.Songs.Insert(index, song);
         playlist.UpdatedAt = DateTime.UtcNow;
     }
@@ -109,6 +111,9 @@ public sealed class PlaylistService
     {
         if (string.IsNullOrWhiteSpace(song.FilePath))
             return;
+
+        if (song.AddedAt == default && File.Exists(song.FilePath))
+            song.AddedAt = File.GetCreationTimeUtc(song.FilePath);
 
         if (!File.Exists(song.FilePath))
         {
@@ -204,10 +209,17 @@ public sealed class PlaylistService
         {
             Title = parsed.Title,
             FilePath = filePath,
+            AddedAt = DateTime.UtcNow,
             DurationMs = parsed.DurationMs,
             NoteCount = ranged.Notes.Count,
             OutOfRangeNoteCount = ranged.OutOfRangeNoteCount
         };
+    }
+
+    private static void EnsureAddedAt(Song song)
+    {
+        if (song.AddedAt == default)
+            song.AddedAt = DateTime.UtcNow;
     }
 
     public static string DefaultPlaylistPath(string name)

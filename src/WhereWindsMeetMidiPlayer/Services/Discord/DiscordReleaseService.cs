@@ -27,7 +27,7 @@ public sealed class DiscordReleaseService
         @"```(?:json)?\s*(\{[\s\S]*?\})\s*```",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-    private readonly HttpClient _http = new() { Timeout = TimeSpan.FromMinutes(30) };
+    private readonly HttpClient _http = DiscordApiHttp.Create(TimeSpan.FromMinutes(30));
 
     public async Task<ReleaseManifest> FetchManifestFromDiscordAsync(
         DiscordCredentials credentials,
@@ -80,17 +80,18 @@ public sealed class DiscordReleaseService
 
         string downloadUrl;
         string manifestFileName;
-        DiscordMessageDto announce;
+        DiscordMessageDto? announce = null;
 
-        var embed = new
+        if (request.ManifestOnly)
         {
-            title = $"Debra Midi Player {version}",
-            description = Truncate(notes, 4000),
-            color = 0xD4AF37,
-            footer = new { text = "Portable — extract over your install folder" }
-        };
+            if (string.IsNullOrWhiteSpace(request.DownloadUrl))
+                throw new InvalidOperationException("Manifest-only publish requires a download URL.");
 
-        if (!string.IsNullOrWhiteSpace(request.DownloadUrl))
+            downloadUrl = request.DownloadUrl.Trim();
+            manifestFileName = request.ArchiveFileName ?? $"DebraMidiPlayer-{version}-portable.zip";
+            progress?.Report("Manifest-only mode — skipping release announcement.");
+        }
+        else if (!string.IsNullOrWhiteSpace(request.DownloadUrl))
         {
             downloadUrl = request.DownloadUrl.Trim();
             manifestFileName = fileName;
@@ -98,10 +99,10 @@ public sealed class DiscordReleaseService
 
             var embedWithUrl = new
             {
-                embed.title,
-                embed.description,
-                embed.color,
-                embed.footer,
+                title = $"Debra Midi Player {version}",
+                description = Truncate(notes, 4000),
+                color = 0xD4AF37,
+                footer = new { text = "Portable — extract over your install folder" },
                 url = downloadUrl
             };
 
@@ -115,6 +116,14 @@ public sealed class DiscordReleaseService
         }
         else
         {
+            var embed = new
+            {
+                title = $"Debra Midi Player {version}",
+                description = Truncate(notes, 4000),
+                color = 0xD4AF37,
+                footer = new { text = "Portable — extract over your install folder" }
+            };
+
             if (string.IsNullOrWhiteSpace(request.ArchivePath) || !File.Exists(request.ArchivePath))
                 throw new FileNotFoundException("Portable archive not found.", request.ArchivePath ?? "(null)");
 
@@ -181,10 +190,12 @@ public sealed class DiscordReleaseService
         }
         else
         {
-            manifestChannelId = channelId;
-            progress?.Report("No manifest message ID yet — creating a new manifest message (pin it and save the IDs).");
+            manifestChannelId = string.IsNullOrWhiteSpace(request.ManifestChannelId)
+                ? channelId
+                : request.ManifestChannelId.Trim();
+            progress?.Report($"No manifest message ID yet — creating a new manifest message in channel {manifestChannelId} (pin it).");
             manifestMessage = await PostMultipartMessageAsync(
-                channelId,
+                manifestChannelId,
                 token,
                 BuildManifestMessageContent(version, manifestJson) +
                 "\n\n_Pin this message. Add **releaseManifestChannelId** and **releaseManifestMessageId** to discord-catalogue.json._",
@@ -200,8 +211,8 @@ public sealed class DiscordReleaseService
         return new DiscordReleasePublishResult
         {
             Manifest = manifest,
-            AnnouncementMessageId = announce.Id,
-            AnnouncementChannelId = channelId,
+            AnnouncementMessageId = announce?.Id ?? string.Empty,
+            AnnouncementChannelId = announce is not null ? channelId : string.Empty,
             ManifestMessageId = manifestMessageId,
             ManifestChannelId = manifestChannelId,
             ManifestAttachmentUrl = manifestAttachment?.Url,
@@ -340,6 +351,7 @@ public sealed class DiscordReleasePublishRequest
     public string? DownloadUrl { get; init; }
     public required string Version { get; init; }
     public required string ReleaseNotes { get; init; }
+    public bool ManifestOnly { get; init; }
 }
 
 public sealed class DiscordReleasePublishResult

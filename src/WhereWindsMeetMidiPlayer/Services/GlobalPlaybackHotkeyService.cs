@@ -2,20 +2,22 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows.Threading;
 using WhereWindsMeetMidiPlayer.Infrastructure;
+using WhereWindsMeetMidiPlayer.Models;
 
 namespace WhereWindsMeetMidiPlayer.Services;
 
 /// <summary>
-/// F3 play/pause, F4 stop, F5 previous, F6 next — active while the game or Debra window is focused.
+/// Global playback hotkeys — active while the game or Debra window is focused.
 /// </summary>
 public sealed class GlobalPlaybackHotkeyService : IDisposable
 {
     private const int WhKeyboardLl = 13;
     private const int WmKeyDown = 0x0100;
-    private const int VkF3 = 0x72;
-    private const int VkF4 = 0x73;
-    private const int VkF5 = 0x74;
-    private const int VkF6 = 0x75;
+
+    private uint _vkPlayPause = PlaybackHotkeyDefaults.PlayPause;
+    private uint _vkStop = PlaybackHotkeyDefaults.Stop;
+    private uint _vkPrevious = PlaybackHotkeyDefaults.Previous;
+    private uint _vkNext = PlaybackHotkeyDefaults.Next;
 
     private readonly GameWindowService _gameWindow;
     private readonly Func<bool> _isHotkeyContextActive;
@@ -47,6 +49,14 @@ public sealed class GlobalPlaybackHotkeyService : IDisposable
         _onPrevious = onPrevious;
         _onNext = onNext;
         _dispatcher = dispatcher;
+    }
+
+    public void SetVirtualKeys(int playPause, int stop, int previous, int next)
+    {
+        _vkPlayPause = (uint)playPause;
+        _vkStop = (uint)stop;
+        _vkPrevious = (uint)previous;
+        _vkNext = (uint)next;
     }
 
     public void Start()
@@ -114,20 +124,29 @@ public sealed class GlobalPlaybackHotkeyService : IDisposable
             return CallNextHookEx(_hookId, nCode, wParam, lParam);
 
         var hook = Marshal.PtrToStructure<KbdLlHookStruct>(lParam);
-        switch (hook.vkCode)
+        var vk = hook.vkCode;
+        if (vk == _vkPlayPause)
         {
-            case VkF3:
-                _dispatcher.BeginInvoke(_onTogglePlayPause);
-                return (IntPtr)1;
-            case VkF4 when _hasActivePlayback():
-                _dispatcher.BeginInvoke(_onStop);
-                return (IntPtr)1;
-            case VkF5:
-                _dispatcher.BeginInvoke(_onPrevious);
-                return (IntPtr)1;
-            case VkF6:
-                _dispatcher.BeginInvoke(_onNext);
-                return (IntPtr)1;
+            _dispatcher.BeginInvoke(_onTogglePlayPause);
+            return (IntPtr)1;
+        }
+
+        if (vk == _vkStop && _hasActivePlayback())
+        {
+            _dispatcher.BeginInvoke(_onStop);
+            return (IntPtr)1;
+        }
+
+        if (vk == _vkPrevious)
+        {
+            _dispatcher.BeginInvoke(_onPrevious);
+            return (IntPtr)1;
+        }
+
+        if (vk == _vkNext)
+        {
+            _dispatcher.BeginInvoke(_onNext);
+            return (IntPtr)1;
         }
 
         return CallNextHookEx(_hookId, nCode, wParam, lParam);

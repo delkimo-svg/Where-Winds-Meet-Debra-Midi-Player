@@ -233,5 +233,13 @@
   "KeybindEditor_ResetDone": "Layout Where Winds Meet predefinito ripristinato.",
   "KeybindEditor_NameRequired": "Inserisci un nome modello.",
   "KeybindEditor_Saved": "Modello salvato: {0}",
-  "Chrome_EditKeybinds": "Modifica tasti"
+  "Chrome_EditKeybinds": "Modifica tasti",
+  "Sort_Label": "Ordina",
+  "Sort_Manual": "Ordine personalizzato",
+  "Sort_Name": "Nome (A–Z)",
+  "Sort_TimeAddedNewest": "Più recenti",
+  "Sort_TimeAddedOldest": "Più vecchi",
+  "Catalogue_NewBadge": "NUOVO",
+  "Sort_CataloguePublishingDate": "Data di pubblicazione",
+  "Sort_CatalogueAlphabetical": "Alfabetico (A–Z)"
 }

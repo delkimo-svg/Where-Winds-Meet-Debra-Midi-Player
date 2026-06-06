@@ -233,5 +233,13 @@
   "KeybindEditor_ResetDone": "Disposición predeterminada de Where Winds Meet restaurada.",
   "KeybindEditor_NameRequired": "Introduce un nombre de plantilla.",
   "KeybindEditor_Saved": "Plantilla guardada: {0}",
-  "Chrome_EditKeybinds": "Editar teclas"
+  "Chrome_EditKeybinds": "Editar teclas",
+  "Sort_Label": "Ordenar",
+  "Sort_Manual": "Orden personalizado",
+  "Sort_Name": "Nombre (A–Z)",
+  "Sort_TimeAddedNewest": "Más recientes",
+  "Sort_TimeAddedOldest": "Más antiguos",
+  "Catalogue_NewBadge": "NUEVO",
+  "Sort_CataloguePublishingDate": "Fecha de publicación",
+  "Sort_CatalogueAlphabetical": "Alfabético (A–Z)"
 }

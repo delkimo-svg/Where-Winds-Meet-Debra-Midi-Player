@@ -42,6 +42,17 @@ public sealed class PlaybackEngine : IDisposable
 
     private readonly Stopwatch _clock = new();
 
+    private double _tempoMultiplier = 1.0;
+
+    public const double MinTempoMultiplier = 0.5;
+
+    public const double MaxTempoMultiplier = 2.0;
+
+    public double TempoMultiplier
+    {
+        get { lock (_gate) return _tempoMultiplier; }
+    }
+
 
 
     public PlaybackState State
@@ -70,7 +81,7 @@ public sealed class PlaybackEngine : IDisposable
 
                 {
 
-                    PlaybackState.Playing => _pausedAtMs + _clock.ElapsedMilliseconds,
+                    PlaybackState.Playing => _pausedAtMs + (long)(_clock.ElapsedMilliseconds * _tempoMultiplier),
 
                     PlaybackState.Paused => _pausedAtMs,
 
@@ -191,7 +202,7 @@ public sealed class PlaybackEngine : IDisposable
 
 
 
-            _pausedAtMs += _clock.ElapsedMilliseconds;
+            _pausedAtMs += (long)(_clock.ElapsedMilliseconds * _tempoMultiplier);
 
             _clock.Reset();
 
@@ -242,6 +253,23 @@ public sealed class PlaybackEngine : IDisposable
         }
 
     }
+
+    public void SetTempoMultiplier(double multiplier)
+    {
+        multiplier = Math.Clamp(multiplier, MinTempoMultiplier, MaxTempoMultiplier);
+        lock (_gate)
+        {
+            if (_state == PlaybackState.Playing)
+            {
+                _pausedAtMs += (long)(_clock.ElapsedMilliseconds * _tempoMultiplier);
+                _clock.Restart();
+            }
+
+            _tempoMultiplier = multiplier;
+        }
+    }
+
+    public void ResetTempoMultiplier() => SetTempoMultiplier(1.0);
 
     public void PlayFromCurrentPosition(
 
@@ -308,6 +336,8 @@ public sealed class PlaybackEngine : IDisposable
         _pausedAtMs = 0;
 
         _clock.Reset();
+
+        _tempoMultiplier = 1.0;
 
         CancelLoop();
 
@@ -463,9 +493,9 @@ public sealed class PlaybackEngine : IDisposable
 
                 sessionClock.Start();
 
-                startOffset = CurrentPositionMs;
+                var resumePositionMs = GetSongPositionMs();
 
-                while (index < events.Count && events[index].StartMs < startOffset)
+                while (index < events.Count && events[index].StartMs < resumePositionMs)
 
                     index++;
 
@@ -483,11 +513,7 @@ public sealed class PlaybackEngine : IDisposable
 
             var targetMs = events[index].StartMs;
 
-            var elapsed = startOffset + sessionClock.ElapsedMilliseconds;
-
-
-
-            await WaitUntilSongTimeAsync(targetMs, elapsed, cancellationToken, sessionClock, startOffset);
+            await WaitUntilSongTimeAsync(targetMs, cancellationToken);
 
 
 
@@ -557,33 +583,81 @@ public sealed class PlaybackEngine : IDisposable
 
 
 
-    private static async Task WaitUntilSongTimeAsync(
-
-        long targetMs,
-
-        long elapsed,
-
-        CancellationToken cancellationToken,
-
-        Stopwatch sessionClock,
-
-        long startOffset)
+    private long GetSongPositionMs()
 
     {
 
-        while (targetMs > startOffset + sessionClock.ElapsedMilliseconds)
+        lock (_gate)
 
         {
 
-            var remaining = targetMs - (startOffset + sessionClock.ElapsedMilliseconds);
+            return _state switch
 
-            var sleep = (int)Math.Min(remaining, 2);
+            {
 
-            if (sleep > 0)
+                PlaybackState.Playing => _pausedAtMs + (long)(_clock.ElapsedMilliseconds * _tempoMultiplier),
 
-                await Task.Delay(sleep, cancellationToken);
+                PlaybackState.Paused => _pausedAtMs,
+
+                _ => 0
+
+            };
+
+        }
+
+    }
+
+
+
+    private async Task WaitUntilSongTimeAsync(long targetMs, CancellationToken cancellationToken)
+
+    {
+
+        while (GetSongPositionMs() < targetMs)
+
+        {
 
             cancellationToken.ThrowIfCancellationRequested();
+
+
+
+            PlaybackState state;
+
+            double tempoMultiplier;
+
+            lock (_gate)
+
+            {
+
+                state = _state;
+
+                tempoMultiplier = _tempoMultiplier;
+
+            }
+
+
+
+            if (state != PlaybackState.Playing)
+
+                return;
+
+
+
+            var positionMs = GetSongPositionMs();
+
+            if (positionMs >= targetMs)
+
+                break;
+
+
+
+            var remainingSongMs = targetMs - positionMs;
+
+            var wallMs = remainingSongMs / Math.Max(tempoMultiplier, MinTempoMultiplier);
+
+            var sleep = (int)Math.Clamp(wallMs, 1, 50);
+
+            await Task.Delay(sleep, cancellationToken);
 
         }
 

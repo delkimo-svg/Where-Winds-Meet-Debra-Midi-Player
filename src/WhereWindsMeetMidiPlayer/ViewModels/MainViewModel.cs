@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Data;
+using System.Windows.Input;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -94,6 +95,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] private bool _shuffle;
     [ObservableProperty] private bool _repeat;
     [ObservableProperty] private int _volume = 64;
+    [ObservableProperty] private double _songTempoBpm = 120;
+    [ObservableProperty] private int _playbackTempoPercent = 100;
     [ObservableProperty] private KeyLayoutOption? _selectedLayout;
     [ObservableProperty] private string _libraryStatsText = "0 songs • 0 B";
     [ObservableProperty] private string _playlistStatsText = "0 songs • 0:00";
@@ -132,9 +135,15 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public BulkObservableCollection<SavedPlaylistEntry> SavedPlaylists { get; } = [];
     public ObservableCollection<LanguageOption> AvailableLanguages { get; } = [];
     public ObservableCollection<ThemeOption> AvailableThemes { get; } = [];
+    public ObservableCollection<SongSortOption> LibrarySortOptions { get; } = [];
+    public ObservableCollection<SongSortOption> PlaylistSortOptions { get; } = [];
+    public ObservableCollection<CatalogueSortOption> CatalogueSortOptions { get; } = [];
     public LocalizedUi Ui { get; } = new();
 
     [ObservableProperty] private SavedPlaylistEntry? _selectedSavedPlaylist;
+    [ObservableProperty] private SongSortOption? _selectedLibrarySortOption;
+    [ObservableProperty] private SongSortOption? _selectedPlaylistSortOption;
+    [ObservableProperty] private CatalogueSortOption? _selectedCatalogueSortOption;
     [ObservableProperty] private LanguageOption? _selectedLanguage;
     [ObservableProperty] private ThemeOption? _selectedTheme;
 
@@ -159,6 +168,10 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private CatalogueTrack? _lastSelectedCatalogueTrack;
     private PrimarySelectionSource _primarySelection = PrimarySelectionSource.None;
     private bool _suppressExclusiveSelection;
+    private bool _suppressSortChange;
+    private bool _suppressTempoChange;
+
+    public bool IsPlaylistManualSort => SelectedPlaylistSortOption?.Mode == SongListSortMode.Manual;
 
     private enum PrimarySelectionSource
     {
@@ -195,13 +208,41 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public string SmartTransposeStateLabel =>
         SmartTranspose ? L.T(UiText.ChromeOn) : L.T(UiText.ChromeOff);
 
-    public string PlayPauseToolTip =>
-        _playback.State switch
-        {
-            PlaybackState.Playing => L.T(UiText.PauseTooltip),
-            PlaybackState.Paused => L.T(UiText.ResumeTooltip),
-            _ => L.T(UiText.PlayTooltip)
-        };
+    [ObservableProperty] private PlaybackHotkeyRole? _playbackHotkeyCapture;
+
+    public string PlayPauseToolTip => FormatTransportTooltip(_playback.State switch
+    {
+        PlaybackState.Playing => UiText.PauseTooltip,
+        PlaybackState.Paused => UiText.ResumeTooltip,
+        _ => UiText.PlayTooltip
+    }, PlaybackHotkeyRole.PlayPause);
+
+    public string StopToolTip => FormatTransportTooltip(UiText.ChromeStop, PlaybackHotkeyRole.Stop);
+
+    public string PreviousToolTip => FormatTransportTooltip(UiText.PreviousTooltip, PlaybackHotkeyRole.Previous);
+
+    public string NextToolTip => FormatTransportTooltip(UiText.NextTooltip, PlaybackHotkeyRole.Next);
+
+    public string PlaybackHotkeyPlayPauseLabel => GetPlaybackHotkeyLabel(PlaybackHotkeyRole.PlayPause);
+
+    public string PlaybackHotkeyStopLabel => GetPlaybackHotkeyLabel(PlaybackHotkeyRole.Stop);
+
+    public string PlaybackHotkeyPreviousLabel => GetPlaybackHotkeyLabel(PlaybackHotkeyRole.Previous);
+
+    public string PlaybackHotkeyNextLabel => GetPlaybackHotkeyLabel(PlaybackHotkeyRole.Next);
+
+    public string PlaybackHotkeyCaptureStatus =>
+        PlaybackHotkeyCapture is null ? string.Empty : L.T(UiText.KeybindEditorPressKey);
+
+    public bool IsTempoSliderEnabled => _nowPlaying is not null;
+
+    public bool CanResetPlaybackTempo => IsTempoSliderEnabled && PlaybackTempoPercent != 100;
+
+    public string PlaybackTempoDisplay =>
+        _nowPlaying is null ? "—" : $"{EffectiveTempoBpm}";
+
+    public int EffectiveTempoBpm =>
+        (int)Math.Round(SongTempoBpm * PlaybackTempoPercent / 100.0, MidpointRounding.AwayFromZero);
 
     private static string AllStylesLabel => L.T(UiText.AllStyles);
 
@@ -364,6 +405,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
         ApplyInputAndWindowSettings();
         ApplyUiLanguageFromSettings();
         ApplyUiThemeFromSettings();
+        RebuildSongSortOptions();
+        ApplySortSettingsFromSaved();
+        ApplyPlaybackHotkeysFromSettings();
         RebuildFavoritePathSet();
         SyncAllSongFavoriteFlags();
         RefreshFavoriteSongs();
@@ -548,7 +592,47 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     partial void OnCatalogueSearchTextChanged(string value) => ScheduleRefreshCatalogueView();
 
-    partial void OnCatalogueStyleFilterChanged(string? value) => ScheduleRefreshCatalogueView();
+    partial void OnCatalogueStyleFilterChanged(string? value)
+    {
+        ApplyCatalogueSort();
+        ScheduleRefreshCatalogueView();
+    }
+
+    partial void OnSelectedLibrarySortOptionChanged(SongSortOption? value)
+    {
+        if (_suppressSortChange || value is null)
+            return;
+
+        SongListSortHelper.Apply(_libraryViewSource, value.Mode);
+        _settings.Settings.LibrarySortMode = value.Mode.ToString();
+        ScheduleSettingsSave();
+        ScheduleRefreshLibraryView();
+    }
+
+    partial void OnSelectedPlaylistSortOptionChanged(SongSortOption? value)
+    {
+        if (_suppressSortChange || value is null)
+            return;
+
+        SongListSortHelper.Apply(_playlistViewSource, value.Mode);
+        _settings.Settings.PlaylistSortMode = value.Mode.ToString();
+        ScheduleSettingsSave();
+        OnPropertyChanged(nameof(IsPlaylistManualSort));
+        MovePlaylistSongUpCommand.NotifyCanExecuteChanged();
+        MovePlaylistSongDownCommand.NotifyCanExecuteChanged();
+        _playlistViewSource.View.Refresh();
+    }
+
+    partial void OnSelectedCatalogueSortOptionChanged(CatalogueSortOption? value)
+    {
+        if (_suppressSortChange || value is null)
+            return;
+
+        ApplyCatalogueSort();
+        _settings.Settings.CatalogueSortMode = value.Mode.ToString();
+        ScheduleSettingsSave();
+        ScheduleRefreshCatalogueView();
+    }
 
     private void ScheduleRefreshCatalogueView()
     {
@@ -998,6 +1082,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         finally
         {
             _suppressCatalogueStats = false;
+            ApplyCatalogueSort();
             _catalogueViewSource.View.Refresh();
             RefreshCatalogueStats();
         }
@@ -1267,30 +1352,33 @@ public partial class MainViewModel : ObservableObject, IDisposable
         var existing = -1;
         for (var i = 0; i < PlaylistSongs.Count; i++)
         {
-            if (PlaylistSongs[i].Id == song.Id)
+            if (PlaylistSongs[i].FilePath.Equals(song.FilePath, StringComparison.OrdinalIgnoreCase))
             {
                 existing = i;
                 break;
             }
         }
+
         if (existing >= 0)
         {
             if (insertIndex is int target)
-                MovePlaylistSongToIndex(song, target);
+                MovePlaylistSongToIndex(PlaylistSongs[existing], target);
             return;
         }
 
+        var playlistSong = ResolvePlaylistSong(song) is not null ? song : song.CloneForPlaylist();
+
         if (insertIndex is int index)
         {
-            _playlistService.InsertSong(_currentPlaylist, song, index);
-            SyncSongFavoriteFlag(song);
-            PlaylistSongs.Insert(index, song);
+            _playlistService.InsertSong(_currentPlaylist, playlistSong, index);
+            SyncSongFavoriteFlag(playlistSong);
+            PlaylistSongs.Insert(index, playlistSong);
         }
         else
         {
-            _playlistService.AddSong(_currentPlaylist, song);
-            SyncSongFavoriteFlag(song);
-            PlaylistSongs.Add(song);
+            _playlistService.AddSong(_currentPlaylist, playlistSong);
+            SyncSongFavoriteFlag(playlistSong);
+            PlaylistSongs.Add(playlistSong);
         }
 
         RefreshPlaylistStats();
@@ -1354,10 +1442,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
         if (libraryItem is not null)
             LibrarySongs.Remove(libraryItem);
 
-        var playlistSong = ResolvePlaylistSong(song);
-        if (playlistSong is not null)
-            RemoveFromPlaylist(playlistSong);
-
         _settings.Settings.FavoritePaths.RemoveAll(
             p => p.Equals(song.FilePath, StringComparison.OrdinalIgnoreCase));
         RebuildFavoritePathSet();
@@ -1392,8 +1476,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
             Stop();
 
         var paths = LibrarySongs.Select(s => s.FilePath).ToList();
-        foreach (var song in PlaylistSongs.Where(p => LibrarySongs.Any(l => l.Id == p.Id)).ToList())
-            RemoveFromPlaylist(song);
 
         foreach (var path in paths)
         {
@@ -1931,6 +2013,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public async Task PlaySongFromListAsync(Song song, ActivePlaybackList list)
     {
         SetActivePlaybackContext(list, song);
+        SyncListSelectionForActivePlayback(list, song);
         await StartSongAsync(song);
     }
 
@@ -1962,7 +2045,98 @@ public partial class MainViewModel : ObservableObject, IDisposable
         await PlayPrimarySelectionAsync();
     }
 
-    private void RefreshPlayPauseUi() => OnPropertyChanged(nameof(PlayPauseToolTip));
+    private void RefreshPlayPauseUi() => NotifyTransportTooltips();
+
+    private void NotifyTransportTooltips()
+    {
+        OnPropertyChanged(nameof(PlayPauseToolTip));
+        OnPropertyChanged(nameof(StopToolTip));
+        OnPropertyChanged(nameof(PreviousToolTip));
+        OnPropertyChanged(nameof(NextToolTip));
+    }
+
+    private void NotifyPlaybackHotkeyLabels()
+    {
+        OnPropertyChanged(nameof(PlaybackHotkeyPlayPauseLabel));
+        OnPropertyChanged(nameof(PlaybackHotkeyStopLabel));
+        OnPropertyChanged(nameof(PlaybackHotkeyPreviousLabel));
+        OnPropertyChanged(nameof(PlaybackHotkeyNextLabel));
+        NotifyTransportTooltips();
+    }
+
+    private string GetPlaybackHotkeyLabel(PlaybackHotkeyRole role) =>
+        PlaybackHotkeyCapture == role
+            ? "…"
+            : VirtualKeyFormatter.Format(PlaybackHotkeySettingsHelper.GetVk(_settings.Settings, role));
+
+    private string FormatTransportTooltip(string actionKey, PlaybackHotkeyRole role) =>
+        $"{L.T(actionKey)} ({VirtualKeyFormatter.Format(PlaybackHotkeySettingsHelper.GetVk(_settings.Settings, role))})";
+
+    private void ApplyPlaybackHotkeysFromSettings()
+    {
+        _globalHotkey.SetVirtualKeys(
+            PlaybackHotkeySettingsHelper.GetVk(_settings.Settings, PlaybackHotkeyRole.PlayPause),
+            PlaybackHotkeySettingsHelper.GetVk(_settings.Settings, PlaybackHotkeyRole.Stop),
+            PlaybackHotkeySettingsHelper.GetVk(_settings.Settings, PlaybackHotkeyRole.Previous),
+            PlaybackHotkeySettingsHelper.GetVk(_settings.Settings, PlaybackHotkeyRole.Next));
+        NotifyPlaybackHotkeyLabels();
+    }
+
+    [RelayCommand]
+    private void BeginCapturePlaybackHotkey(PlaybackHotkeyRole role) =>
+        PlaybackHotkeyCapture = role;
+
+    [RelayCommand]
+    private void ResetPlaybackHotkeys()
+    {
+        PlaybackHotkeySettingsHelper.ResetToDefaults(_settings.Settings);
+        PlaybackHotkeyCapture = null;
+        ApplyPlaybackHotkeysFromSettings();
+        ScheduleSettingsSave();
+    }
+
+    public bool TryHandlePlaybackHotkeyCapture(Key key)
+    {
+        if (PlaybackHotkeyCapture is not PlaybackHotkeyRole role)
+            return false;
+
+        if (key == Key.Escape)
+        {
+            PlaybackHotkeyCapture = null;
+            NotifyPlaybackHotkeyLabels();
+            OnPropertyChanged(nameof(PlaybackHotkeyCaptureStatus));
+            return true;
+        }
+
+        if (key is Key.LeftCtrl or Key.RightCtrl or Key.LeftAlt or Key.RightAlt or Key.LeftShift or Key.RightShift
+            or Key.LWin or Key.RWin or Key.System)
+            return true;
+
+        var vk = KeyInterop.VirtualKeyFromKey(key);
+        if (vk <= 0)
+            return true;
+
+        if (PlaybackHotkeySettingsHelper.IsDuplicate(_settings.Settings, role, vk))
+        {
+            PlaybackHotkeyCapture = null;
+            NotifyPlaybackHotkeyLabels();
+            OnPropertyChanged(nameof(PlaybackHotkeyCaptureStatus));
+            return true;
+        }
+
+        PlaybackHotkeySettingsHelper.SetVk(_settings.Settings, role, vk);
+        PlaybackHotkeyCapture = null;
+        ApplyPlaybackHotkeysFromSettings();
+        ScheduleSettingsSave();
+        OnPropertyChanged(nameof(PlaybackHotkeyCaptureStatus));
+        return true;
+    }
+
+    partial void OnPlaybackHotkeyCaptureChanged(PlaybackHotkeyRole? value)
+    {
+        NotifyPlaybackHotkeyLabels();
+        OnPropertyChanged(nameof(PlaybackHotkeyCaptureStatus));
+    }
 
     [RelayCommand]
     private void FocusGameNow()
@@ -2220,6 +2394,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                     song.NoteCount = ranged.Notes.Count;
                     song.OutOfRangeNoteCount = ranged.OutOfRangeNoteCount;
 
+                    ResetPlaybackTempoForSong(parsed.BeatsPerMinute);
                     _playback.LoadSchedule(schedule, parsed.DurationMs);
                     TotalTimeText = TimeFormat.FromMilliseconds(parsed.DurationMs);
                     _input.ResetDiagnostics();
@@ -2477,6 +2652,25 @@ public partial class MainViewModel : ObservableObject, IDisposable
         finally
         {
             _suppressExclusiveSelection = false;
+        }
+    }
+
+    private void SyncListSelectionForActivePlayback(ActivePlaybackList list, Song? song = null, CatalogueTrack? catalogueTrack = null)
+    {
+        switch (list)
+        {
+            case ActivePlaybackList.Library when song is not null:
+                SetPrimaryListSelection(PrimarySelectionSource.Library, song);
+                break;
+            case ActivePlaybackList.Favorites when song is not null:
+                SetPrimaryListSelection(PrimarySelectionSource.Favorites, song);
+                break;
+            case ActivePlaybackList.Playlist when song is not null:
+                SetPrimaryListSelection(PrimarySelectionSource.Playlist, song);
+                break;
+            case ActivePlaybackList.Catalogue when catalogueTrack is not null:
+                SetPrimaryListSelection(PrimarySelectionSource.Catalogue, null, catalogueTrack);
+                break;
         }
     }
 
@@ -2850,7 +3044,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                     _activeListIndex = ResolveAdjacentIndex(songs.Count, current, forward);
                     _activePlaybackList = ActivePlaybackList.Library;
                     var song = songs[_activeListIndex];
-                    SetPrimaryListSelection(PrimarySelectionSource.Library, song);
+                    SyncListSelectionForActivePlayback(ActivePlaybackList.Library, song);
                     SetActivePlaybackContext(ActivePlaybackList.Library, song);
                     if (autoStart)
                         await StartSongAsync(song);
@@ -2869,7 +3063,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                     _activeListIndex = ResolveAdjacentIndex(tracks.Count, current, forward);
                     _activePlaybackList = ActivePlaybackList.Catalogue;
                     var track = tracks[_activeListIndex];
-                    SetPrimaryListSelection(PrimarySelectionSource.Catalogue, null, track);
+                    SyncListSelectionForActivePlayback(ActivePlaybackList.Catalogue, catalogueTrack: track);
                     SetActivePlaybackContext(ActivePlaybackList.Catalogue, track);
                     if (autoStart)
                         await PlayCatalogueTrack(track);
@@ -2907,7 +3101,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                     _activeListIndex = ResolveAdjacentIndex(songs.Count, current, forward);
                     _activePlaybackList = ActivePlaybackList.Playlist;
                     var song = songs[_activeListIndex];
-                    SetPrimaryListSelection(PrimarySelectionSource.Playlist, song);
+                    SyncListSelectionForActivePlayback(ActivePlaybackList.Playlist, song);
                     SetActivePlaybackContext(ActivePlaybackList.Playlist, song);
                     if (autoStart)
                         await StartSongAsync(song);
@@ -3273,16 +3467,89 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _settings.Save();
     }
 
+    private void RebuildSongSortOptions()
+    {
+        var libraryMode = SelectedLibrarySortOption?.Mode ?? ParseSortMode(_settings.Settings.LibrarySortMode);
+        var playlistMode = SelectedPlaylistSortOption?.Mode ?? ParseSortMode(_settings.Settings.PlaylistSortMode);
+        var catalogueMode = SelectedCatalogueSortOption?.Mode ?? ParseCatalogueSortMode(_settings.Settings.CatalogueSortMode);
+
+        LibrarySortOptions.Clear();
+        PlaylistSortOptions.Clear();
+        CatalogueSortOptions.Clear();
+        foreach (var mode in new[]
+                 {
+                     SongListSortMode.Manual,
+                     SongListSortMode.Name,
+                     SongListSortMode.TimeAddedNewest,
+                     SongListSortMode.TimeAddedOldest
+                 })
+        {
+            var option = new SongSortOption { Mode = mode, Label = GetSortLabel(mode) };
+            LibrarySortOptions.Add(option);
+            PlaylistSortOptions.Add(new SongSortOption { Mode = mode, Label = option.Label });
+        }
+
+        foreach (var mode in new[] { CatalogueSortMode.PublishingDate, CatalogueSortMode.Alphabetical })
+            CatalogueSortOptions.Add(new CatalogueSortOption { Mode = mode, Label = GetCatalogueSortLabel(mode) });
+
+        _suppressSortChange = true;
+        SelectedLibrarySortOption = LibrarySortOptions.FirstOrDefault(o => o.Mode == libraryMode)
+                                    ?? LibrarySortOptions.FirstOrDefault();
+        SelectedPlaylistSortOption = PlaylistSortOptions.FirstOrDefault(o => o.Mode == playlistMode)
+                                     ?? PlaylistSortOptions.FirstOrDefault();
+        SelectedCatalogueSortOption = CatalogueSortOptions.FirstOrDefault(o => o.Mode == catalogueMode)
+                                        ?? CatalogueSortOptions.FirstOrDefault();
+        _suppressSortChange = false;
+    }
+
+    private void ApplySortSettingsFromSaved()
+    {
+        SongListSortHelper.Apply(_libraryViewSource, SelectedLibrarySortOption?.Mode ?? SongListSortMode.Manual);
+        SongListSortHelper.Apply(_playlistViewSource, SelectedPlaylistSortOption?.Mode ?? SongListSortMode.Manual);
+        ApplyCatalogueSort();
+        OnPropertyChanged(nameof(IsPlaylistManualSort));
+    }
+
+    private void ApplyCatalogueSort() =>
+        SongListSortHelper.ApplyCatalogueSort(
+            _catalogueViewSource,
+            SelectedCatalogueSortOption?.Mode ?? ParseCatalogueSortMode(_settings.Settings.CatalogueSortMode),
+            IsAllStylesFilter(CatalogueStyleFilter));
+
+    private static SongListSortMode ParseSortMode(string? value) =>
+        Enum.TryParse<SongListSortMode>(value, out var mode) ? mode : SongListSortMode.Manual;
+
+    private static CatalogueSortMode ParseCatalogueSortMode(string? value) =>
+        Enum.TryParse<CatalogueSortMode>(value, out var mode) ? mode : CatalogueSortMode.PublishingDate;
+
+    private static string GetCatalogueSortLabel(CatalogueSortMode mode) => mode switch
+    {
+        CatalogueSortMode.Alphabetical => L.T(UiText.SortCatalogueAlphabetical),
+        _ => L.T(UiText.SortCataloguePublishingDate)
+    };
+
+    private static string GetSortLabel(SongListSortMode mode) => mode switch
+    {
+        SongListSortMode.Manual => L.T(UiText.SortManual),
+        SongListSortMode.Name => L.T(UiText.SortName),
+        SongListSortMode.TimeAddedNewest => L.T(UiText.SortTimeAddedNewest),
+        SongListSortMode.TimeAddedOldest => L.T(UiText.SortTimeAddedOldest),
+        _ => L.T(UiText.SortManual)
+    };
+
     private void ApplyLocalization()
     {
         RefreshNavLabels();
         RefreshThemeOptions();
+        RebuildSongSortOptions();
+        ApplySortSettingsFromSaved();
         Ui.Refresh();
         OnPropertyChanged(nameof(Ui));
         OnPropertyChanged(nameof(UiFlowDirection));
         OnPropertyChanged(nameof(ChromeAutoPlayNextText));
         OnPropertyChanged(nameof(SmartTransposeStateLabel));
         RefreshPlayPauseUi();
+        NotifyPlaybackHotkeyLabels();
         RefreshIdleUiStrings();
         UpdateAllStylesLabel();
 
@@ -3400,6 +3667,54 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         _settings.Settings.Repeat = value;
         ScheduleSettingsSave();
+    }
+
+    private void ResetPlaybackTempoForSong(double beatsPerMinute)
+    {
+        SongTempoBpm = Math.Clamp(beatsPerMinute, 40, 320);
+        _suppressTempoChange = true;
+        PlaybackTempoPercent = 100;
+        _suppressTempoChange = false;
+        _playback.SetTempoMultiplier(1.0);
+        NotifyPlaybackTempoUi();
+    }
+
+    private void NotifyPlaybackTempoUi()
+    {
+        OnPropertyChanged(nameof(EffectiveTempoBpm));
+        OnPropertyChanged(nameof(PlaybackTempoDisplay));
+        OnPropertyChanged(nameof(IsTempoSliderEnabled));
+        OnPropertyChanged(nameof(CanResetPlaybackTempo));
+    }
+
+    [RelayCommand]
+    private void ResetPlaybackTempo()
+    {
+        if (!CanResetPlaybackTempo)
+            return;
+
+        _suppressTempoChange = true;
+        PlaybackTempoPercent = 100;
+        _suppressTempoChange = false;
+        _playback.SetTempoMultiplier(1.0);
+        NotifyPlaybackTempoUi();
+    }
+
+    partial void OnPlaybackTempoPercentChanged(int value)
+    {
+        if (_suppressTempoChange)
+            return;
+
+        var clamped = Math.Clamp(value, 50, 200);
+        if (clamped != value)
+        {
+            _suppressTempoChange = true;
+            PlaybackTempoPercent = clamped;
+            _suppressTempoChange = false;
+        }
+
+        _playback.SetTempoMultiplier(clamped / 100.0);
+        NotifyPlaybackTempoUi();
     }
 
     partial void OnVolumeChanged(int value)

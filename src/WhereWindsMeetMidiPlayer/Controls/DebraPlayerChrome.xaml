@@ -27,24 +27,54 @@
                 <!-- Main player row -->
                 <Grid Grid.Row="0" Margin="12,10,12,6" MinHeight="88">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="210"/>
+                        <ColumnDefinition Width="248"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="200"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- Track info -->
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <Border Width="48" Height="48" CornerRadius="10" ClipToBounds="True"
-                                BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" Margin="0,0,10,0"
-                                Background="{DynamicResource Brush.BgHover}">
-                            <Image x:Name="PlayerThumb"
-                                   Stretch="UniformToFill" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                   RenderOptions.BitmapScalingMode="HighQuality"/>
-                        </Border>
-                        <controls:MarqueeText Text="{Binding NowPlayingTitle}" Foreground="{DynamicResource Brush.GoldBright}"
-                                              FontSize="13" VerticalAlignment="Center"
-                                              HorizontalAlignment="Stretch" AutoScrollWhenOverflow="True"
-                                              StripDebraPrefix="False"/>
+                    <!-- Track info + tempo -->
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                            <Border Width="48" Height="48" CornerRadius="10" ClipToBounds="True"
+                                    BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" Margin="0,0,10,0"
+                                    Background="{DynamicResource Brush.BgHover}">
+                                <Image x:Name="PlayerThumb"
+                                       Stretch="UniformToFill" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       RenderOptions.BitmapScalingMode="HighQuality"/>
+                            </Border>
+                            <controls:MarqueeText Text="{Binding NowPlayingTitle}" Foreground="{DynamicResource Brush.GoldBright}"
+                                                  FontSize="13" VerticalAlignment="Center"
+                                                  HorizontalAlignment="Stretch" AutoScrollWhenOverflow="True"
+                                                  StripDebraPrefix="False"/>
+                        </StackPanel>
+                        <Grid Margin="58,0,4,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="♩" Foreground="{DynamicResource Brush.GoldDim}" FontSize="12"
+                                       VerticalAlignment="Center" Margin="0,0,6,0"
+                                       ToolTip="{Binding Ui.ChromeTempoTooltip, Mode=OneWay}"/>
+                            <Slider Grid.Column="1" Style="{StaticResource Slider.Debra.Compact}"
+                                    Minimum="50" Maximum="200"
+                                    Value="{Binding PlaybackTempoPercent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                    IsEnabled="{Binding IsTempoSliderEnabled}"
+                                    VerticalAlignment="Center"
+                                    ToolTip="{Binding Ui.ChromeTempoTooltip, Mode=OneWay}"/>
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0">
+                                <TextBlock Text="{Binding PlaybackTempoDisplay}" Foreground="{DynamicResource Brush.GoldBright}"
+                                           FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                <TextBlock Text=" BPM" Foreground="{DynamicResource Brush.TextMuted}"
+                                           FontSize="10" VerticalAlignment="Center"
+                                           Visibility="{Binding IsTempoSliderEnabled, Converter={StaticResource BoolToVis}}"/>
+                                <Button Content="R" Style="{StaticResource Button.Icon.Row}"
+                                        Command="{Binding ResetPlaybackTempoCommand}"
+                                        IsEnabled="{Binding CanResetPlaybackTempo}"
+                                        ToolTip="{Binding Ui.ChromeTempoResetTooltip, Mode=OneWay}"
+                                        VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Grid>
                     </StackPanel>
 
                     <!-- Transport + spectrum progress -->
@@ -54,7 +84,7 @@
                             <ToggleButton Content="🔀" Style="{StaticResource Toggle.Transport}" VerticalAlignment="Center"
                                           IsChecked="{Binding Shuffle, Mode=TwoWay}" ToolTip="Shuffle"/>
                             <Button Content="⏮" Style="{StaticResource Button.Transport}" VerticalAlignment="Center"
-                                    Command="{Binding PreviousCommand}"/>
+                                    Command="{Binding PreviousCommand}" ToolTip="{Binding PreviousToolTip}"/>
                             <Button Style="{StaticResource Button.Play}" Command="{Binding PlayPauseCommand}"
                                     Margin="6,0" VerticalAlignment="Center" ToolTip="{Binding PlayPauseToolTip}">
                                 <Viewbox Width="18" Height="18">
@@ -87,9 +117,9 @@
                                 </Viewbox>
                             </Button>
                             <Button Content="⏹" Style="{StaticResource Button.Transport}" VerticalAlignment="Center"
-                                    Command="{Binding StopCommand}" ToolTip="{Binding Ui.ChromeStop, Mode=OneWay}"/>
+                                    Command="{Binding StopCommand}" ToolTip="{Binding StopToolTip}"/>
                             <Button Content="⏭" Style="{StaticResource Button.Transport}" VerticalAlignment="Center"
-                                    Command="{Binding NextCommand}"/>
+                                    Command="{Binding NextCommand}" ToolTip="{Binding NextToolTip}"/>
                             <ToggleButton Content="🔁" Style="{StaticResource Toggle.Transport}" VerticalAlignment="Center"
                                           IsChecked="{Binding Repeat, Mode=TwoWay}" ToolTip="Repeat"/>
                             <ToggleButton Content="▶▶" Style="{StaticResource Toggle.Transport}" VerticalAlignment="Center"

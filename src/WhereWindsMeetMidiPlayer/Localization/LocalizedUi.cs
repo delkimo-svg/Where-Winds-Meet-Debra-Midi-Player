@@ -22,6 +22,13 @@ public sealed partial class LocalizedUi : ObservableObject
     public string SettingsFocusGame => L.T(UiText.SettingsFocusGame);
     public string SettingsDetect => L.T(UiText.SettingsDetect);
     public string SettingsPlayback => L.T(UiText.SettingsPlayback);
+    public string SettingsPlayerHotkeys => L.T(UiText.SettingsPlayerHotkeys);
+    public string SettingsPlayerHotkeysHint => L.T(UiText.SettingsPlayerHotkeysHint);
+    public string SettingsHotkeyPlayPause => L.T(UiText.SettingsHotkeyPlayPause);
+    public string SettingsHotkeyStop => L.T(UiText.SettingsHotkeyStop);
+    public string SettingsHotkeyPrevious => L.T(UiText.SettingsHotkeyPrevious);
+    public string SettingsHotkeyNext => L.T(UiText.SettingsHotkeyNext);
+    public string SettingsHotkeyReset => L.T(UiText.SettingsHotkeyReset);
     public string SettingsSmartTranspose => L.T(UiText.SettingsSmartTranspose);
     public string SettingsNoteDelay => L.T(UiText.SettingsNoteDelay);
     public string SettingsChordRoll => L.T(UiText.SettingsChordRoll);
@@ -38,6 +45,8 @@ public sealed partial class LocalizedUi : ObservableObject
     public string LibraryDragHint => L.T(UiText.LibraryDragHint);
     public string LibraryClear => L.T(UiText.LibraryClear);
     public string LibraryClearTip => L.T(UiText.LibraryClearTip);
+    public string SortLabel => L.T(UiText.SortLabel);
+    public string CatalogueNewBadge => L.T(UiText.CatalogueNewBadge);
     public string HistoryClear => L.T(UiText.HistoryClear);
     public string HistoryPlayed => L.T(UiText.HistoryPlayed);
     public string CatalogueSubtitle => L.T(UiText.CatalogueSubtitle);
@@ -70,6 +79,8 @@ public sealed partial class LocalizedUi : ObservableObject
     public string ChromeNoteDelay => L.T(UiText.ChromeNoteDelay);
     public string ChromeChordRoll => L.T(UiText.ChromeChordRoll);
     public string ChromeStop => L.T(UiText.ChromeStop);
+    public string ChromeTempoTooltip => L.T(UiText.ChromeTempoTooltip);
+    public string ChromeTempoResetTooltip => L.T(UiText.ChromeTempoResetTooltip);
     public string ChromeFavoriteTip => L.T(UiText.ChromeFavoriteTip);
     public string ChromeOn => L.T(UiText.ChromeOn);
     public string ChromeOff => L.T(UiText.ChromeOff);

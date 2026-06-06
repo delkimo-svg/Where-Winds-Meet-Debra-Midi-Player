@@ -290,6 +290,7 @@
         <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling"/>
         <Setter Property="VirtualizingPanel.ScrollUnit" Value="Pixel"/>
         <Setter Property="behaviors:ListBoxScrollWheelBehavior.IsEnabled" Value="True"/>
+        <Setter Property="behaviors:ListBoxSelectedItemScrollBehavior.IsEnabled" Value="True"/>
     </Style>
 
     <Style x:Key="ListBoxItem.Song" TargetType="ListBoxItem">
@@ -648,6 +649,11 @@
     <Style x:Key="Slider.Debra" TargetType="Slider">
         <Setter Property="Foreground" Value="{DynamicResource Brush.Gold}"/>
         <Setter Property="Height" Value="22"/>
+    </Style>
+
+    <Style x:Key="Slider.Debra.Compact" TargetType="Slider" BasedOn="{StaticResource Slider.Debra}">
+        <Setter Property="Height" Value="18"/>
+        <Setter Property="Margin" Value="0,1,0,0"/>
     </Style>
 
     <Style x:Key="ProgressBar.Wave" TargetType="ProgressBar">

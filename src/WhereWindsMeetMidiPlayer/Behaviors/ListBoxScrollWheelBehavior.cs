@@ -264,4 +264,78 @@ public static class ListBoxScrollWheelBehavior
 
         return null;
     }
+
+    /// <summary>Scrolls the selected row into view without ListBox.ScrollIntoView (virtualization-safe).</summary>
+    public static void ScrollSelectedItemIntoView(ListBox listBox)
+    {
+        if (listBox.SelectedItem is null || listBox.Items.Count == 0)
+            return;
+
+        var index = listBox.Items.IndexOf(listBox.SelectedItem);
+        if (index < 0)
+            return;
+
+        listBox.Dispatcher.BeginInvoke(
+            () => ScrollIndexIntoView(listBox, index),
+            System.Windows.Threading.DispatcherPriority.Background);
+    }
+
+    private static void ScrollIndexIntoView(ListBox listBox, int index)
+    {
+        try
+        {
+            var scrollViewer = GetListScrollViewer(listBox);
+            if (scrollViewer is null)
+            {
+                listBox.ScrollIntoView(listBox.SelectedItem);
+                return;
+            }
+
+            var stride = MeasureAverageStride(listBox);
+            EnsureIndexVisible(listBox, scrollViewer, index, stride);
+
+            listBox.Dispatcher.BeginInvoke(() =>
+            {
+                try
+                {
+                    if (listBox.ItemContainerGenerator.ContainerFromIndex(index) is FrameworkElement item)
+                        AlignItemInViewport(scrollViewer, item);
+                }
+                catch (InvalidOperationException)
+                {
+                    // Item not realized yet — estimated offset is enough.
+                }
+            }, System.Windows.Threading.DispatcherPriority.Loaded);
+        }
+        catch (InvalidOperationException)
+        {
+            listBox.Dispatcher.BeginInvoke(
+                () => ScrollIndexIntoView(listBox, index),
+                System.Windows.Threading.DispatcherPriority.Loaded);
+        }
+    }
+
+    private static void EnsureIndexVisible(ListBox listBox, ScrollViewer scrollViewer, int index, double stride)
+    {
+        var top = GetOffsetForItemTop(listBox, index, stride);
+        var bottom = top + GetItemStride(listBox, index, stride);
+        var viewTop = scrollViewer.VerticalOffset;
+        var viewBottom = viewTop + scrollViewer.ViewportHeight;
+
+        if (top < viewTop)
+            scrollViewer.ScrollToVerticalOffset(top);
+        else if (bottom > viewBottom)
+            scrollViewer.ScrollToVerticalOffset(Math.Min(bottom - scrollViewer.ViewportHeight, scrollViewer.ScrollableHeight));
+    }
+
+    private static void AlignItemInViewport(ScrollViewer scrollViewer, FrameworkElement item)
+    {
+        var top = item.TransformToAncestor(scrollViewer).Transform(new Point(0, 0)).Y;
+        var bottom = top + item.ActualHeight;
+
+        if (top < 0)
+            scrollViewer.ScrollToVerticalOffset(scrollViewer.VerticalOffset + top);
+        else if (bottom > scrollViewer.ViewportHeight)
+            scrollViewer.ScrollToVerticalOffset(scrollViewer.VerticalOffset + (bottom - scrollViewer.ViewportHeight));
+    }
 }

@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.IO;
+using System.Text;
 using System.Text.Json;
 using System.Windows;
 
@@ -113,7 +114,7 @@ public sealed class LocalizationService
 
         try
         {
-            var json = File.ReadAllText(path);
+            var json = File.ReadAllText(path, Encoding.UTF8);
             var dict = JsonSerializer.Deserialize<Dictionary<string, string>>(json)
                        ?? new Dictionary<string, string>(StringComparer.Ordinal);
             _languages[code] = new Dictionary<string, string>(dict, StringComparer.Ordinal);

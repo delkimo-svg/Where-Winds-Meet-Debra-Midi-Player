@@ -6,7 +6,8 @@ param(
     [string]$DownloadUrl = '',
     [string]$ConfigPath = '',
     [switch]$SkipBuild,
-    [switch]$UpdateConfig
+    [switch]$UpdateConfig,
+    [switch]$ManifestOnly
 )
 
 $ErrorActionPreference = 'Stop'
@@ -65,10 +66,10 @@ if (-not $NotesFile) {
 $archiveMb = if (Test-Path $ArchivePath) { [math]::Round((Get-Item $ArchivePath).Length / 1MB, 1) } else { 0 }
 if ($archiveMb -gt 25 -and -not $DownloadUrl) {
     Write-Host ""
-    Write-Host "Archive is $archiveMb MB — too large for Discord bot uploads (limit ~25 MB)." -ForegroundColor Yellow
+    Write-Host "Archive is $archiveMb MB - too large for Discord bot uploads (limit ~25 MB)." -ForegroundColor Yellow
     Write-Host "1. Upload release\DebraMidiPlayer-$Version-portable.zip to GitHub Releases, Google Drive, Mega, etc."
     Write-Host "2. Copy the direct HTTPS download link"
-    Write-Host "3. Re-run: .\scripts\publish-release-to-discord.ps1 -SkipBuild -Version $Version -DownloadUrl 'https://YOUR_LINK' -NotesFile .\RELEASE_NOTES_$Version.md -UpdateConfig"
+    Write-Host "3. Re-run with -DownloadUrl and -UpdateConfig"
     Write-Host ""
     exit 1
 }
@@ -82,5 +83,6 @@ $toolArgs = @(
 if ($ArchivePath) { $toolArgs += @('--archive', $ArchivePath) }
 if ($DownloadUrl) { $toolArgs += @('--download-url', $DownloadUrl) }
 if ($UpdateConfig) { $toolArgs += '--update-config' }
+if ($ManifestOnly) { $toolArgs += '--manifest-only' }
 
 dotnet run --project $publishTool -c Release -- @toolArgs

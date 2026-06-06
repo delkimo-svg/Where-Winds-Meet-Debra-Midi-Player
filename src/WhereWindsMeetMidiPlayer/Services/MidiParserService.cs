@@ -64,8 +64,24 @@ public sealed class MidiParserService
             FilePath = filePath,
             Title = MidiTitleHelper.ResolveTitle(midiFile, filePath),
             DurationMs = durationMsTotal,
+            BeatsPerMinute = GetInitialBeatsPerMinute(tempoMap),
             Notes = notes
         };
+    }
+
+    private static double GetInitialBeatsPerMinute(TempoMap tempoMap)
+    {
+        try
+        {
+            var tempo = tempoMap.GetTempoAtTime(new MetricTimeSpan(0));
+            return tempo.MicrosecondsPerQuarterNote > 0
+                ? 60000000.0 / tempo.MicrosecondsPerQuarterNote
+                : 120;
+        }
+        catch
+        {
+            return 120;
+        }
     }
 }
 
@@ -74,5 +90,6 @@ public sealed class MidiParseResult
     public string FilePath { get; init; } = string.Empty;
     public string Title { get; init; } = string.Empty;
     public long DurationMs { get; init; }
+    public double BeatsPerMinute { get; init; } = 120;
     public IReadOnlyList<NormalizedNote> Notes { get; init; } = [];
 }

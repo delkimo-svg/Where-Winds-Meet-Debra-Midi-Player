@@ -18,6 +18,8 @@
     <Color x:Key="Gold">#B84A68</Color>
     <Color x:Key="GoldDim">#D4899E</Color>
     <Color x:Key="GoldBright">#8E3D55</Color>
+    <Color x:Key="NewBadge">#2E9B5A</Color>
+    <Color x:Key="NewBadgeText">#FFFFFF</Color>
     <Color x:Key="TextPrimary">#4A3038</Color>
     <Color x:Key="TextMuted">#8A6068</Color>
     <Color x:Key="BorderSubtle">#E8B4C4</Color>
@@ -81,6 +83,8 @@
     <SolidColorBrush x:Key="Brush.Gold" Color="{StaticResource Gold}"/>
     <SolidColorBrush x:Key="Brush.GoldDim" Color="{StaticResource GoldDim}"/>
     <SolidColorBrush x:Key="Brush.GoldBright" Color="{StaticResource GoldBright}"/>
+    <SolidColorBrush x:Key="Brush.NewBadge" Color="{StaticResource NewBadge}"/>
+    <SolidColorBrush x:Key="Brush.NewBadgeText" Color="{StaticResource NewBadgeText}"/>
     <SolidColorBrush x:Key="Brush.TextPrimary" Color="{StaticResource TextPrimary}"/>
     <SolidColorBrush x:Key="Brush.TextMuted" Color="{StaticResource TextMuted}"/>
     <SolidColorBrush x:Key="Brush.Border" Color="{StaticResource BorderSubtle}"/>

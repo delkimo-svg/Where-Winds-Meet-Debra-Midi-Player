@@ -80,16 +80,52 @@ function Copy-UpdateManifestExample([string]$publishDir) {
     Write-Host '  Included debra-update-manifest.example.json (host manifest JSON on Discord CDN; optional debra-update-manifest.url beside exe)'
 }
 
-Get-Process -Name 'DebraMidiPlayer','WhereWindsMeetMidiPlayer' -ErrorAction SilentlyContinue | Stop-Process -Force
+function Sync-PortableFromStaging([string]$stagingDir, [string]$portableDir) {
+    New-Item -ItemType Directory -Force -Path $portableDir | Out-Null
+    Clean-PublishRoot $stagingDir
+    Prune-Assets $stagingDir
+    Copy-DiscordConfig $stagingDir
+    Copy-UpdateManifestExample $stagingDir
+
+    foreach ($name in @('discord-catalogue.json', 'debra-update-manifest.example.json')) {
+        $src = Join-Path $stagingDir $name
+        if (Test-Path $src) {
+            Copy-Item $src (Join-Path $portableDir $name) -Force
+        }
+    }
+
+    $assetsSrc = Join-Path $stagingDir 'Assets'
+    $assetsDest = Join-Path $portableDir 'Assets'
+    if (Test-Path $assetsSrc) {
+        New-Item -ItemType Directory -Force -Path $assetsDest | Out-Null
+        & robocopy $assetsSrc $assetsDest /E /IS /IT /NFL /NDL /NJH /NJS /nc /ns /np | Out-Null
+        if ($LASTEXITCODE -ge 8) { throw "robocopy Assets failed with exit code $LASTEXITCODE" }
+    }
+
+    $exeSrc = Join-Path $stagingDir 'DebraMidiPlayer.exe'
+    $exeDest = Join-Path $portableDir 'DebraMidiPlayer.exe'
+    if (Test-Path $exeSrc) {
+        try {
+            Copy-Item $exeSrc $exeDest -Force
+        }
+        catch {
+            $alt = Join-Path $portableDir 'DebraMidiPlayer.new.exe'
+            Copy-Item $exeSrc $alt -Force
+            Write-Host '  WARNING: DebraMidiPlayer.exe is running — built as DebraMidiPlayer.new.exe. Close the app, delete the old exe, rename .new.exe.' -ForegroundColor Yellow
+        }
+    }
+}
+
+Get-Process -Name 'DebraMidiPlayer','WhereWindsMeetMidiPlayer' -ErrorAction SilentlyContinue |
+    ForEach-Object { Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue }
 
 if ($Target -in 'portable', 'both', 'all') {
     Write-Host 'Publishing portable (self-contained single .exe + Assets)...'
-    dotnet publish $proj -c Release /p:PublishProfile=Win64-Portable.pubxml
+    $staging = Join-Path $root 'release\portable-staging'
     $portable = Join-Path $root 'release\portable'
-    Clean-PublishRoot $portable
-    Prune-Assets $portable
-    Copy-DiscordConfig $portable
-    Copy-UpdateManifestExample $portable
+    dotnet publish $proj -c Release /p:PublishProfile=Win64-Portable.pubxml "/p:PublishDir=..\..\release\portable-staging\"
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    Sync-PortableFromStaging $staging $portable
     Show-Size $portable
 }
 
