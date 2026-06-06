@@ -414,7 +414,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
         EnsureKeyMaps();
         RefreshKeyLayouts();
-        LoadKeyMapping(_settings.Settings.KeyMappingFile);
+        LoadKeyMapping(SelectedLayout?.FileName ?? _settings.Settings.KeyMappingFile);
 
         ResetToBlankPlaylist();
 
@@ -435,11 +435,13 @@ public partial class MainViewModel : ObservableObject, IDisposable
         RefreshPlaylistStats();
     }
 
+    private bool _suppressLayoutChange;
+
     private void EnsureKeyMaps()
     {
-        // Refresh from bundled assets so in-game layout updates apply after app updates.
-        _keyMapping.EnsureDefaultKeyMap("default-keymap.json", updateFromBundle: true);
-        _keyMapping.EnsureDefaultKeyMap("debra-36-keys.json", updateFromBundle: true);
+        // Seed bundled defaults only when missing — never overwrite user-edited keymaps on startup.
+        _keyMapping.EnsureDefaultKeyMap("default-keymap.json");
+        _keyMapping.EnsureDefaultKeyMap("debra-36-keys.json");
     }
 
     private void RefreshKeyLayouts()
@@ -459,9 +461,15 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
         var pick = KeyLayouts.FirstOrDefault(k => k.FileName == _settings.Settings.KeyMappingFile)
                    ?? KeyLayouts.FirstOrDefault();
-        SelectedLayout = pick;
-        if (pick is not null)
-            LoadKeyMapping(pick.FileName);
+        _suppressLayoutChange = true;
+        try
+        {
+            SelectedLayout = pick;
+        }
+        finally
+        {
+            _suppressLayoutChange = false;
+        }
     }
 
     private void LoadKeyMapping(string fileName)
@@ -2269,8 +2277,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
             _settings.Settings.KeyMappingFile,
             fileName =>
             {
-                RefreshKeyLayouts();
                 LoadKeyMapping(fileName);
+                RefreshKeyLayouts();
             })
         {
             Owner = owner
@@ -3768,7 +3776,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     partial void OnSelectedLayoutChanged(KeyLayoutOption? value)
     {
-        if (value is null)
+        if (_suppressLayoutChange || value is null)
             return;
         LoadKeyMapping(value.FileName);
     }
