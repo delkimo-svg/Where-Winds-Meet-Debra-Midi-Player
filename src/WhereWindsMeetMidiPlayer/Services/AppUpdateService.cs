@@ -19,6 +19,23 @@ public sealed class AppUpdateService
         DiscordCredentials? discord = null,
         CancellationToken cancellationToken = default)
     {
+        var localTestPath = Path.Combine(InstallDirectory, "debra-update-manifest.local.json");
+        if (File.Exists(localTestPath))
+        {
+            try
+            {
+                var json = await File.ReadAllTextAsync(localTestPath, cancellationToken).ConfigureAwait(false);
+                return JsonSerializer.Deserialize<ReleaseManifest>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+            }
+            catch (Exception ex)
+            {
+                AppPaths.WriteDiagnosticLog("update-manifest-local-test", ex);
+            }
+        }
+
         if (!string.IsNullOrWhiteSpace(settings.ReleaseManifestUrl))
             return await FetchManifestAsync(settings.ReleaseManifestUrl, cancellationToken).ConfigureAwait(false);
 

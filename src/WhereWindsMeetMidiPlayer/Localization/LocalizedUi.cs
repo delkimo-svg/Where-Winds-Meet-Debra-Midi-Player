@@ -81,6 +81,7 @@ public sealed partial class LocalizedUi : ObservableObject
     public string ChromeStop => L.T(UiText.ChromeStop);
     public string ChromeTempoTooltip => L.T(UiText.ChromeTempoTooltip);
     public string ChromeTempoResetTooltip => L.T(UiText.ChromeTempoResetTooltip);
+    public string ChromeTempoSaveTooltip => L.T(UiText.ChromeTempoSaveTooltip);
     public string ChromeFavoriteTip => L.T(UiText.ChromeFavoriteTip);
     public string ChromeOn => L.T(UiText.ChromeOn);
     public string ChromeOff => L.T(UiText.ChromeOff);

@@ -104,10 +104,23 @@ public partial class SongTrashBin : UserControl
             Command.Execute(null);
     }
 
-    private void DropBorder_OnDragEnter(object sender, DragEventArgs e) => UpdateDragEffects(e);
+    private void DropBorder_OnDragEnter(object sender, DragEventArgs e)
+    {
+        if (FileDropHelper.ShouldShowFileDropCursor(e.Data))
+            return;
+
+        UpdateDragEffects(e);
+    }
 
     private void DropBorder_OnDragOver(object sender, DragEventArgs e)
     {
+        if (FileDropHelper.ShouldShowFileDropCursor(e.Data))
+        {
+            e.Effects = DragDropEffects.Copy;
+            SetDragHighlight(false);
+            return;
+        }
+
         UpdateDragEffects(e);
         e.Handled = true;
     }
@@ -116,6 +129,9 @@ public partial class SongTrashBin : UserControl
 
     private void DropBorder_OnDrop(object sender, DragEventArgs e)
     {
+        if (FileDropHelper.ShouldShowFileDropCursor(e.Data))
+            return;
+
         SetDragHighlight(false);
         e.Handled = true;
 
@@ -131,9 +147,6 @@ public partial class SongTrashBin : UserControl
         var song = GetSongFromDrag(e);
         if (song is null || !CanExecuteFor(song))
         {
-            if (e.Data.GetDataPresent(DataFormats.FileDrop))
-                return;
-
             e.Effects = DragDropEffects.None;
             SetDragHighlight(false);
             return;

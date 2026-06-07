@@ -62,6 +62,58 @@ public sealed class LocalizationService
     public string Format(string key, params object[] args) =>
         string.Format(CultureInfo.CurrentCulture, Get(key), args);
 
+    /// <summary>
+    /// True when <paramref name="value"/> is empty or matches a localized string for <paramref name="key"/>
+    /// in any bundled language file (e.g. catalogue "All styles" filter after UI language change).
+    /// </summary>
+    public bool MatchesAnyTranslation(string key, string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return true;
+
+        return GetAllTranslations(key).Contains(value);
+    }
+
+    private IReadOnlySet<string> GetAllTranslations(string key)
+    {
+        if (_allTranslationsCache is not null && _allTranslationsCache.TryGetValue(key, out var cached))
+            return cached;
+
+        _allTranslationsCache ??= new Dictionary<string, IReadOnlySet<string>>(StringComparer.OrdinalIgnoreCase);
+        var labels = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var dir = Path.Combine(AppContext.BaseDirectory, "Assets", "Localization");
+        if (Directory.Exists(dir))
+        {
+            foreach (var file in Directory.EnumerateFiles(dir, "*.json"))
+            {
+                try
+                {
+                    var json = File.ReadAllText(file, Encoding.UTF8);
+                    var dict = JsonSerializer.Deserialize<Dictionary<string, string>>(json);
+                    if (dict is not null
+                        && dict.TryGetValue(key, out var label)
+                        && !string.IsNullOrWhiteSpace(label))
+                    {
+                        labels.Add(label);
+                    }
+                }
+                catch
+                {
+                    // Ignore malformed localization files.
+                }
+            }
+        }
+
+        if (labels.Count == 0 && _current.TryGetValue(key, out var current) && !string.IsNullOrWhiteSpace(current))
+            labels.Add(current);
+
+        cached = labels;
+        _allTranslationsCache[key] = cached;
+        return cached;
+    }
+
+    private Dictionary<string, IReadOnlySet<string>>? _allTranslationsCache;
+
     private static void TryApplyCulture(string code)
     {
         try

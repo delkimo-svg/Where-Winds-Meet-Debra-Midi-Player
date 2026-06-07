@@ -114,6 +114,7 @@ public static class UiText
     public const string ChromeStop = "Chrome_Stop";
     public const string ChromeTempoTooltip = "Chrome_TempoTooltip";
     public const string ChromeTempoResetTooltip = "Chrome_TempoResetTooltip";
+    public const string ChromeTempoSaveTooltip = "Chrome_TempoSaveTooltip";
     public const string ChromeFavoriteTip = "Chrome_FavoriteTip";
     public const string ChromeOn = "Chrome_On";
     public const string ChromeOff = "Chrome_Off";

@@ -11,6 +11,7 @@ public static class AppPaths
     public static string KeyMapsFolder => Path.Combine(AppDataRoot, "keymaps");
     public static string CatalogueCacheFolder => Path.Combine(AppDataRoot, "catalogue-cache");
     public static string CatalogueIndexFile => Path.Combine(AppDataRoot, "catalogue-index.json");
+    public static string SongTempoFile => Path.Combine(AppDataRoot, "song-tempo.json");
     public static string DiscordCredentialsFile => Path.Combine(AppDataRoot, "discord-credentials.dat");
 
     public static void EnsureCreated()

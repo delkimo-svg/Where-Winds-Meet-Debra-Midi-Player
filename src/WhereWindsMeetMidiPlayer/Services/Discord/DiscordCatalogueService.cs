@@ -1,5 +1,6 @@
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Security.Authentication;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -123,22 +124,32 @@ public sealed class DiscordCatalogueService
         for (var i = 1; File.Exists(targetPath); i++)
             targetPath = Path.Combine(styleDir, $"{baseName}_{i}{ext}");
 
-        if (!DiscordUrlValidator.TryValidateDownloadUrl(track.DownloadUrl, out _))
+        var downloadUrl = await ResolveFreshDownloadUrlAsync(track, botToken, cancellationToken).ConfigureAwait(false);
+        if (!DiscordUrlValidator.TryValidateDownloadUrl(downloadUrl, out _))
             throw new InvalidOperationException("Refusing to download: URL is not from an allowed Discord host.");
 
-        using var request = new HttpRequestMessage(HttpMethod.Get, track.DownloadUrl);
-        var token = NormalizeToken(botToken);
-        request.Headers.Authorization = new AuthenticationHeaderValue(
-            "Bot", token.Replace("Bot ", "", StringComparison.OrdinalIgnoreCase).Trim());
+        Exception? lastError = null;
+        for (var attempt = 1; attempt <= 3; attempt++)
+        {
+            try
+            {
+                if (attempt > 1)
+                    downloadUrl = await ResolveFreshDownloadUrlAsync(track, botToken, cancellationToken).ConfigureAwait(false);
 
-        using var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
-            .ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
+                await DownloadMidiFileAsync(downloadUrl, targetPath, botToken, cancellationToken).ConfigureAwait(false);
+                lastError = null;
+                break;
+            }
+            catch (Exception ex) when (IsRetryableDownloadError(ex) && attempt < 3)
+            {
+                lastError = ex;
+            }
+        }
 
-        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-        await using var file = File.Create(targetPath);
-        await stream.CopyToAsync(file, cancellationToken).ConfigureAwait(false);
+        if (lastError is not null)
+            throw lastError;
 
+        track.DownloadUrl = downloadUrl;
         track.CachedFilePath = targetPath;
         var diskTitle = MidiFileNameTitleHelper.FromFilePath(targetPath);
         if (MidiFileNameTitleHelper.IsInformative(diskTitle))
@@ -355,6 +366,166 @@ public sealed class DiscordCatalogueService
             .OrderBy(c => c.Position ?? DiscordCatalogueOrder.GetSortIndex(c.Name))
             .ThenBy(c => DiscordCatalogueOrder.GetSortIndex(c.Name))
             .ToList();
+    }
+
+    private async Task<string> ResolveFreshDownloadUrlAsync(
+        CatalogueTrack track,
+        string botToken,
+        CancellationToken cancellationToken)
+    {
+        if (track.ChannelId == 0 || track.MessageId == 0)
+            return track.DownloadUrl;
+
+        try
+        {
+            var url = $"https://discord.com/api/v10/channels/{track.ChannelId}/messages/{track.MessageId}";
+            var json = await GetStringAsync(url, NormalizeToken(botToken), cancellationToken).ConfigureAwait(false);
+            var message = JsonSerializer.Deserialize<DiscordMessageDto>(json, JsonOptions);
+            if (message is null)
+                return track.DownloadUrl;
+
+            if (!string.IsNullOrWhiteSpace(track.AttachmentId))
+            {
+                var attachment = message.Attachments.FirstOrDefault(a => a.Id == track.AttachmentId);
+                if (attachment is not null && DiscordUrlValidator.TryValidateDownloadUrl(attachment.Url, out _))
+                    return attachment.Url;
+            }
+
+            foreach (var attachment in message.Attachments)
+            {
+                if (!IsMidiFile(attachment.Filename, attachment.ContentType, attachment.Url))
+                    continue;
+
+                if (DiscordUrlValidator.TryValidateDownloadUrl(attachment.Url, out _))
+                    return attachment.Url;
+            }
+
+            if (!string.IsNullOrWhiteSpace(message.Content))
+            {
+                foreach (Match match in MidiUrlRegex.Matches(message.Content))
+                {
+                    if (DiscordUrlValidator.TryValidateDownloadUrl(match.Value, out _))
+                        return match.Value;
+                }
+            }
+
+            foreach (var embed in message.Embeds)
+            {
+                if (!string.IsNullOrWhiteSpace(embed.Url) && IsMidiUrl(embed.Url) &&
+                    DiscordUrlValidator.TryValidateDownloadUrl(embed.Url, out _))
+                    return embed.Url;
+            }
+        }
+        catch
+        {
+            // Fall back to the cached URL from the catalogue index.
+        }
+
+        return track.DownloadUrl;
+    }
+
+    private async Task DownloadMidiFileAsync(
+        string downloadUrl,
+        string targetPath,
+        string botToken,
+        CancellationToken cancellationToken)
+    {
+        var tempPath = targetPath + ".part";
+        Exception? lastError = null;
+        var url = downloadUrl;
+
+        for (var attempt = 1; attempt <= 4; attempt++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (attempt > 1)
+                await Task.Delay(TimeSpan.FromMilliseconds(400 * attempt), cancellationToken).ConfigureAwait(false);
+
+            DeleteIfExists(tempPath);
+
+            foreach (var useFallbackClient in new[] { false, true })
+            {
+                foreach (var useBotAuth in new[] { false, true })
+                {
+                    try
+                    {
+                        using var client = useFallbackClient
+                            ? DiscordApiHttp.CreateFallback()
+                            : DiscordApiHttp.Create();
+
+                        await DownloadMidiFileAttemptAsync(
+                                client, url, tempPath, botToken, useBotAuth, cancellationToken)
+                            .ConfigureAwait(false);
+
+                        if (File.Exists(targetPath))
+                            File.Delete(targetPath);
+                        File.Move(tempPath, targetPath);
+                        return;
+                    }
+                    catch (Exception ex) when (IsRetryableDownloadError(ex))
+                    {
+                        lastError = ex;
+                        DeleteIfExists(tempPath);
+                    }
+                }
+            }
+        }
+
+        DeleteIfExists(tempPath);
+        throw new HttpRequestException(
+            "Could not download the track from Discord. Check your connection, then press Refresh in the Catalogue section and try again.",
+            lastError);
+    }
+
+    private static bool IsRetryableDownloadError(Exception ex)
+    {
+        if (ex is HttpRequestException or IOException or AuthenticationException)
+            return true;
+
+        var root = ex.GetBaseException();
+        return root is AuthenticationException
+               || root.Message.Contains("SSL", StringComparison.OrdinalIgnoreCase)
+               || root.Message.Contains("TLS", StringComparison.OrdinalIgnoreCase)
+               || root.Message.Contains("certificate", StringComparison.OrdinalIgnoreCase)
+               || root.Message.Contains("connection", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void DeleteIfExists(string path)
+    {
+        try
+        {
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+        catch
+        {
+            // ignored
+        }
+    }
+
+    private static async Task DownloadMidiFileAttemptAsync(
+        HttpClient http,
+        string downloadUrl,
+        string targetPath,
+        string botToken,
+        bool useBotAuth,
+        CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, downloadUrl);
+        if (useBotAuth)
+        {
+            var token = NormalizeToken(botToken);
+            request.Headers.Authorization = new AuthenticationHeaderValue(
+                "Bot", token.Replace("Bot ", "", StringComparison.OrdinalIgnoreCase).Trim());
+        }
+
+        using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+            .ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+        await using var file = File.Create(targetPath);
+        await stream.CopyToAsync(file, cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<string> GetStringAsync(string url, string token, CancellationToken ct)

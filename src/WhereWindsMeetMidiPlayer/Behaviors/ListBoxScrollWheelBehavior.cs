@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using WhereWindsMeetMidiPlayer.Helpers;
 
 namespace WhereWindsMeetMidiPlayer.Behaviors;
 
@@ -243,7 +244,7 @@ public static class ListBoxScrollWheelBehavior
 
     private static bool IsInsidePopup(DependencyObject element)
     {
-        for (var node = element; node is not null; node = VisualTreeHelper.GetParent(node))
+        for (var node = element; node is not null; node = DependencyTreeHelper.GetParent(node))
         {
             if (node is Popup)
                 return true;
@@ -252,18 +253,8 @@ public static class ListBoxScrollWheelBehavior
         return false;
     }
 
-    private static T? FindAncestor<T>(DependencyObject? child) where T : DependencyObject
-    {
-        while (child is not null)
-        {
-            if (child is T match)
-                return match;
-
-            child = VisualTreeHelper.GetParent(child);
-        }
-
-        return null;
-    }
+    private static T? FindAncestor<T>(DependencyObject? child) where T : DependencyObject =>
+        DependencyTreeHelper.FindAncestor<T>(child);
 
     /// <summary>Scrolls the selected row into view without ListBox.ScrollIntoView (virtualization-safe).</summary>
     public static void ScrollSelectedItemIntoView(ListBox listBox)

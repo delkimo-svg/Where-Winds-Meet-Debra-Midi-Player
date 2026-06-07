@@ -43,6 +43,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private readonly GlobalPlaybackHotkeyService _globalHotkey;
     private ReleaseManifest? _pendingUpdateManifest;
     private readonly SystemVolumeService _systemVolume = new();
+    private readonly SongTempoStore _songTempo = new();
 
     private bool _suppressVolumeSync;
     private bool _suppressCatalogueStats;
@@ -170,6 +171,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private bool _suppressExclusiveSelection;
     private bool _suppressSortChange;
     private bool _suppressTempoChange;
+    private int _sessionTempoPercent = 100;
 
     public bool IsPlaylistManualSort => SelectedPlaylistSortOption?.Mode == SongListSortMode.Manual;
 
@@ -237,6 +239,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public bool IsTempoSliderEnabled => _nowPlaying is not null;
 
     public bool CanResetPlaybackTempo => IsTempoSliderEnabled && PlaybackTempoPercent != 100;
+
+    public bool CanSaveSongTempo =>
+        _nowPlaying is not null && PlaybackTempoPercent != _sessionTempoPercent;
 
     public string PlaybackTempoDisplay =>
         _nowPlaying is null ? "—" : $"{EffectiveTempoBpm}";
@@ -375,6 +380,15 @@ public partial class MainViewModel : ObservableObject, IDisposable
         catch (Exception ex)
         {
             AppPaths.WriteDiagnosticLog("history-load", ex);
+        }
+
+        try
+        {
+            _songTempo.Load();
+        }
+        catch (Exception ex)
+        {
+            AppPaths.WriteDiagnosticLog("song-tempo-load", ex);
         }
 
         SmartTranspose = _settings.Settings.SmartTranspose;
@@ -908,12 +922,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         UpdateCatalogueStatsText(count);
     }
 
-    private static bool IsAllStylesFilter(string? value, string allStylesLabel) =>
-        string.IsNullOrWhiteSpace(value)
-        || value.Equals("All styles", StringComparison.OrdinalIgnoreCase)
-        || value.Equals(allStylesLabel, StringComparison.OrdinalIgnoreCase);
-
-    private bool IsAllStylesFilter(string? value) => IsAllStylesFilter(value, AllStylesLabel);
+    private static bool IsAllStylesFilter(string? value) =>
+        LocalizationService.Instance.MatchesAnyTranslation(UiText.AllStyles, value);
 
     private void RebuildCatalogueStyles() =>
         ApplyCatalogueStyleNames(CatalogueIndexBuilder.BuildStyleNames(CatalogueTracks));
@@ -1159,7 +1169,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            DebraDialogs.Error("Catalogue play", ex.Message);
+            AppPaths.WriteDiagnosticLog("catalogue-play", ex);
+            DebraDialogs.Error("Catalogue play", ExceptionMessageHelper.FormatUserMessage(ex));
             CatalogueStatusText = "Could not open track.";
         }
     }
@@ -1184,7 +1195,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            DebraDialogs.Error("Catalogue", ex.Message);
+            AppPaths.WriteDiagnosticLog("catalogue-favorite", ex);
+            DebraDialogs.Error("Catalogue", ExceptionMessageHelper.FormatUserMessage(ex));
             CatalogueStatusText = "Download failed.";
         }
     }
@@ -1221,7 +1233,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            DebraDialogs.Error("Catalogue", ex.Message);
+            AppPaths.WriteDiagnosticLog("catalogue-playlist", ex);
+            DebraDialogs.Error("Catalogue", ExceptionMessageHelper.FormatUserMessage(ex));
             CatalogueStatusText = "Download failed.";
         }
     }
@@ -1273,42 +1286,10 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
         foreach (var path in paths)
         {
-            if (string.IsNullOrWhiteSpace(path))
-                continue;
-
-            try
+            foreach (var song in EnumerateSongsFromDropPath(path))
             {
-                if (File.Exists(path))
-                {
-                    if (!IsMidiFile(path))
-                        continue;
-
-                    var before = LibrarySongs.Count;
-                    AddSongToLibrary(path);
-                    if (LibrarySongs.Count > before)
-                    {
-                        added++;
-                        lastAdded = SelectedLibrarySong;
-                    }
-                }
-                else if (Directory.Exists(path))
-                {
-                    _settings.Settings.LastImportFolder = path;
-                    var imported = _library.ImportFolder(path, SmartTranspose, StrictNoteRange);
-                    foreach (var song in imported)
-                    {
-                        if (!LibrarySongs.Any(s => s.FilePath.Equals(song.FilePath, StringComparison.OrdinalIgnoreCase)))
-                        {
-                            LibrarySongs.Add(song);
-                            added++;
-                            lastAdded = song;
-                        }
-                    }
-                }
-            }
-            catch
-            {
-                // Skip unreadable paths.
+                added++;
+                lastAdded = song;
             }
         }
 
@@ -1321,6 +1302,87 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
 
         return added;
+    }
+
+    /// <summary>Import MIDI paths into the library and append/insert into the active playlist.</summary>
+    public int ImportDroppedPathsToPlaylist(IEnumerable<string> paths, int? insertIndex = null)
+    {
+        var added = 0;
+        var index = insertIndex;
+
+        foreach (var path in paths)
+        {
+            foreach (var song in EnumerateSongsFromDropPath(path))
+            {
+                AddToPlaylistAt(song, index);
+                added++;
+                if (index is int i)
+                    index = i + 1;
+            }
+        }
+
+        if (added > 0)
+        {
+            _settings.Save();
+            RefreshLibraryStats();
+            RefreshPlaylistStats();
+            ScheduleAutoSave();
+        }
+
+        return added;
+    }
+
+    private IEnumerable<Song> EnumerateSongsFromDropPath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return [];
+
+        try
+        {
+            if (File.Exists(path))
+            {
+                if (!IsMidiFile(path))
+                    return [];
+
+                return [EnsureSongInLibrary(path)];
+            }
+
+            if (Directory.Exists(path))
+            {
+                _settings.Settings.LastImportFolder = path;
+                var imported = _library.ImportFolder(path, SmartTranspose, StrictNoteRange);
+                var songs = new List<Song>(imported.Count);
+                foreach (var song in imported)
+                {
+                    if (!LibrarySongs.Any(s => s.FilePath.Equals(song.FilePath, StringComparison.OrdinalIgnoreCase)))
+                        LibrarySongs.Add(song);
+
+                    songs.Add(song);
+                }
+
+                return songs;
+            }
+        }
+        catch
+        {
+            // Skip unreadable paths.
+        }
+
+        return [];
+    }
+
+    private Song EnsureSongInLibrary(string path)
+    {
+        var existing = LibrarySongs.FirstOrDefault(s =>
+            s.FilePath.Equals(path, StringComparison.OrdinalIgnoreCase));
+        if (existing is not null)
+            return existing;
+
+        AddSongToLibrary(path);
+        return LibrarySongs.FirstOrDefault(s =>
+                   s.FilePath.Equals(path, StringComparison.OrdinalIgnoreCase))
+               ?? SelectedLibrarySong
+               ?? throw new InvalidOperationException("Failed to import song.");
     }
 
     private static bool IsMidiFile(string path) =>
@@ -2412,6 +2474,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                     song.OutOfRangeNoteCount = ranged.OutOfRangeNoteCount;
 
                     ResetPlaybackTempoForSong(parsed.BeatsPerMinute);
+                    ApplySongTempoOnLoad(song.FilePath);
                     _playback.LoadSchedule(schedule, parsed.DurationMs);
                     TotalTimeText = TimeFormat.FromMilliseconds(parsed.DurationMs);
                     _input.ResetDiagnostics();
@@ -3596,12 +3659,19 @@ public partial class MainViewModel : ObservableObject, IDisposable
         if (CatalogueStyles.Count == 0)
         {
             CatalogueStyles.Add(AllStylesLabel);
+            CatalogueStyleFilter = AllStylesLabel;
             return;
         }
 
         var wasAll = IsAllStylesFilter(CatalogueStyleFilter);
+        var previous = CatalogueStyleFilter;
         CatalogueStyles[0] = AllStylesLabel;
+
         if (wasAll)
+            CatalogueStyleFilter = AllStylesLabel;
+        else if (!string.IsNullOrWhiteSpace(previous) && CatalogueStyles.Contains(previous))
+            CatalogueStyleFilter = previous;
+        else
             CatalogueStyleFilter = AllStylesLabel;
     }
 
@@ -3693,6 +3763,19 @@ public partial class MainViewModel : ObservableObject, IDisposable
         PlaybackTempoPercent = 100;
         _suppressTempoChange = false;
         _playback.SetTempoMultiplier(1.0);
+    }
+
+    private void ApplySongTempoOnLoad(string filePath)
+    {
+        var percent = 100;
+        if (_songTempo.TryGetPercent(filePath, out var saved))
+            percent = saved;
+
+        _suppressTempoChange = true;
+        PlaybackTempoPercent = percent;
+        _suppressTempoChange = false;
+        _playback.SetTempoMultiplier(percent / 100.0);
+        _sessionTempoPercent = percent;
         NotifyPlaybackTempoUi();
     }
 
@@ -3702,6 +3785,30 @@ public partial class MainViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(PlaybackTempoDisplay));
         OnPropertyChanged(nameof(IsTempoSliderEnabled));
         OnPropertyChanged(nameof(CanResetPlaybackTempo));
+        OnPropertyChanged(nameof(CanSaveSongTempo));
+        SaveSongTempoCommand.NotifyCanExecuteChanged();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanSaveSongTempo))]
+    private void SaveSongTempo()
+    {
+        if (_nowPlaying is null)
+            return;
+
+        _songTempo.SetPercent(_nowPlaying.FilePath, PlaybackTempoPercent);
+        try
+        {
+            _songTempo.Save();
+        }
+        catch (Exception ex)
+        {
+            AppPaths.WriteDiagnosticLog("song-tempo-save", ex);
+            DebraDialogs.Error("Tempo", "Could not save tempo for this song.");
+            return;
+        }
+
+        _sessionTempoPercent = PlaybackTempoPercent;
+        NotifyPlaybackTempoUi();
     }
 
     [RelayCommand]
@@ -3800,6 +3907,15 @@ public partial class MainViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(ShowCataloguePanel));
         OnPropertyChanged(nameof(ShowFavoritesPanel));
         OnPropertyChanged(nameof(ShowPlaylistPanel));
+    }
+
+    public double GetMainPanelLeftRatio() =>
+        Math.Clamp(_settings.Settings.MainPanelLeftRatio, 0.06, 0.94);
+
+    public void SaveMainPanelLeftRatio(double ratio)
+    {
+        _settings.Settings.MainPanelLeftRatio = Math.Clamp(ratio, 0.06, 0.94);
+        ScheduleSettingsSave();
     }
 
     public void SaveWindowState(Window window)

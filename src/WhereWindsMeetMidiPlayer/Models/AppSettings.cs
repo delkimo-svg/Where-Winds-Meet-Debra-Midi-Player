@@ -29,6 +29,9 @@ public sealed class AppSettings
     public double WindowWidth { get; set; } = 1280;
     public double WindowHeight { get; set; } = 720;
 
+    /// <summary>Library/catalogue share of the left+playlist pair (0.06–0.94). Playlist gets the remainder.</summary>
+    public double MainPanelLeftRatio { get; set; } = 0.5;
+
     /// <summary>Game process for attachment (e.g. wwm.exe) — direct keyboard injection target.</summary>
     public string TargetProcessName { get; set; } = "wwm.exe";
 

@@ -12,7 +12,7 @@ public sealed class SharedCatalogueService
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 
-    private readonly HttpClient _http = new();
+    private readonly HttpClient _http = DiscordApiHttp.Create();
 
     public static string SharedManifestFileName => "shared-catalogue.json";
     public static string CataloguePackFolderName => "catalogue-pack";

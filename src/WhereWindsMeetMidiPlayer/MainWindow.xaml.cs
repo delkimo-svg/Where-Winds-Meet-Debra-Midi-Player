@@ -34,6 +34,7 @@ public partial class MainWindow : Window
         try
         {
             InitializeComponent();
+            RegisterGlobalFileDropHandlers();
             ApplyWindowIcon();
         }
         catch (Exception ex)
@@ -134,9 +135,11 @@ public partial class MainWindow : Window
             ApplyThemeVisuals();
             _viewModel.TourRequested += StartTour;
             _viewModel.ApplyWindowState(this);
+            ApplyMainPanelColumnRatio();
             _viewModel.StartGlobalHotkey();
             _ = _viewModel.LoadCatalogueOnStartupAsync();
             _ = _viewModel.CheckForUpdatesOnStartupAsync();
+
         }
         catch (Exception ex)
         {
@@ -201,8 +204,41 @@ public partial class MainWindow : Window
         if (_viewModel is null)
             return;
 
+        CaptureMainPanelColumnRatio();
         _viewModel.SaveWindowState(this);
         _viewModel.Dispose();
+    }
+
+    private void ApplyMainPanelColumnRatio()
+    {
+        if (_viewModel is null)
+            return;
+
+        // Left + playlist share 2★ total; now playing keeps 1★ (~⅓ width). Default 1★:1★:1★ like the original layout.
+        const double pairStarTotal = 2.0;
+        var leftShare = _viewModel.GetMainPanelLeftRatio();
+        MainLeftColumn.Width = new GridLength(leftShare * pairStarTotal, GridUnitType.Star);
+        MainPlaylistColumn.Width = new GridLength((1.0 - leftShare) * pairStarTotal, GridUnitType.Star);
+        MainNowPlayingColumn.Width = new GridLength(1, GridUnitType.Star);
+    }
+
+    private void CaptureMainPanelColumnRatio()
+    {
+        if (_viewModel is null || MainPanelsGrid.ActualWidth <= 0)
+            return;
+
+        var leftWidth = MainLeftColumn.ActualWidth;
+        var playlistWidth = MainPlaylistColumn.ActualWidth;
+        var pairTotal = leftWidth + playlistWidth;
+        if (pairTotal < 80)
+            return;
+
+        _viewModel.SaveMainPanelLeftRatio(leftWidth / pairTotal);
+    }
+
+    private void MainColumnSplitter_OnDragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
+    {
+        CaptureMainPanelColumnRatio();
     }
 
     private void Window_OnPreviewKeyDown(object sender, KeyEventArgs e)
@@ -240,7 +276,7 @@ public partial class MainWindow : Window
         if (ShouldIgnoreListDragSource(source))
             return false;
 
-        if (FindAncestor<ListBoxItem>(source) is null)
+        if (DependencyTreeHelper.FindAncestor<ListBoxItem>(source) is null)
             return false;
 
         start = e.GetPosition(null);
@@ -249,24 +285,13 @@ public partial class MainWindow : Window
 
     private static bool ShouldIgnoreListDragSource(DependencyObject source)
     {
-        for (var node = source; node is not null; node = VisualTreeHelper.GetParent(node))
+        for (var node = source; node is not null; node = DependencyTreeHelper.GetParent(node))
         {
             if (node is ScrollBar or RepeatButton or Thumb or Button)
                 return true;
         }
 
         return false;
-    }
-
-    private static T? FindAncestor<T>(DependencyObject child) where T : DependencyObject
-    {
-        for (var parent = VisualTreeHelper.GetParent(child); parent is not null; parent = VisualTreeHelper.GetParent(parent))
-        {
-            if (parent is T match)
-                return match;
-        }
-
-        return null;
     }
 
     private void SongRowPlay_OnClick(object sender, RoutedEventArgs e)
@@ -319,76 +344,122 @@ public partial class MainWindow : Window
                 }
             }
 
-            element = VisualTreeHelper.GetParent(element);
+            element = DependencyTreeHelper.GetParent(element);
         }
 
         return false;
     }
 
-    private void Window_PreviewDragOver(object sender, DragEventArgs e)
+    private static readonly DragEventHandler GlobalPreviewDragOverHandler = OnGlobalFilePreviewDragOver;
+    private static readonly DragEventHandler GlobalDragOverHandler = OnGlobalFileDragOver;
+
+    private void RegisterGlobalFileDropHandlers()
     {
-        if (_viewModel is null)
-            return;
-
-        if (IsInternalAppDrag(e.Data))
-            return;
-
-        if (!IsExternalFileDrag(e.Data))
-        {
-            e.Effects = DragDropEffects.None;
-            return;
-        }
-
-        if (IsOverTitleBar(e))
-        {
-            e.Effects = DragDropEffects.None;
-            return;
-        }
-
-        e.Effects = DragDropEffects.Copy;
-        e.Handled = true;
-
-        var overLibrary = IsPointerOverLibrary(e);
-        if (overLibrary && !_libraryDropHighlight)
-            SetLibraryDropHighlight(true);
-        else if (!overLibrary && _libraryDropHighlight)
-            SetLibraryDropHighlight(false);
+        // handledEventsToo: list rows may set Handled with Effects=None — window restores Copy cursor.
+        AddHandler(UIElement.PreviewDragOverEvent, GlobalPreviewDragOverHandler, handledEventsToo: true);
+        AddHandler(Control.DragOverEvent, GlobalDragOverHandler, handledEventsToo: true);
     }
 
-    private void Window_DragOver(object sender, DragEventArgs e)
+    private static void OnGlobalFilePreviewDragOver(object sender, DragEventArgs e)
     {
-        if (_viewModel is null || IsInternalAppDrag(e.Data) || !IsExternalFileDrag(e.Data))
+        if (sender is not MainWindow window)
             return;
+
+        if (!window.TryAcceptExternalFileDragOver(e))
+            return;
+
+        window.UpdateExternalFileDropHighlights(e);
+    }
+
+    private static void OnGlobalFileDragOver(object sender, DragEventArgs e)
+    {
+        if (sender is not MainWindow window)
+            return;
+
+        if (!window.TryAcceptExternalFileDragOver(e))
+            return;
+
+        if (!window.IsOverTitleBar(e))
+            e.Effects = DragDropEffects.Copy;
+    }
+
+    private void Window_PreviewDragOver(object sender, DragEventArgs e) => OnGlobalFilePreviewDragOver(sender, e);
+
+    private void Window_DragOver(object sender, DragEventArgs e) => OnGlobalFileDragOver(sender, e);
+
+    private void ExternalFile_PreviewDragOver(object sender, DragEventArgs e)
+    {
+        if (!TryAcceptExternalFileDragOver(e))
+            return;
+
+        if (ReferenceEquals(sender, TourTarget_Playlist) || ReferenceEquals(sender, PlaylistList)
+            || sender is DependencyObject playlistSource && IsUnderPlaylist(playlistSource))
+        {
+            SetPlaylistDropHighlight(true);
+            SetLibraryDropHighlight(false);
+            return;
+        }
+
+        if (ReferenceEquals(sender, LibraryDropTarget) || ReferenceEquals(sender, LibraryList)
+            || sender is DependencyObject librarySource && IsUnderLibrary(librarySource))
+        {
+            SetLibraryDropHighlight(true);
+            SetPlaylistDropHighlight(false);
+            return;
+        }
+
+        UpdateExternalFileDropHighlights(e);
+    }
+
+    private void ExternalFile_DragOver(object sender, DragEventArgs e)
+    {
+        if (!TryAcceptExternalFileDragOver(e))
+            return;
+
+        e.Handled = true;
+    }
+
+    /// <summary>
+    /// Sets Copy on shell file drags. Handled is set on leaf drop targets so inner ListBox rows
+    /// do not leave Effects=None (blocked cursor). Window-level handlers must not set Handled.
+    /// </summary>
+    private bool TryAcceptExternalFileDragOver(DragEventArgs e)
+    {
+        if (_viewModel is null || IsInternalAppDrag(e.Data))
+            return false;
+
+        if (!FileDropHelper.ShouldShowFileDropCursor(e.Data))
+            return false;
 
         if (IsOverTitleBar(e))
         {
             e.Effects = DragDropEffects.None;
-            return;
+            return true;
         }
 
         e.Effects = DragDropEffects.Copy;
+        return true;
     }
 
     private void Window_PreviewDragLeave(object sender, DragEventArgs e)
     {
-        if (_libraryDropHighlight)
-            SetLibraryDropHighlight(false);
+        ClearExternalFileDropHighlights();
     }
 
     private void Window_PreviewDrop(object sender, DragEventArgs e)
     {
-        if (_viewModel is null)
+        if (_viewModel is null || IsInternalAppDrag(e.Data))
             return;
 
-        if (IsInternalAppDrag(e.Data))
+        if (!FileDropHelper.ShouldShowFileDropCursor(e.Data))
             return;
 
-        SetLibraryDropHighlight(false);
+        ClearExternalFileDropHighlights();
 
         if (IsOverTitleBar(e))
             return;
 
-        if (!TryImportExternalFileDrop(e))
+        if (!HandleExternalFileDrop(e))
             return;
 
         e.Handled = true;
@@ -396,12 +467,12 @@ public partial class MainWindow : Window
 
     private void LibraryDropTarget_OnDragOver(object sender, DragEventArgs e)
     {
-        if (_viewModel is null || !IsExternalFileDrag(e.Data))
+        if (!TryAcceptExternalFileDragOver(e))
             return;
 
-        e.Effects = DragDropEffects.Copy;
         e.Handled = true;
         SetLibraryDropHighlight(true);
+        SetPlaylistDropHighlight(false);
     }
 
     private void LibraryDropTarget_OnDragLeave(object sender, DragEventArgs e)
@@ -410,32 +481,128 @@ public partial class MainWindow : Window
             SetLibraryDropHighlight(false);
     }
 
-    private bool TryImportExternalFileDrop(DragEventArgs e)
+    private void LibraryDropTarget_OnDrop(object sender, DragEventArgs e)
     {
-        if (_viewModel is null || !TryExtractFileDropPaths(e.Data, out var paths))
+        if (HandleExternalFileDrop(e, ExternalFileDropTarget.Library))
+            e.Handled = true;
+    }
+
+    private void PlaylistPanel_OnDragOver(object sender, DragEventArgs e)
+    {
+        if (!TryAcceptExternalFileDragOver(e))
+            return;
+
+        e.Handled = true;
+        SetPlaylistDropHighlight(true);
+        SetLibraryDropHighlight(false);
+    }
+
+    private void PlaylistPanel_OnDragLeave(object sender, DragEventArgs e)
+    {
+        if (_playlistDropHighlight)
+            SetPlaylistDropHighlight(false);
+    }
+
+    private void PlaylistPanel_OnDrop(object sender, DragEventArgs e)
+    {
+        if (HandleExternalFileDrop(e, ExternalFileDropTarget.Playlist))
+            e.Handled = true;
+    }
+
+    private enum ExternalFileDropTarget
+    {
+        Auto,
+        Library,
+        Playlist
+    }
+
+    private bool HandleExternalFileDrop(DragEventArgs e, ExternalFileDropTarget target = ExternalFileDropTarget.Auto)
+    {
+        if (_viewModel is null)
             return false;
 
-        var added = _viewModel.ImportDroppedPaths(paths);
+        if (!FileDropHelper.TryExtractPaths(e.Data, out var paths) || paths.Length == 0)
+        {
+            AppPaths.WriteDiagnosticLog(
+                "file-drop",
+                new InvalidOperationException(
+                    $"Could not read dropped paths. Formats: {string.Join(", ", e.Data.GetFormats())}"));
+            return false;
+        }
 
-        if (added > 0)
+        if (target == ExternalFileDropTarget.Auto)
+        {
+            if (IsPointerOverPlaylist(e))
+                target = ExternalFileDropTarget.Playlist;
+            else if (IsPointerOverLibrary(e))
+                target = ExternalFileDropTarget.Library;
+            else
+                target = ExternalFileDropTarget.Library;
+        }
+
+        if (target == ExternalFileDropTarget.Playlist)
+        {
+            var insertIndex = TryGetPlaylistInsertIndex(e);
+            _viewModel.ImportDroppedPathsToPlaylist(paths, insertIndex);
+            return true;
+        }
+
+        var libraryAdded = _viewModel.ImportDroppedPaths(paths);
+        if (libraryAdded > 0)
         {
             _viewModel.ShowLibrarySection();
-            SetLibraryDropMessage($"{added} morceau(x) importé(s)");
+            SetLibraryDropMessage($"{libraryAdded} track(s) imported to library");
         }
         else
         {
-            SetLibraryDropMessage("Aucun fichier .mid / .midi — glissez des MIDI ici");
+            SetLibraryDropMessage("No .mid / .midi files — drop MIDI files or folders here");
         }
 
         return true;
     }
 
+    private void UpdateExternalFileDropHighlights(DragEventArgs e)
+    {
+        var overLibrary = IsPointerOverLibrary(e);
+        var overPlaylist = IsPointerOverPlaylist(e);
+
+        if (overLibrary && !_libraryDropHighlight)
+            SetLibraryDropHighlight(true);
+        else if (!overLibrary && _libraryDropHighlight)
+            SetLibraryDropHighlight(false);
+
+        if (overPlaylist && !_playlistDropHighlight)
+            SetPlaylistDropHighlight(true);
+        else if (!overPlaylist && _playlistDropHighlight)
+            SetPlaylistDropHighlight(false);
+    }
+
+    private void ClearExternalFileDropHighlights()
+    {
+        if (_libraryDropHighlight)
+            SetLibraryDropHighlight(false);
+        if (_playlistDropHighlight)
+            SetPlaylistDropHighlight(false);
+    }
+
+    private int? TryGetPlaylistInsertIndex(DragEventArgs e)
+    {
+        var hit = GetHitElement(e);
+        if (hit is null || (!IsAncestorOf(PlaylistList, hit) && !ReferenceEquals(hit, PlaylistList)))
+            return null;
+
+        return GetPlaylistInsertIndex(PlaylistList, e);
+    }
+
+    private DependencyObject? GetHitElement(DragEventArgs e)
+    {
+        var position = e.GetPosition(this);
+        return VisualTreeHelper.HitTest(this, position)?.VisualHit;
+    }
+
     private static bool IsInternalAppDrag(IDataObject data) =>
         data.GetDataPresent(DebraDialogs.SongDragFormat)
         || data.GetDataPresent(DebraDialogs.CatalogueTrackDragFormat);
-
-    private static bool IsExternalFileDrag(IDataObject data) =>
-        data.GetDataPresent(DataFormats.FileDrop);
 
     private UIElement? GetLayoutRoot()
     {
@@ -453,29 +620,53 @@ public partial class MainWindow : Window
         return e.GetPosition(root).Y < 48;
     }
 
-    private bool IsPointerOverLibrary(DragEventArgs e)
+    private bool IsPointerOverLibrary(DragEventArgs e) =>
+        IsPointerOverNamedTarget(e, LibraryDropTarget, LibraryList, LibraryDropHint);
+
+    private bool IsPointerOverPlaylist(DragEventArgs e) =>
+        _viewModel?.ShowPlaylistPanel == true
+        && IsPointerOverNamedTarget(e, TourTarget_Playlist, PlaylistList);
+
+    private static bool IsUnderLibrary(DependencyObject source) =>
+        IsUnderNamedTarget(source, "LibraryDropTarget", "LibraryList", "LibraryDropHint");
+
+    private static bool IsUnderPlaylist(DependencyObject source) =>
+        IsUnderNamedTarget(source, "TourTarget_Playlist", "PlaylistList");
+
+    private static bool IsUnderNamedTarget(DependencyObject source, params string[] names)
     {
-        if (_viewModel?.ShowLibraryPanel != true)
-            return false;
+        while (source is not null)
+        {
+            if (source is FrameworkElement fe && names.Contains(fe.Name, StringComparer.Ordinal))
+                return true;
 
-        var root = GetLayoutRoot();
-        if (root is null)
-            return false;
+            source = VisualTreeHelper.GetParent(source);
+        }
 
-        var pos = e.GetPosition(root);
-        var hit = VisualTreeHelper.HitTest(root, pos)?.VisualHit;
+        return false;
+    }
+
+    private bool IsPointerOverNamedTarget(DragEventArgs e, params DependencyObject[] targets)
+    {
+        var hit = GetHitElement(e);
         while (hit is not null)
         {
-            if (ReferenceEquals(hit, LibraryDropTarget) || ReferenceEquals(hit, LibraryList) || ReferenceEquals(hit, LibraryDropHint))
-                return true;
+            foreach (var target in targets)
+            {
+                if (ReferenceEquals(hit, target) || IsAncestorOf(target, hit))
+                    return true;
+            }
 
-            if (hit is FrameworkElement fe && fe.Name is "LibraryDropTarget" or "LibraryList" or "LibraryDropHint")
-                return true;
+            if (hit is FrameworkElement fe)
+            {
+                foreach (var target in targets)
+                {
+                    if (target is FrameworkElement named && fe.Name == named.Name && !string.IsNullOrEmpty(fe.Name))
+                        return true;
+                }
+            }
 
-            if (IsAncestorOf(LibraryDropTarget, hit) || IsAncestorOf(LibraryList, hit))
-                return true;
-
-            hit = VisualTreeHelper.GetParent(hit);
+            hit = DependencyTreeHelper.GetParent(hit);
         }
 
         return false;
@@ -487,7 +678,7 @@ public partial class MainWindow : Window
         {
             if (ReferenceEquals(node, ancestor))
                 return true;
-            node = VisualTreeHelper.GetParent(node);
+            node = DependencyTreeHelper.GetParent(node);
         }
 
         return false;
@@ -515,39 +706,6 @@ public partial class MainWindow : Window
             DropTargetHighlight.Apply(LibraryDropTarget, false);
             if (LibraryDropHint.Text.StartsWith("Relâchez", StringComparison.Ordinal))
                 LibraryDropHint.Text = "Glissez des fichiers .mid ou .midi ici";
-        }
-    }
-
-    private static bool TryExtractFileDropPaths(IDataObject data, out string[] paths)
-    {
-        paths = [];
-        if (!data.GetDataPresent(DataFormats.FileDrop))
-            return false;
-
-        try
-        {
-            if (data.GetData(DataFormats.FileDrop, autoConvert: false) is string[] direct && direct.Length > 0)
-            {
-                paths = direct;
-                return true;
-            }
-        }
-        catch
-        {
-            // fall through
-        }
-
-        var raw = data.GetData(DataFormats.FileDrop, autoConvert: true);
-        switch (raw)
-        {
-            case string[] array when array.Length > 0:
-                paths = array;
-                return true;
-            case string single when !string.IsNullOrWhiteSpace(single):
-                paths = single.Split(['\0', '\n', '\r'], StringSplitOptions.RemoveEmptyEntries);
-                return paths.Length > 0;
-            default:
-                return false;
         }
     }
 
@@ -637,12 +795,11 @@ public partial class MainWindow : Window
 
     private void FavoritesList_OnDragOver(object sender, DragEventArgs e)
     {
-        if (!e.Data.GetDataPresent(DebraDialogs.SongDragFormat)
-            && !e.Data.GetDataPresent(DebraDialogs.CatalogueTrackDragFormat))
-        {
-            e.Effects = DragDropEffects.None;
+        if (TryAcceptExternalFileDragOver(e))
             return;
-        }
+
+        if (!IsInternalAppDrag(e.Data))
+            return;
 
         e.Effects = DragDropEffects.Copy;
         e.Handled = true;
@@ -699,14 +856,16 @@ public partial class MainWindow : Window
 
     private void PlaylistList_OnDragOver(object sender, DragEventArgs e)
     {
-        if (IsExternalFileDrag(e.Data))
-            return;
-
-        if (!IsInternalAppDrag(e.Data))
+        if (TryAcceptExternalFileDragOver(e))
         {
-            e.Effects = DragDropEffects.None;
+            e.Handled = true;
+            SetPlaylistDropHighlight(true);
+            SetLibraryDropHighlight(false);
             return;
         }
+
+        if (!IsInternalAppDrag(e.Data))
+            return;
 
         e.Effects = DragDropEffects.Copy;
         e.Handled = true;
@@ -718,6 +877,14 @@ public partial class MainWindow : Window
     private async void PlaylistList_OnDrop(object sender, DragEventArgs e)
     {
         SetPlaylistDropHighlight(false);
+
+        if (FileDropHelper.ShouldShowFileDropCursor(e.Data))
+        {
+            if (HandleExternalFileDrop(e, ExternalFileDropTarget.Playlist))
+                e.Handled = true;
+            return;
+        }
+
         e.Handled = true;
 
         if (sender is not ListBox listBox)
