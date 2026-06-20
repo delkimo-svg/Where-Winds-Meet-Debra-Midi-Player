@@ -9,6 +9,7 @@
                 <ResourceDictionary Source="/Themes/DebraTheme.xaml"/>
                 <ResourceDictionary Source="/Themes/KeybindEditorStyles.xaml"/>
                 <ResourceDictionary Source="/Themes/DebraIcons.xaml"/>
+                <ResourceDictionary Source="/Controls/ChromeFadeCard.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>

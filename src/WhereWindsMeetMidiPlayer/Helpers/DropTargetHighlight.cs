@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using WhereWindsMeetMidiPlayer.Controls;
 
 namespace WhereWindsMeetMidiPlayer.Helpers;
 
@@ -19,6 +20,21 @@ public static class DropTargetHighlight
         border.SetResourceReference(Border.BorderBrushProperty, "Brush.Border");
         border.SetResourceReference(Border.BackgroundProperty, "Brush.CardBackground");
         border.BorderThickness = new Thickness(1);
+    }
+
+    public static void Apply(ChromeFadeCard card, bool active)
+    {
+        if (active)
+        {
+            card.SetResourceReference(ChromeFadeCard.SurfaceBackgroundProperty, "Brush.DropTargetActiveBackground");
+            card.SetResourceReference(Border.BorderBrushProperty, "Brush.DropTargetActiveBorder");
+            card.BorderThickness = new Thickness(2);
+            return;
+        }
+
+        card.SetResourceReference(ChromeFadeCard.SurfaceBackgroundProperty, "Brush.CardBackground");
+        card.SetResourceReference(Border.BorderBrushProperty, "Brush.Border");
+        card.BorderThickness = new Thickness(1);
     }
 
     public static Brush ResolveBrush(string key, Brush fallback) =>

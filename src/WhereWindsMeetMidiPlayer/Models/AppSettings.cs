@@ -10,12 +10,18 @@ public sealed class AppSettings
     public int Volume { get; set; } = 64;
     public List<string> FavoritePaths { get; set; } = [];
     public string? LastImportFolder { get; set; }
+    public NoteMappingMode DefaultNoteMappingMode { get; set; } = NoteMappingMode.Chromatic36;
     public bool SmartTranspose { get; set; } = true;
     public bool StrictNoteRange { get; set; }
     /// <summary>Minimum milliseconds between consecutive scheduled notes (default 2).</summary>
-    public int NoteDelayMs { get; set; } = 2;
+    public int NoteDelayMs { get; set; } = 0;
     /// <summary>Stagger chord notes (0 = SnowiyQ-style simultaneous taps).</summary>
     public int ChordRollDelayMs { get; set; }
+    /// <summary>Delay between modifier and main key for Shift/Ctrl combos (ms).</summary>
+    public int ModifierDelayMs { get; set; }
+    /// <summary>Player chrome opacity (15–100). Not persisted — always 100% on launch.</summary>
+    [JsonIgnore]
+    public int PlayerChromeOpacityPercent { get; set; } = 100;
     /// <summary>When enabled, advance to the next track in the active list after each song ends.</summary>
     public bool AutoPlayEnabled { get; set; }
     /// <summary>Seconds to wait after a song ends before playing the next track (0 = immediate).</summary>
@@ -26,8 +32,8 @@ public sealed class AppSettings
     public string? LastPlaylistPath { get; set; }
     public double? WindowLeft { get; set; }
     public double? WindowTop { get; set; }
-    public double WindowWidth { get; set; } = 1280;
-    public double WindowHeight { get; set; } = 720;
+    public double WindowWidth { get; set; } = 1024;
+    public double WindowHeight { get; set; } = 682;
 
     /// <summary>Library/catalogue share of the left+playlist pair (0.06–0.94). Playlist gets the remainder.</summary>
     public double MainPanelLeftRatio { get; set; } = 0.5;

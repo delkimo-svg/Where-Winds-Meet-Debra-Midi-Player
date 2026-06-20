@@ -4,23 +4,37 @@
              xmlns:controls="clr-namespace:WhereWindsMeetMidiPlayer.Controls"
 >
 
+    <UserControl.Resources>
+        <Style x:Key="ChromeFade" TargetType="FrameworkElement">
+            <Setter Property="Opacity" Value="{Binding PlayerChromeOpacity}"/>
+        </Style>
+        <Style x:Key="ChromeTextFade" TargetType="TextBlock">
+            <Setter Property="Opacity" Value="{Binding PlayerChromeOpacity}"/>
+        </Style>
+    </UserControl.Resources>
+
     <Border CornerRadius="16,16,12,12" ClipToBounds="True" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1"
-            Background="{DynamicResource Brush.PlayerChrome}">
-        <Border.Effect>
-            <DropShadowEffect Color="{DynamicResource PanelShadow}" BlurRadius="16" ShadowDepth="2" Opacity="0.28"/>
-        </Border.Effect>
+            Background="Transparent">
 
         <Grid>
+            <Border x:Name="ChromeBackdrop" CornerRadius="16,16,12,12"
+                    Background="{DynamicResource Brush.PlayerChrome}"
+                    Opacity="{Binding PlayerChromeOpacity}"
+                    IsHitTestVisible="False"/>
+
             <!-- Floral corner borders -->
-            <Image x:Name="PlayerCornerBl" Width="100"
-                   HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="-12,0,0,-6"
-                   Panel.ZIndex="2" IsHitTestVisible="False" RenderOptions.BitmapScalingMode="HighQuality"/>
+            <Border HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="-12,0,0,-6"
+                    Panel.ZIndex="2" IsHitTestVisible="False" Style="{StaticResource ChromeFade}">
+                <Image x:Name="PlayerCornerBl" Width="100"
+                       RenderOptions.BitmapScalingMode="HighQuality"/>
+            </Border>
             <controls:PlayerSakuraCornerDecor DecorScale="1" HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                                            Margin="0,0,-6,-4" Panel.ZIndex="2"/>
+                                            Margin="0,0,-6,-4" Panel.ZIndex="2" Style="{StaticResource ChromeFade}"/>
 
             <Grid Margin="0" Panel.ZIndex="1">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
@@ -41,7 +55,7 @@
                             </Grid.ColumnDefinitions>
                             <Border Width="48" Height="48" CornerRadius="10" ClipToBounds="True"
                                     BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" Margin="0,0,10,0"
-                                    Background="{DynamicResource Brush.BgHover}">
+                                    Background="{DynamicResource Brush.BgHover}" Style="{StaticResource ChromeFade}">
                                 <Image x:Name="PlayerThumb"
                                        Stretch="UniformToFill" HorizontalAlignment="Center" VerticalAlignment="Center"
                                        RenderOptions.BitmapScalingMode="HighQuality"/>
@@ -50,7 +64,7 @@
                                        FontWeight="Normal" Foreground="{DynamicResource Brush.GoldBright}"
                                        Text="{Binding NowPlayingTitle}" VerticalAlignment="Center"
                                        TextWrapping="Wrap" TextTrimming="None" LineHeight="16" MaxHeight="32"
-                                       ToolTip="{Binding NowPlayingTitle}"/>
+                                       ToolTip="{Binding NowPlayingTitle}" Style="{StaticResource ChromeTextFade}"/>
                         </Grid>
                         <Grid Margin="58,0,4,0">
                             <Grid.ColumnDefinitions>
@@ -60,24 +74,29 @@
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="♩" Foreground="{DynamicResource Brush.GoldDim}" FontSize="12"
                                        VerticalAlignment="Center" Margin="0,0,6,0"
-                                       ToolTip="{Binding Ui.ChromeTempoTooltip, Mode=OneWay}"/>
+                                       ToolTip="{Binding Ui.ChromeTempoTooltip, Mode=OneWay}"
+                                       Style="{StaticResource ChromeTextFade}"/>
                             <Slider Grid.Column="1" Style="{StaticResource Slider.Debra.Compact}"
                                     Minimum="50" Maximum="200"
                                     Value="{Binding PlaybackTempoPercent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                     IsEnabled="{Binding IsTempoSliderEnabled}"
                                     VerticalAlignment="Center"
-                                    ToolTip="{Binding Ui.ChromeTempoTooltip, Mode=OneWay}"/>
+                                    ToolTip="{Binding Ui.ChromeTempoTooltip, Mode=OneWay}"
+                                    Opacity="{Binding PlayerChromeOpacity}"/>
                             <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0">
                                 <TextBlock Text="{Binding PlaybackTempoDisplay}" Foreground="{DynamicResource Brush.GoldBright}"
-                                           FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                           FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
+                                           Style="{StaticResource ChromeTextFade}"/>
                                 <TextBlock Text=" BPM" Foreground="{DynamicResource Brush.TextMuted}"
                                            FontSize="10" VerticalAlignment="Center"
-                                           Visibility="{Binding IsTempoSliderEnabled, Converter={StaticResource BoolToVis}}"/>
+                                           Visibility="{Binding IsTempoSliderEnabled, Converter={StaticResource BoolToVis}}"
+                                           Style="{StaticResource ChromeTextFade}"/>
                                 <Button Content="S" Style="{StaticResource Button.Icon.Row}"
                                         Command="{Binding SaveSongTempoCommand}"
                                         IsEnabled="{Binding CanSaveSongTempo}"
                                         ToolTipService.ShowOnDisabled="True"
-                                        VerticalAlignment="Center" Margin="4,0,0,0">
+                                        VerticalAlignment="Center" Margin="4,0,0,0"
+                                        Opacity="{Binding PlayerChromeOpacity}">
                                     <Button.ToolTip>
                                         <ToolTip Content="{Binding Ui.ChromeTempoSaveTooltip, Mode=OneWay}"/>
                                     </Button.ToolTip>
@@ -86,7 +105,8 @@
                                         Command="{Binding ResetPlaybackTempoCommand}"
                                         IsEnabled="{Binding CanResetPlaybackTempo}"
                                         ToolTipService.ShowOnDisabled="True"
-                                        VerticalAlignment="Center">
+                                        VerticalAlignment="Center"
+                                        Opacity="{Binding PlayerChromeOpacity}">
                                     <Button.ToolTip>
                                         <ToolTip Content="{Binding Ui.ChromeTempoResetTooltip, Mode=OneWay}"/>
                                     </Button.ToolTip>
@@ -98,9 +118,10 @@
                     <!-- Transport + spectrum progress -->
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                    Height="46" Margin="0,0,0,8">
+                                    Height="46" Margin="0,0,0,8" Opacity="{Binding PlayerChromeOpacity}">
                             <ToggleButton Content="🔀" Style="{StaticResource Toggle.Transport}" VerticalAlignment="Center"
-                                          IsChecked="{Binding Shuffle, Mode=TwoWay}" ToolTip="Shuffle"/>
+                                          IsChecked="{Binding Shuffle, Mode=TwoWay}"
+                                          ToolTip="{Binding Ui.ChromeShuffleTip, Mode=OneWay}"/>
                             <Button Content="⏮" Style="{StaticResource Button.Transport}" VerticalAlignment="Center"
                                     Command="{Binding PreviousCommand}" ToolTip="{Binding PreviousToolTip}"/>
                             <Button Style="{StaticResource Button.Play}" Command="{Binding PlayPauseCommand}"
@@ -139,7 +160,8 @@
                             <Button Content="⏭" Style="{StaticResource Button.Transport}" VerticalAlignment="Center"
                                     Command="{Binding NextCommand}" ToolTip="{Binding NextToolTip}"/>
                             <ToggleButton Content="🔁" Style="{StaticResource Toggle.Transport}" VerticalAlignment="Center"
-                                          IsChecked="{Binding Repeat, Mode=TwoWay}" ToolTip="Repeat"/>
+                                          IsChecked="{Binding Repeat, Mode=TwoWay}"
+                                          ToolTip="{Binding Ui.ChromeRepeatTip, Mode=OneWay}"/>
                             <ToggleButton Content="▶▶" Style="{StaticResource Toggle.Transport}" VerticalAlignment="Center"
                                           IsChecked="{Binding AutoPlayEnabled, Mode=TwoWay}"
                                           ToolTip="{Binding Ui.ChromeAutoPlayTip, Mode=OneWay}" Margin="2,0,0,0"/>
@@ -170,7 +192,7 @@
                             </Grid.RowDefinitions>
                             <controls:SpectrumVisualizer Grid.Row="0" IsActive="{Binding IsPlaying}"
                                                          Margin="36,0,36,0" VerticalAlignment="Bottom" Height="24"
-                                                         Panel.ZIndex="1"/>
+                                                         Panel.ZIndex="1" Opacity="{Binding PlayerChromeOpacity}"/>
                             <Grid Grid.Row="1" Margin="0,4,0,0" Panel.ZIndex="2">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
@@ -178,56 +200,171 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Text="{Binding CurrentTimeText}" Foreground="{DynamicResource Brush.GoldBright}" FontSize="11"
-                                           FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                           FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,10,0"
+                                           Style="{StaticResource ChromeTextFade}"/>
                                 <Grid Grid.Column="1" x:Name="SeekBarHost" Height="20" VerticalAlignment="Center"
                                       Background="Transparent" Cursor="Hand"
                                       MouseLeftButtonDown="SeekBar_OnMouseLeftButtonDown"
-                                      ToolTip="Click to seek">
+                                      ToolTip="{Binding Ui.ChromeSeekTip, Mode=OneWay}" Opacity="{Binding PlayerChromeOpacity}">
                                     <ProgressBar Style="{StaticResource ProgressBar.Wave}"
                                                  Value="{Binding Progress}" Minimum="0" Maximum="100"
                                                  VerticalAlignment="Center" Height="8" IsHitTestVisible="False"/>
                                 </Grid>
                                 <TextBlock Grid.Column="2" Text="{Binding TotalTimeText}" Foreground="{DynamicResource Brush.GoldBright}"
-                                           FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                                           FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Margin="10,0,0,0"
+                                           Style="{StaticResource ChromeTextFade}"/>
                             </Grid>
                         </Grid>
                     </StackPanel>
 
                     <!-- Volume + tools (Windows master / PC output volume) -->
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                Opacity="{Binding PlayerChromeOpacity}">
                         <TextBlock Text="🔊" Foreground="{DynamicResource Brush.GoldBright}" VerticalAlignment="Center" Margin="0,0,6,0"
-                                   ToolTip="PC volume (game audio)"/>
+                                   ToolTip="{Binding Ui.ChromeVolumePcTip, Mode=OneWay}"/>
                         <Slider Width="78" Style="{StaticResource Slider.Debra}" Minimum="0" Maximum="100"
                                 Value="{Binding Volume, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                 VerticalAlignment="Center"
-                                ToolTip="Controls Windows master volume"/>
+                                ToolTip="{Binding Ui.ChromeVolumeMasterTip, Mode=OneWay}"/>
                         <Button Content="⌨" Style="{StaticResource Button.Transport}" Margin="8,0,0,0"
                                 Command="{Binding OpenKeybindEditorCommand}"
                                 ToolTip="{Binding Ui.SettingsEditKeybinds}"/>
                     </StackPanel>
                 </Grid>
 
-                <!-- Status / MIDI options row -->
-                <Border Grid.Row="1" Background="{DynamicResource Brush.BgPanel}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0"
-                        Padding="12,8,12,8" CornerRadius="0,0,12,12">
+                <!-- Status / quick options row -->
+                <Border Grid.Row="1" Background="Transparent" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0"
+                        Padding="12,8,12,8" CornerRadius="0">
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <TextBlock Text="{Binding Ui.ChromeSmartTranspose}" Foreground="{DynamicResource Brush.TextMuted}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                        <TextBlock Text="{Binding SmartTransposeStateLabel}" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Gold}" FontSize="11" Margin="0,0,4,0"/>
-                        <ToggleButton Style="{StaticResource Toggle.Debra}" IsChecked="{Binding SmartTranspose}" Margin="8,0,14,0" VerticalAlignment="Center"/>
-                        <Rectangle Width="1" Height="18" Fill="{DynamicResource Brush.Border}" Margin="0,0,14,0"/>
-                        <TextBlock Text="{Binding ChromeAutoPlayNextText}" Foreground="{DynamicResource Brush.TextMuted}" VerticalAlignment="Center" Margin="0,0,14,0"/>
-                        <Rectangle Width="1" Height="18" Fill="{DynamicResource Brush.Border}" Margin="0,0,14,0"/>
-                        <TextBlock Text="{Binding Ui.ChromeLayout}" Foreground="{DynamicResource Brush.TextMuted}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock Text="{Binding Ui.ChromeSmartTranspose}" Foreground="{DynamicResource Brush.TextMuted}" VerticalAlignment="Center" Margin="0,0,6,0"
+                                   Style="{StaticResource ChromeTextFade}"/>
+                        <TextBlock Text="{Binding SmartTransposeStateLabel}" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Gold}" FontSize="11" Margin="0,0,4,0"
+                                   Style="{StaticResource ChromeTextFade}"/>
+                        <ToggleButton Style="{StaticResource Toggle.Debra}" IsChecked="{Binding SmartTranspose}" Margin="8,0,14,0" VerticalAlignment="Center"
+                                      Opacity="{Binding PlayerChromeOpacity}"/>
+                        <Rectangle Width="1" Height="18" Fill="{DynamicResource Brush.Border}" Margin="0,0,14,0"
+                                   Opacity="{Binding PlayerChromeOpacity}"/>
+                        <TextBlock Text="{Binding PlaybackOctaveShiftLabel}" Foreground="{DynamicResource Brush.TextMuted}" VerticalAlignment="Center" Margin="0,0,6,0"
+                                   Style="{StaticResource ChromeTextFade}"/>
+                        <Button Content="−" Style="{StaticResource Button.Ghost}" Width="28" Height="24" FontSize="14"
+                                Command="{Binding OctaveShiftDownCommand}" VerticalAlignment="Center"
+                                Opacity="{Binding PlayerChromeOpacity}"/>
+                        <Button Content="+" Style="{StaticResource Button.Ghost}" Width="28" Height="24" FontSize="14" Margin="2,0,0,0"
+                                Command="{Binding OctaveShiftUpCommand}" VerticalAlignment="Center"
+                                Opacity="{Binding PlayerChromeOpacity}"/>
+                        <Rectangle Width="1" Height="18" Fill="{DynamicResource Brush.Border}" Margin="14,0,14,0"
+                                   Visibility="{Binding ShowMidiTrackSelector, Converter={StaticResource BoolToVis}}"
+                                   Opacity="{Binding PlayerChromeOpacity}"/>
+                        <TextBlock Text="{Binding Ui.ChromeMidiTrack}" Foreground="{DynamicResource Brush.TextMuted}" VerticalAlignment="Center" Margin="0,0,6,0"
+                                   Visibility="{Binding ShowMidiTrackSelector, Converter={StaticResource BoolToVis}}"
+                                   Style="{StaticResource ChromeTextFade}"/>
+                        <ComboBox ItemsSource="{Binding MidiTrackOptions}" DisplayMemberPath="DisplayName"
+                                  SelectedItem="{Binding SelectedMidiTrack, Mode=TwoWay}"
+                                  Style="{StaticResource ComboBox.Debra}" MinWidth="100" MaxWidth="160" Height="26"
+                                  VerticalContentAlignment="Center" Margin="0,0,14,0"
+                                  Visibility="{Binding ShowMidiTrackSelector, Converter={StaticResource BoolToVis}}"
+                                  Opacity="{Binding PlayerChromeOpacity}"/>
+                        <Rectangle Width="1" Height="18" Fill="{DynamicResource Brush.Border}" Margin="0,0,14,0"
+                                   Opacity="{Binding PlayerChromeOpacity}"/>
+                        <TextBlock Text="{Binding Ui.ChromeLayout}" Foreground="{DynamicResource Brush.TextMuted}" VerticalAlignment="Center" Margin="0,0,8,0"
+                                   Style="{StaticResource ChromeTextFade}"/>
                         <ComboBox ItemsSource="{Binding KeyLayouts}" DisplayMemberPath="DisplayName"
                                   SelectedItem="{Binding SelectedLayout, Mode=TwoWay}"
                                   Style="{StaticResource ComboBox.Debra}" MinWidth="100" MaxWidth="140" Height="26"
-                                  VerticalContentAlignment="Center" Margin="0,0,12,0"/>
-                        <TextBlock Text="{Binding Ui.ChromeLanguage}" Foreground="{DynamicResource Brush.TextMuted}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                  VerticalContentAlignment="Center" Margin="0,0,12,0"
+                                  Opacity="{Binding PlayerChromeOpacity}"/>
+                        <TextBlock Text="{Binding Ui.ChromeLanguage}" Foreground="{DynamicResource Brush.TextMuted}" VerticalAlignment="Center" Margin="0,0,8,0"
+                                   Style="{StaticResource ChromeTextFade}"/>
                         <ComboBox ItemsSource="{Binding AvailableLanguages}" DisplayMemberPath="DisplayName"
                                   SelectedItem="{Binding SelectedLanguage, Mode=TwoWay}"
                                   Style="{StaticResource ComboBox.Debra}" MinWidth="100" MaxWidth="140" Height="26"
-                                  VerticalContentAlignment="Center"/>
+                                  VerticalContentAlignment="Center"
+                                  Opacity="{Binding PlayerChromeOpacity}"/>
+                        <Rectangle Width="1" Height="18" Fill="{DynamicResource Brush.Border}" Margin="14,0,14,0"
+                                   Opacity="{Binding PlayerChromeOpacity}"/>
+                        <StackPanel x:Name="TourTarget_PlayerMore" Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Ui.ChromeMore}" Foreground="{DynamicResource Brush.TextMuted}" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="11"
+                                       ToolTip="{Binding Ui.ChromeAdvancedSettingsTip, Mode=OneWay}"
+                                       Style="{StaticResource ChromeTextFade}"/>
+                            <ToggleButton Style="{StaticResource Toggle.Debra}" Height="26" VerticalAlignment="Center"
+                                          IsChecked="{Binding IsPlayerTuningPanelOpen, Mode=TwoWay}"
+                                          ToolTip="{Binding Ui.ChromeAdvancedSettingsTip, Mode=OneWay}"
+                                          Opacity="{Binding PlayerChromeOpacity}"/>
+                        </StackPanel>
                     </StackPanel>
+                </Border>
+
+                <!-- MIDI tuning + panel fade -->
+                <Border Grid.Row="2" Padding="12,0,12,10" CornerRadius="0,0,12,12"
+                        Visibility="{Binding IsPlayerTuningPanelOpen, Converter={StaticResource BoolToVis}}">
+                    <Grid>
+                        <Border Background="{DynamicResource Brush.BgElevated}" CornerRadius="10"
+                                BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1"
+                                Opacity="{Binding PlayerChromeOpacity}" IsHitTestVisible="False"/>
+                        <Border CornerRadius="10" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1"
+                                Padding="10,8" Background="Transparent">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,8,8">
+                                    <TextBlock Text="{Binding Ui.ChromeNoteMappingShort}" Foreground="{DynamicResource Brush.TextMuted}"
+                                               FontSize="10" Margin="0,0,0,4" Style="{StaticResource ChromeTextFade}"/>
+                                    <ComboBox ItemsSource="{Binding NoteMappingModes}" DisplayMemberPath="DisplayName"
+                                              SelectedItem="{Binding SelectedNoteMappingMode, Mode=TwoWay}"
+                                              Style="{StaticResource ComboBox.Debra}" Height="26" VerticalContentAlignment="Center"
+                                              Opacity="{Binding PlayerChromeOpacity}"/>
+                                    <TextBlock Text="{Binding SelectedNoteMappingModeDescription}" Foreground="{DynamicResource Brush.TextMuted}"
+                                               FontSize="9" Margin="0,4,0,0" TextWrapping="Wrap"
+                                               Style="{StaticResource ChromeTextFade}"/>
+                                </StackPanel>
+
+                                <StackPanel Grid.Row="0" Grid.Column="1" Margin="8,0,0,8">
+                                    <TextBlock Text="{Binding PlayerChromeOpacityLabel}" Foreground="{DynamicResource Brush.TextMuted}"
+                                               FontSize="10" Margin="0,0,0,4"
+                                               ToolTip="{Binding Ui.ChromePlayerOpacityTip, Mode=OneWay}"
+                                               Style="{StaticResource ChromeTextFade}"/>
+                                    <Slider Style="{StaticResource Slider.Debra.Compact}" Minimum="15" Maximum="100"
+                                            Value="{Binding PlayerChromeOpacityPercent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                            VerticalAlignment="Center" Opacity="{Binding PlayerChromeOpacity}"/>
+                                </StackPanel>
+
+                                <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Orientation="Horizontal"
+                                            HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Ui.ChromeNoteDelayShort}" Foreground="{DynamicResource Brush.TextMuted}"
+                                               FontSize="10" VerticalAlignment="Center" Margin="0,0,4,0"
+                                               ToolTip="{Binding Ui.SettingsNoteDelayHint, Mode=OneWay}"
+                                               Style="{StaticResource ChromeTextFade}"/>
+                                    <TextBox Width="40" Height="24" Text="{Binding NoteDelayMs, UpdateSourceTrigger=LostFocus}"
+                                             Style="{StaticResource TextBox.Search}" VerticalContentAlignment="Center"
+                                             ToolTip="{Binding Ui.SettingsNoteDelayHint, Mode=OneWay}"
+                                             Opacity="{Binding PlayerChromeOpacity}"/>
+                                    <TextBlock Text="{Binding Ui.ChromeChordRollShort}" Foreground="{DynamicResource Brush.TextMuted}"
+                                               FontSize="10" VerticalAlignment="Center" Margin="12,0,4,0"
+                                               ToolTip="{Binding Ui.SettingsChordRollHint, Mode=OneWay}"
+                                               Style="{StaticResource ChromeTextFade}"/>
+                                    <TextBox Width="40" Height="24" Text="{Binding ChordRollDelayMs, UpdateSourceTrigger=LostFocus}"
+                                             Style="{StaticResource TextBox.Search}" VerticalContentAlignment="Center"
+                                             ToolTip="{Binding Ui.SettingsChordRollHint, Mode=OneWay}"
+                                             Opacity="{Binding PlayerChromeOpacity}"/>
+                                    <TextBlock Text="{Binding Ui.ChromeModifierDelayShort}" Foreground="{DynamicResource Brush.TextMuted}"
+                                               FontSize="10" VerticalAlignment="Center" Margin="12,0,4,0"
+                                               ToolTip="{Binding Ui.SettingsModifierDelayHint, Mode=OneWay}"
+                                               Style="{StaticResource ChromeTextFade}"/>
+                                    <TextBox Width="40" Height="24" Text="{Binding ModifierDelayMs, UpdateSourceTrigger=LostFocus}"
+                                             Style="{StaticResource TextBox.Search}" VerticalContentAlignment="Center"
+                                             ToolTip="{Binding Ui.SettingsModifierDelayHint, Mode=OneWay}"
+                                             Opacity="{Binding PlayerChromeOpacity}"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </Grid>
                 </Border>
             </Grid>
         </Grid>

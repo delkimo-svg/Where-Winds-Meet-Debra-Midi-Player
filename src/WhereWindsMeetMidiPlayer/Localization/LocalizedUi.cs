@@ -31,9 +31,25 @@ public sealed partial class LocalizedUi : ObservableObject
     public string SettingsHotkeyReset => L.T(UiText.SettingsHotkeyReset);
     public string SettingsSmartTranspose => L.T(UiText.SettingsSmartTranspose);
     public string SettingsNoteDelay => L.T(UiText.SettingsNoteDelay);
+    public string SettingsNoteDelayHint => L.T(UiText.SettingsNoteDelayHint);
     public string SettingsChordRoll => L.T(UiText.SettingsChordRoll);
+    public string SettingsChordRollHint => L.T(UiText.SettingsChordRollHint);
+    public string SettingsModifierDelay => L.T(UiText.SettingsModifierDelay);
+    public string SettingsModifierDelayHint => L.T(UiText.SettingsModifierDelayHint);
+    public string ChromeAdvancedSettings => L.T(UiText.ChromeAdvancedSettings);
+    public string ChromeAdvancedSettingsTip => L.T(UiText.ChromeAdvancedSettingsTip);
+    public string ChromeMore => L.T(UiText.ChromeMore);
+    public string SettingsAdvancedSettings => L.T(UiText.SettingsAdvancedSettings);
+    public string ChromePlayerOpacityTip => L.T(UiText.ChromePlayerOpacityTip);
+    public string ChromeNoteDelayShort => L.T(UiText.ChromeNoteDelayShort);
+    public string ChromeChordRollShort => L.T(UiText.ChromeChordRollShort);
+    public string ChromeModifierDelayShort => L.T(UiText.ChromeModifierDelayShort);
+    public string ChromeNoteMappingShort => L.T(UiText.ChromeNoteMappingShort);
     public string SettingsAutoPlayNext => L.T(UiText.SettingsAutoPlayNext);
     public string SettingsAutoPlayNextHint => L.T(UiText.SettingsAutoPlayNextHint);
+    public string SettingsKeyLayout => L.T(UiText.SettingsKeyLayout);
+    public string SettingsKeyModeHint => L.T(UiText.SettingsKeyModeHint);
+    public string SettingsNoteMappingMode => L.T(UiText.SettingsNoteMappingMode);
     public string SettingsOpenKeymaps => L.T(UiText.SettingsOpenKeymaps);
     public string SettingsEditKeybinds => L.T(UiText.SettingsEditKeybinds);
     public string SettingsTheme => L.T(UiText.SettingsTheme);
@@ -74,6 +90,7 @@ public sealed partial class LocalizedUi : ObservableObject
     public string FavoritesAddTip => L.T(UiText.FavoritesAddTip);
     public string FavoritesHint => L.T(UiText.FavoritesHint);
     public string ChromeLayout => L.T(UiText.ChromeLayout);
+    public string ChromeMidiTrack => L.T(UiText.ChromeMidiTrack);
     public string ChromeLanguage => L.T(UiText.ChromeLanguage);
     public string ChromeSmartTranspose => L.T(UiText.ChromeSmartTranspose);
     public string ChromeNoteDelay => L.T(UiText.ChromeNoteDelay);
@@ -102,6 +119,11 @@ public sealed partial class LocalizedUi : ObservableObject
     public string TrashTooltip => L.T(UiText.TrashTooltip);
     public string PlayTooltip => L.T(UiText.PlayTooltip);
     public string ChromeAutoPlayTip => L.T(UiText.ChromeAutoPlayTip);
+    public string ChromeShuffleTip => L.T(UiText.ChromeShuffleTip);
+    public string ChromeRepeatTip => L.T(UiText.ChromeRepeatTip);
+    public string ChromeSeekTip => L.T(UiText.ChromeSeekTip);
+    public string ChromeVolumePcTip => L.T(UiText.ChromeVolumePcTip);
+    public string ChromeVolumeMasterTip => L.T(UiText.ChromeVolumeMasterTip);
 
     public void Refresh() => OnPropertyChanged(string.Empty);
 }

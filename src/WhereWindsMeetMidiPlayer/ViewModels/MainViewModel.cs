@@ -44,6 +44,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private ReleaseManifest? _pendingUpdateManifest;
     private readonly SystemVolumeService _systemVolume = new();
     private readonly SongTempoStore _songTempo = new();
+    private readonly SongPlaybackCalibrationStore _songPlayback = new();
+    private readonly MidiPlaybackPreparer _midiPlaybackPreparer;
 
     private bool _suppressVolumeSync;
     private bool _suppressCatalogueStats;
@@ -89,8 +91,14 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] private bool _isPlaying;
     [ObservableProperty] private bool _smartTranspose = true;
     [ObservableProperty] private bool _strictNoteRange;
-    [ObservableProperty] private int _noteDelayMs = 2;
-    [ObservableProperty] private int _chordRollDelayMs = 12;
+    [ObservableProperty] private int _noteDelayMs;
+    [ObservableProperty] private int _chordRollDelayMs;
+    [ObservableProperty] private int _modifierDelayMs;
+    [ObservableProperty] private int _playbackOctaveShift;
+    [ObservableProperty] private bool _showMidiTrackSelector;
+    [ObservableProperty] private bool _isPlayerTuningPanelOpen;
+    [ObservableProperty] private int _playerChromeOpacityPercent = 100;
+    [ObservableProperty] private NoteMappingModeOption? _selectedNoteMappingMode;
     [ObservableProperty] private int _autoPlayNextDelaySeconds;
     [ObservableProperty] private bool _autoPlayEnabled;
     [ObservableProperty] private bool _shuffle;
@@ -136,6 +144,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public BulkObservableCollection<SavedPlaylistEntry> SavedPlaylists { get; } = [];
     public ObservableCollection<LanguageOption> AvailableLanguages { get; } = [];
     public ObservableCollection<ThemeOption> AvailableThemes { get; } = [];
+    public ObservableCollection<NoteMappingModeOption> NoteMappingModes { get; } = [];
+    public ObservableCollection<MidiTrackOption> MidiTrackOptions { get; } = [];
     public ObservableCollection<SongSortOption> LibrarySortOptions { get; } = [];
     public ObservableCollection<SongSortOption> PlaylistSortOptions { get; } = [];
     public ObservableCollection<CatalogueSortOption> CatalogueSortOptions { get; } = [];
@@ -147,6 +157,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] private CatalogueSortOption? _selectedCatalogueSortOption;
     [ObservableProperty] private LanguageOption? _selectedLanguage;
     [ObservableProperty] private ThemeOption? _selectedTheme;
+    [ObservableProperty] private MidiTrackOption? _selectedMidiTrack;
 
     private bool _suppressThemeChange;
 
@@ -210,6 +221,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public string SmartTransposeStateLabel =>
         SmartTranspose ? L.T(UiText.ChromeOn) : L.T(UiText.ChromeOff);
 
+    public string SelectedNoteMappingModeDescription =>
+        SelectedNoteMappingMode?.Description ?? string.Empty;
+
     [ObservableProperty] private PlaybackHotkeyRole? _playbackHotkeyCapture;
 
     public string PlayPauseToolTip => FormatTransportTooltip(_playback.State switch
@@ -257,6 +271,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
         _playlistService = new PlaylistService(_midiParser, _noteRange);
         _library = new LibraryService(_playlistService);
+        _midiPlaybackPreparer = new MidiPlaybackPreparer(_midiParser, _noteRange);
         _input = new InputService(_gameWindow);
         _playback = new PlaybackEngine(_input);
 
@@ -391,10 +406,22 @@ public partial class MainViewModel : ObservableObject, IDisposable
             AppPaths.WriteDiagnosticLog("song-tempo-load", ex);
         }
 
+        try
+        {
+            _songPlayback.Load();
+        }
+        catch (Exception ex)
+        {
+            AppPaths.WriteDiagnosticLog("song-playback-load", ex);
+        }
+
         SmartTranspose = _settings.Settings.SmartTranspose;
         StrictNoteRange = _settings.Settings.StrictNoteRange;
         NoteDelayMs = _settings.Settings.NoteDelayMs;
         ChordRollDelayMs = _settings.Settings.ChordRollDelayMs;
+        ModifierDelayMs = _settings.Settings.ModifierDelayMs;
+        PlayerChromeOpacityPercent = 100;
+        SelectedNoteMappingMode = null;
         AutoPlayEnabled = _settings.Settings.AutoPlayEnabled;
         AutoPlayNextDelaySeconds = _settings.Settings.AutoPlayNextDelaySeconds;
         Shuffle = _settings.Settings.Shuffle;
@@ -416,6 +443,10 @@ public partial class MainViewModel : ObservableObject, IDisposable
         DiscordCredentialStore.MigrateFromSettings(_settings);
         _discordCredentials = DiscordCredentialStore.Load();
 
+        RebuildNoteMappingModes();
+        SelectedNoteMappingMode = NoteMappingModes.FirstOrDefault(m =>
+            m.Mode == _settings.Settings.DefaultNoteMappingMode)
+            ?? NoteMappingModes.FirstOrDefault();
         ApplyInputAndWindowSettings();
         ApplyUiLanguageFromSettings();
         ApplyUiThemeFromSettings();
@@ -911,7 +942,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
             return true;
 
         return track.DisplayTitle.Contains(CatalogueSearchText, StringComparison.OrdinalIgnoreCase)
-               || track.Title.Contains(CatalogueSearchText, StringComparison.OrdinalIgnoreCase);
+               || track.Title.Contains(CatalogueSearchText, StringComparison.OrdinalIgnoreCase)
+               || track.StyleName.Contains(CatalogueSearchText, StringComparison.OrdinalIgnoreCase);
     }
 
     private void RefreshCatalogueStats()
@@ -2260,8 +2292,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     private void StartPlaybackFromCurrentPosition() =>
         _playback.PlayFromCurrentPosition(
-            _settings.Settings.NoteDelayMs,
-            _settings.Settings.ChordRollDelayMs,
+            NoteDelayMs,
+            ChordRollDelayMs,
             _settings.Settings.MinKeyPressDurationMs,
             _settings.Settings.IdenticalKeyGapMs);
 
@@ -2393,31 +2425,37 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
             NowPlayingTitle = CatalogueTitleHelper.GetDisplayTitle(song.Title, song.FilePath);
 
+            ApplyPlaybackCalibrationOnLoad(song.FilePath);
+
             var smartTranspose = SmartTranspose;
             var strictNoteRange = StrictNoteRange;
-            var chordRollDelayMs = _settings.Settings.ChordRollDelayMs;
-            var noteDelayMs = _settings.Settings.NoteDelayMs;
+            var chordRollDelayMs = ChordRollDelayMs;
+            var noteDelayMs = NoteDelayMs;
+            var octaveShift = PlaybackOctaveShift;
+            var trackIndex = SelectedMidiTrack?.TrackIndex ?? -1;
+            var mappingMode = SelectedNoteMappingMode?.Mode ?? NoteMappingMode.Chromatic36;
             var filePath = song.FilePath;
 
             var prepared = await Task.Run(() =>
             {
-                var parsed = _midiParser.Parse(filePath);
-                var transposed = smartTranspose
-                    ? MidiTransposeService.ApplyTranspose(parsed.Notes,
-                        MidiTransposeService.DetectBestTranspose(parsed.Notes))
-                    : parsed.Notes.ToList();
-                var ranged = _noteRange.ApplyRange(transposed, smartTranspose: true, strictMode: strictNoteRange);
-                var schedule = PlaybackEngine.BuildSchedule(
-                    ranged.Notes,
-                    _keyMapping,
-                    chordRollDelayMs,
-                    noteDelayMs);
-                return (parsed, ranged, schedule);
+                return _midiPlaybackPreparer.Prepare(
+                    filePath,
+                    new MidiPrepareRequest
+                    {
+                        SmartTranspose = smartTranspose,
+                        StrictNoteRange = strictNoteRange,
+                        OctaveShift = octaveShift,
+                        TrackIndex = trackIndex,
+                        MappingMode = mappingMode,
+                        ChordRollDelayMs = chordRollDelayMs,
+                        NoteDelayMs = noteDelayMs
+                    },
+                    _keyMapping);
             }).ConfigureAwait(false);
 
-            var parsed = prepared.parsed;
-            var ranged = prepared.ranged;
-            var schedule = prepared.schedule;
+            var parsed = prepared.Parsed;
+            var ranged = prepared.Ranged;
+            var schedule = prepared.Schedule;
 
             if (schedule.Count == 0)
             {
@@ -2521,6 +2559,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _gameWindow.SetTargetProcessName(TargetProcessName);
         _gameWindow.SetCustomKeywords(_settings.Settings.CustomWindowKeywords);
         _input.ConfigureMode(() => InputDeliveryMode.LocalPostMessage);
+        _input.ConfigureModifierDelay(() => ModifierDelayMs);
     }
 
     partial void OnTargetProcessNameChanged(string value)
@@ -3622,12 +3661,16 @@ public partial class MainViewModel : ObservableObject, IDisposable
         RefreshNavLabels();
         RefreshThemeOptions();
         RebuildSongSortOptions();
+        RebuildNoteMappingModes();
         ApplySortSettingsFromSaved();
         Ui.Refresh();
         OnPropertyChanged(nameof(Ui));
         OnPropertyChanged(nameof(UiFlowDirection));
         OnPropertyChanged(nameof(ChromeAutoPlayNextText));
         OnPropertyChanged(nameof(SmartTransposeStateLabel));
+        OnPropertyChanged(nameof(PlaybackOctaveShiftLabel));
+        OnPropertyChanged(nameof(PlayerChromeOpacityLabel));
+        OnPropertyChanged(nameof(SelectedNoteMappingModeDescription));
         RefreshPlayPauseUi();
         NotifyPlaybackHotkeyLabels();
         RefreshIdleUiStrings();
@@ -3709,15 +3752,214 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     partial void OnNoteDelayMsChanged(int value)
     {
-        _settings.Settings.NoteDelayMs = value;
+        _settings.Settings.NoteDelayMs = Math.Clamp(value, 0, 50);
         ScheduleSettingsSave();
     }
 
     partial void OnChordRollDelayMsChanged(int value)
     {
-        _settings.Settings.ChordRollDelayMs = value;
+        _settings.Settings.ChordRollDelayMs = Math.Max(0, value);
         ScheduleSettingsSave();
     }
+
+    partial void OnModifierDelayMsChanged(int value)
+    {
+        _settings.Settings.ModifierDelayMs = Math.Clamp(value, 0, 50);
+        ScheduleSettingsSave();
+        _input.ConfigureModifierDelay(() => ModifierDelayMs);
+    }
+
+    partial void OnPlayerChromeOpacityPercentChanged(int value)
+    {
+        var clamped = Math.Clamp(value, 15, 100);
+        if (clamped != value)
+            PlayerChromeOpacityPercent = clamped;
+
+        OnPropertyChanged(nameof(PlayerChromeOpacity));
+        OnPropertyChanged(nameof(PlayerChromeTextOpacity));
+        OnPropertyChanged(nameof(PlayerChromeOpacityLabel));
+    }
+
+    private bool _suppressPlaybackCalibrationChange;
+
+    partial void OnPlaybackOctaveShiftChanged(int value)
+    {
+        var clamped = Math.Clamp(value, SongPlaybackCalibration.MinOctaveShift, SongPlaybackCalibration.MaxOctaveShift);
+        if (clamped != value)
+            PlaybackOctaveShift = clamped;
+
+        OnPropertyChanged(nameof(PlaybackOctaveShiftLabel));
+
+        if (_suppressPlaybackCalibrationChange)
+            return;
+
+        SavePlaybackCalibration();
+        SchedulePlaybackCalibrationReload();
+    }
+
+    partial void OnSelectedMidiTrackChanged(MidiTrackOption? value)
+    {
+        if (_suppressPlaybackCalibrationChange)
+            return;
+
+        SavePlaybackCalibration();
+        SchedulePlaybackCalibrationReload();
+    }
+
+    partial void OnSelectedNoteMappingModeChanged(NoteMappingModeOption? value)
+    {
+        if (value is not null)
+        {
+            _settings.Settings.DefaultNoteMappingMode = value.Mode;
+            ScheduleSettingsSave();
+        }
+
+        OnPropertyChanged(nameof(SelectedNoteMappingModeDescription));
+
+        if (_suppressPlaybackCalibrationChange)
+            return;
+
+        SavePlaybackCalibration();
+        SchedulePlaybackCalibrationReload();
+    }
+
+    [RelayCommand]
+    private void OctaveShiftDown()
+    {
+        if (PlaybackOctaveShift > SongPlaybackCalibration.MinOctaveShift)
+            PlaybackOctaveShift--;
+    }
+
+    [RelayCommand]
+    private void OctaveShiftUp()
+    {
+        if (PlaybackOctaveShift < SongPlaybackCalibration.MaxOctaveShift)
+            PlaybackOctaveShift++;
+    }
+
+    private void RebuildNoteMappingModes()
+    {
+        var selected = SelectedNoteMappingMode?.Mode ?? _settings.Settings.DefaultNoteMappingMode;
+        NoteMappingModes.Clear();
+        NoteMappingModes.Add(new NoteMappingModeOption
+        {
+            Mode = NoteMappingMode.Chromatic36,
+            DisplayName = L.T(UiText.NoteMappingChromatic36),
+            Description = L.T(UiText.NoteMappingChromatic36Hint)
+        });
+        NoteMappingModes.Add(new NoteMappingModeOption
+        {
+            Mode = NoteMappingMode.TransposeOnly,
+            DisplayName = L.T(UiText.NoteMappingTransposeOnly),
+            Description = L.T(UiText.NoteMappingTransposeOnlyHint)
+        });
+        NoteMappingModes.Add(new NoteMappingModeOption
+        {
+            Mode = NoteMappingMode.ClosestNatural,
+            DisplayName = L.T(UiText.NoteMappingClosestNatural),
+            Description = L.T(UiText.NoteMappingClosestNaturalHint)
+        });
+
+        _suppressPlaybackCalibrationChange = true;
+        SelectedNoteMappingMode = NoteMappingModes.FirstOrDefault(m => m.Mode == selected)
+            ?? NoteMappingModes.FirstOrDefault();
+        _suppressPlaybackCalibrationChange = false;
+        OnPropertyChanged(nameof(SelectedNoteMappingModeDescription));
+    }
+
+    private void ApplyPlaybackCalibrationOnLoad(string filePath)
+    {
+        var calibration = _songPlayback.GetOrDefault(filePath);
+        if (calibration.IsDefault)
+            calibration.MappingMode = _settings.Settings.DefaultNoteMappingMode;
+
+        var tracks = _midiParser.GetTracks(filePath);
+        RebuildMidiTrackOptions(tracks);
+
+        _suppressPlaybackCalibrationChange = true;
+        PlaybackOctaveShift = Math.Clamp(
+            calibration.OctaveShift,
+            SongPlaybackCalibration.MinOctaveShift,
+            SongPlaybackCalibration.MaxOctaveShift);
+        SelectedNoteMappingMode = NoteMappingModes.FirstOrDefault(m => m.Mode == calibration.MappingMode)
+            ?? NoteMappingModes.FirstOrDefault();
+        SelectedMidiTrack = MidiTrackOptions.FirstOrDefault(t => t.TrackIndex == calibration.TrackIndex)
+            ?? MidiTrackOptions.FirstOrDefault();
+        _suppressPlaybackCalibrationChange = false;
+        ShowMidiTrackSelector = MidiTrackOptions.Count > 1;
+        OnPropertyChanged(nameof(PlaybackOctaveShiftLabel));
+    }
+
+    private void RebuildMidiTrackOptions(IReadOnlyList<MidiTrackInfo> tracks)
+    {
+        var selectedIndex = SelectedMidiTrack?.TrackIndex ?? -1;
+        MidiTrackOptions.Clear();
+        MidiTrackOptions.Add(new MidiTrackOption
+        {
+            TrackIndex = -1,
+            DisplayName = L.T(UiText.MidiTrackAll)
+        });
+
+        foreach (var track in tracks)
+        {
+            MidiTrackOptions.Add(new MidiTrackOption
+            {
+                TrackIndex = track.Index,
+                DisplayName = $"{track.Name} ({track.NoteCount})"
+            });
+        }
+
+        SelectedMidiTrack = MidiTrackOptions.FirstOrDefault(t => t.TrackIndex == selectedIndex)
+            ?? MidiTrackOptions.FirstOrDefault();
+    }
+
+    private void SavePlaybackCalibration()
+    {
+        if (_nowPlaying is null)
+            return;
+
+        _songPlayback.Set(_nowPlaying.FilePath, new SongPlaybackCalibration
+        {
+            OctaveShift = PlaybackOctaveShift,
+            TrackIndex = SelectedMidiTrack?.TrackIndex ?? -1,
+            MappingMode = SelectedNoteMappingMode?.Mode ?? NoteMappingMode.Chromatic36
+        });
+        _songPlayback.Save();
+    }
+
+    private bool _playbackCalibrationReloadScheduled;
+
+    private void SchedulePlaybackCalibrationReload()
+    {
+        if (_nowPlaying is null)
+            return;
+
+        if (_playbackCalibrationReloadScheduled)
+            return;
+
+        _playbackCalibrationReloadScheduled = true;
+        UiDispatcher.Post(async () =>
+        {
+            _playbackCalibrationReloadScheduled = false;
+            if (_nowPlaying is null)
+                return;
+
+            if (_playback.State is PlaybackState.Playing or PlaybackState.Paused)
+                await StartSongAsync(_nowPlaying);
+        });
+    }
+
+    public string PlaybackOctaveShiftLabel =>
+        L.F(UiText.ChromeOctaveShift, PlaybackOctaveShift);
+
+    public double PlayerChromeOpacity =>
+        Math.Clamp(PlayerChromeOpacityPercent, 15, 100) / 100.0;
+
+    public double PlayerChromeTextOpacity => PlayerChromeOpacity;
+
+    public string PlayerChromeOpacityLabel =>
+        L.F(UiText.ChromePlayerOpacity, PlayerChromeOpacityPercent);
+
 
     partial void OnAutoPlayEnabledChanged(bool value)
     {
@@ -3934,35 +4176,23 @@ public partial class MainViewModel : ObservableObject, IDisposable
             window.Left = left;
         if (_settings.Settings.WindowTop is { } top)
             window.Top = top;
+
         const double defaultWidth = 1024;
         const double defaultHeight = 682;
-        const double designAspect = defaultWidth / defaultHeight;
+        const double minWindowWidth = 940;
         const double minWindowHeight = 640;
+        const double maxWindowWidth = 3840;
+        const double maxWindowHeight = 2160;
 
-        var savedWidth = _settings.Settings.WindowWidth;
-        var savedHeight = _settings.Settings.WindowHeight;
-        if (savedWidth is > 0 and <= 1150 && savedHeight is > 0 and <= 760)
-        {
-            window.Width = savedWidth;
-            window.Height = savedHeight;
-        }
-        else
-        {
-            window.Width = defaultWidth;
-            window.Height = defaultHeight;
-        }
+        var width = _settings.Settings.WindowWidth;
+        var height = _settings.Settings.WindowHeight;
+        if (width <= 0 || width > maxWindowWidth || double.IsNaN(width))
+            width = defaultWidth;
+        if (height <= 0 || height > maxWindowHeight || double.IsNaN(height))
+            height = defaultHeight;
 
-        // Snap saved sizes to design aspect so Viewbox does not leave bottom/right bands
-        var aspect = window.Width / window.Height;
-        if (Math.Abs(aspect - designAspect) > 0.008)
-        {
-            window.Height = Math.Round(window.Width / designAspect);
-            if (window.Height < minWindowHeight)
-            {
-                window.Height = minWindowHeight;
-                window.Width = Math.Round(window.Height * designAspect);
-            }
-        }
+        window.Width = Math.Clamp(width, minWindowWidth, maxWindowWidth);
+        window.Height = Math.Clamp(height, minWindowHeight, maxWindowHeight);
     }
 
     private static double? SafeCoord(double value) =>

@@ -1,7 +1,8 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:conv="clr-namespace:WhereWindsMeetMidiPlayer.Converters"
-                    xmlns:behaviors="clr-namespace:WhereWindsMeetMidiPlayer.Behaviors">
+                    xmlns:behaviors="clr-namespace:WhereWindsMeetMidiPlayer.Behaviors"
+                    xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework">
 
     <conv:DurationMsConverter x:Key="DurationMsConverter"/>
     <conv:CatalogueDurationConverter x:Key="CatalogueDurationConverter"/>
@@ -179,15 +180,18 @@
     </Style>
 
     <Style x:Key="Button.WindowChrome" TargetType="Button" BasedOn="{StaticResource Button.Ghost}">
+        <Setter Property="shell:WindowChrome.IsHitTestVisibleInChrome" Value="True"/>
         <Setter Property="Foreground" Value="{DynamicResource Brush.ChromeButtonForeground}"/>
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderBrush" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="FontWeight" Value="Bold"/>
         <Setter Property="FontSize" Value="14"/>
+        <Setter Property="MinWidth" Value="40"/>
+        <Setter Property="MinHeight" Value="32"/>
         <Setter Property="Width" Value="34"/>
         <Setter Property="Height" Value="28"/>
-        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Padding" Value="8,6"/>
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
                 <Setter Property="Background" Value="{DynamicResource Brush.ChromeButtonHoverBackground}"/>
@@ -280,6 +284,13 @@
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+    </Style>
+
+    <Style x:Key="TextBox.Search.Compact" TargetType="TextBox" BasedOn="{StaticResource TextBox.Search}">
+        <Setter Property="Padding" Value="10,4"/>
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="MinHeight" Value="32"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
     </Style>
 
     <Style x:Key="ListBox.Debra" TargetType="ListBox">

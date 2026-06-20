@@ -8,6 +8,12 @@
              ClipToBounds="True">
 
     <UserControl.Resources>
+        <Style TargetType="TextBlock">
+            <Setter Property="Opacity" Value="{Binding PlayerChromeOpacity, RelativeSource={RelativeSource AncestorType=Window}}"/>
+        </Style>
+        <Style TargetType="Button">
+            <Setter Property="Opacity" Value="{Binding PlayerChromeOpacity, RelativeSource={RelativeSource AncestorType=Window}}"/>
+        </Style>
 
         <DataTemplate x:Key="NavItemTemplate" DataType="{x:Type vm:NavItemViewModel}">
             <Grid Margin="1,0,1,0"
@@ -203,9 +209,9 @@
                        Stretch="Uniform"
                        VerticalAlignment="Stretch"
                        HorizontalAlignment="Center"
-                       Opacity="0.8"
                        IsHitTestVisible="False"
-                       RenderOptions.BitmapScalingMode="HighQuality"/>
+                       RenderOptions.BitmapScalingMode="HighQuality"
+                       Opacity="{Binding PlayerChromeOpacity, RelativeSource={RelativeSource AncestorType=Window}}"/>
             </Border>
 
             <Grid x:Name="NavOverlay"

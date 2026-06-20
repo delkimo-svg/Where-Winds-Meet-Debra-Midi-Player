@@ -7,22 +7,27 @@
         xmlns:controls="clr-namespace:WhereWindsMeetMidiPlayer.Controls"
         xmlns:behaviors="clr-namespace:WhereWindsMeetMidiPlayer.Behaviors"
         xmlns:asset="clr-namespace:WhereWindsMeetMidiPlayer.Helpers"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         Title="Debra MIDI Player — Where Winds Meet"
         Height="682" Width="1024"
         MinHeight="640" MinWidth="940"
         SizeToContent="Manual"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
-        ResizeMode="CanMinimize"
-        Background="{DynamicResource Brush.WindowBackground}"
+        ResizeMode="CanResize"
+        AllowsTransparency="True"
+        Background="Transparent"
         AllowDrop="True"
         Closing="Window_OnClosing"
-        MouseLeftButtonDown="TitleBar_OnMouseDown"
         PreviewDragOver="Window_PreviewDragOver"
         DragOver="Window_DragOver"
         PreviewDragLeave="Window_PreviewDragLeave"
         PreviewDrop="Window_PreviewDrop"
         PreviewKeyDown="Window_OnPreviewKeyDown">
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="48" ResizeBorderThickness="8" GlassFrameThickness="0" UseAeroCaptionButtons="False"/>
+    </WindowChrome.WindowChrome>
 
     <Window.Resources>
         <conv:EnumEqualsConverter x:Key="EnumEquals"/>
@@ -95,20 +100,22 @@
         </DataTemplate>
     </Window.Resources>
 
-    <Grid FlowDirection="{Binding UiFlowDirection}" ClipToBounds="True" Background="{DynamicResource Brush.WindowBackground}">
-    <!-- 1024×682 design — UniformToFill crops edges instead of letterboxing -->
-    <Viewbox Stretch="UniformToFill" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-        <Grid Width="1024" Height="682" AllowDrop="True" ClipToBounds="True" FlowDirection="{Binding UiFlowDirection}">
-            <Image x:Name="MainBackgroundImage" Stretch="UniformToFill"
-                   HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                   RenderOptions.BitmapScalingMode="HighQuality"/>
-            <Rectangle IsHitTestVisible="False" Fill="{DynamicResource Brush.BackgroundScrim}"/>
+    <Grid FlowDirection="{Binding UiFlowDirection}" ClipToBounds="True" Background="Transparent">
+        <Image x:Name="MainBackgroundImage" Stretch="UniformToFill"
+               HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+               RenderOptions.BitmapScalingMode="HighQuality"
+               Opacity="{Binding PlayerChromeOpacity}"/>
+        <Border Background="{DynamicResource Brush.WindowBackground}"
+                Opacity="{Binding PlayerChromeOpacity}"
+                IsHitTestVisible="False"/>
+        <Rectangle IsHitTestVisible="False" Fill="{DynamicResource Brush.BackgroundScrim}"
+                   Opacity="{Binding PlayerChromeOpacity}"/>
 
-    <Grid>
+        <Grid AllowDrop="True" ClipToBounds="True" FlowDirection="{Binding UiFlowDirection}">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="48"/>
                     <RowDefinition Height="*"/>
-                    <RowDefinition Height="192"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -117,12 +124,19 @@
 
                 <!-- Title bar spans full width so body column 0 stays sidebar-narrow only -->
                 <Grid Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" ClipToBounds="True"
-                      Background="{DynamicResource Brush.BgDeep}">
+                      Background="Transparent">
+                    <Grid.Resources>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Opacity" Value="{Binding PlayerChromeOpacity}"/>
+                        </Style>
+                    </Grid.Resources>
                     <Border x:Name="TitleBarDecorHost" Panel.ZIndex="0" IsHitTestVisible="False"
                             VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
-                            Background="{DynamicResource Brush.BgDeep}"/>
+                            Background="{DynamicResource Brush.BgDeep}"
+                            Opacity="{Binding PlayerChromeOpacity}"/>
                     <Border x:Name="TitleBarVignette" Panel.ZIndex="0" IsHitTestVisible="False"
-                            VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+                            VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
+                            Opacity="{Binding PlayerChromeOpacity}">
                         <Border.Background>
                             <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
                                 <GradientStop Color="#70141518" Offset="0"/>
@@ -133,7 +147,8 @@
                         </Border.Background>
                     </Border>
                     <Border x:Name="TitleBarEdgeFadeTop" Panel.ZIndex="1" Height="3" VerticalAlignment="Top"
-                            HorizontalAlignment="Stretch" IsHitTestVisible="False">
+                            HorizontalAlignment="Stretch" IsHitTestVisible="False"
+                            Opacity="{Binding PlayerChromeOpacity}">
                         <Border.Background>
                             <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                                 <GradientStop Color="{DynamicResource BgDeep}" Offset="0"/>
@@ -142,7 +157,8 @@
                         </Border.Background>
                     </Border>
                     <Border x:Name="TitleBarEdgeFadeBottom" Panel.ZIndex="1" Height="3" VerticalAlignment="Bottom"
-                            HorizontalAlignment="Stretch" IsHitTestVisible="False">
+                            HorizontalAlignment="Stretch" IsHitTestVisible="False"
+                            Opacity="{Binding PlayerChromeOpacity}">
                         <Border.Background>
                             <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                                 <GradientStop Color="#00000000" Offset="0"/>
@@ -150,16 +166,18 @@
                             </LinearGradientBrush>
                         </Border.Background>
                     </Border>
-                    <Grid Panel.ZIndex="2" VerticalAlignment="Center">
+                    <Grid Panel.ZIndex="2" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0"
+                                MouseLeftButtonDown="TitleBar_OnMouseDown">
                         <Image Source="{asset:LocalAsset debra-wwm-header-logo.png}"
                                Height="32" Stretch="Uniform" VerticalAlignment="Center"
                                Margin="0,0,10,0" RenderOptions.BitmapScalingMode="HighQuality"
-                               SnapsToDevicePixels="True" IsHitTestVisible="False"/>
+                               SnapsToDevicePixels="True" IsHitTestVisible="False"
+                               Opacity="{Binding PlayerChromeOpacity}"/>
                         <TextBlock VerticalAlignment="Center" FontFamily="{DynamicResource Font.HeaderTitle}"
                                    TextOptions.TextFormattingMode="Display">
                             <Run Text="Debra Midi Player" FontSize="17" FontWeight="SemiBold"
@@ -175,7 +193,9 @@
                         </TextBlock>
                     </StackPanel>
                     <StackPanel x:Name="TourTarget_Header" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center"
-                                HorizontalAlignment="Right" Margin="8,0,8,0">
+                                HorizontalAlignment="Right" Margin="8,0,8,0" Panel.ZIndex="10"
+                                shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                                Opacity="{Binding PlayerChromeOpacity}">
                         <Button Content="{Binding Ui.HeaderUpdate}" Style="{StaticResource Button.UpdatePulse}"
                                 Command="{Binding ShowUpdateOverlayCommand}"
                                 ToolTip="{Binding Ui.HeaderUpdateTooltip}"
@@ -198,10 +218,12 @@
                                 <TextBlock Text="Debra ▾" Foreground="{DynamicResource Brush.GoldBright}" FontWeight="SemiBold" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Border>
-                        <Border Background="{DynamicResource Brush.BgElevated}" CornerRadius="10" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" Padding="2,0">
+                        <Border x:Name="TitleBarWindowButtons" Background="{DynamicResource Brush.BgElevated}" CornerRadius="10"
+                                BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" Padding="2,0"
+                                Panel.ZIndex="10" shell:WindowChrome.IsHitTestVisibleInChrome="True">
                             <StackPanel Orientation="Horizontal">
                                 <Button Content="—" Style="{StaticResource Button.WindowChrome}" Click="Minimize_OnClick"/>
-                                <Button Content="□" Style="{StaticResource Button.WindowChrome}" Visibility="Collapsed" IsEnabled="False"/>
+                                <Button Content="□" Style="{StaticResource Button.WindowChrome}" Click="Maximize_OnClick"/>
                                 <Button Content="✕" Style="{StaticResource Button.WindowChrome}" Click="Close_OnClick"/>
                             </StackPanel>
                         </Border>
@@ -219,9 +241,41 @@
 
                 <Grid x:Name="MainContentStack" Grid.Row="1" Grid.Column="1" Margin="0,6,5,0"
                       HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                        <Border Background="{DynamicResource Brush.SettingsShellBackground}" CornerRadius="16" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" Padding="10"
+                        <Grid.Resources>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Opacity" Value="{Binding PlayerChromeOpacity}"/>
+                            </Style>
+                            <Style TargetType="Button">
+                                <Setter Property="Opacity" Value="{Binding PlayerChromeOpacity}"/>
+                            </Style>
+                            <Style TargetType="ToggleButton">
+                                <Setter Property="Opacity" Value="{Binding PlayerChromeOpacity}"/>
+                            </Style>
+                            <Style TargetType="ComboBox">
+                                <Setter Property="Opacity" Value="{Binding PlayerChromeOpacity}"/>
+                            </Style>
+                            <Style TargetType="TextBox">
+                                <Setter Property="Opacity" Value="{Binding PlayerChromeOpacity}"/>
+                            </Style>
+                            <Style TargetType="Slider">
+                                <Setter Property="Opacity" Value="{Binding PlayerChromeOpacity}"/>
+                            </Style>
+                            <Style TargetType="ListBox">
+                                <Setter Property="Opacity" Value="{Binding PlayerChromeOpacity}"/>
+                            </Style>
+                            <Style TargetType="ProgressBar">
+                                <Setter Property="Opacity" Value="{Binding PlayerChromeOpacity}"/>
+                            </Style>
+                            <Style TargetType="controls:DebraFastDropdown">
+                                <Setter Property="Opacity" Value="{Binding PlayerChromeOpacity}"/>
+                            </Style>
+                            <Style TargetType="controls:SongTrashBin">
+                                <Setter Property="Opacity" Value="{Binding PlayerChromeOpacity}"/>
+                            </Style>
+                        </Grid.Resources>
+                        <controls:ChromeFadeCard x:Name="TourTarget_Settings" SurfaceBackground="{DynamicResource Brush.SettingsShellBackground}" CornerRadius="16" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" Padding="10"
                                 Visibility="{Binding ShowSettingsPanel, Converter={StaticResource BoolToVis}}">
-                            <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="560" ClipToBounds="True">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" ClipToBounds="True">
                                 <StackPanel MaxWidth="480">
                                     <TextBlock Text="{Binding Ui.SectionSettings}" Style="{StaticResource Text.SectionHeader}" Margin="0,0,0,16"/>
                                     <TextBlock Text="{Binding Ui.SettingsTheme}" Style="{StaticResource Text.Muted}" Margin="0,0,0,4"/>
@@ -293,11 +347,46 @@
                                         <TextBlock Text="{Binding Ui.SettingsSmartTranspose}" Style="{StaticResource Text.Muted}" VerticalAlignment="Center"/>
                                         <ToggleButton Grid.Column="1" Style="{StaticResource Toggle.Debra}" IsChecked="{Binding SmartTranspose}"/>
                                     </Grid>
+                                    <TextBlock Text="{Binding Ui.SettingsAdvancedSettings}" Style="{StaticResource Text.Title}" Margin="0,16,0,8"/>
+                                    <TextBlock Text="{Binding Ui.SettingsNoteMappingMode}" Style="{StaticResource Text.Muted}" Margin="0,0,0,4"/>
+                                    <ComboBox ItemsSource="{Binding NoteMappingModes}" DisplayMemberPath="DisplayName"
+                                              SelectedItem="{Binding SelectedNoteMappingMode, Mode=TwoWay}"
+                                              Style="{StaticResource ComboBox.Debra}"/>
+                                    <TextBlock Text="{Binding SelectedNoteMappingModeDescription}" Style="{StaticResource Text.Muted}" FontSize="9" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                                    <Grid Margin="0,10,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="72"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding Ui.SettingsNoteDelay}" Style="{StaticResource Text.Muted}" VerticalAlignment="Center"/>
+                                        <TextBox Grid.Column="1" Text="{Binding NoteDelayMs, UpdateSourceTrigger=LostFocus}" Style="{StaticResource TextBox.Search}"/>
+                                    </Grid>
+                                    <TextBlock Text="{Binding Ui.SettingsNoteDelayHint}" Style="{StaticResource Text.Muted}" FontSize="9" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                    <Grid Margin="0,6,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="72"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding Ui.SettingsChordRoll}" Style="{StaticResource Text.Muted}" VerticalAlignment="Center"/>
+                                        <TextBox Grid.Column="1" Text="{Binding ChordRollDelayMs, UpdateSourceTrigger=LostFocus}" Style="{StaticResource TextBox.Search}"/>
+                                    </Grid>
+                                    <TextBlock Text="{Binding Ui.SettingsChordRollHint}" Style="{StaticResource Text.Muted}" FontSize="9" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                    <Grid Margin="0,6,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="72"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding Ui.SettingsModifierDelay}" Style="{StaticResource Text.Muted}" VerticalAlignment="Center"/>
+                                        <TextBox Grid.Column="1" Text="{Binding ModifierDelayMs, UpdateSourceTrigger=LostFocus}" Style="{StaticResource TextBox.Search}"/>
+                                    </Grid>
+                                    <TextBlock Text="{Binding Ui.SettingsModifierDelayHint}" Style="{StaticResource Text.Muted}" FontSize="9" Margin="0,2,0,0" TextWrapping="Wrap"/>
                                     <TextBlock Text="{Binding Ui.SettingsAutoPlayNext}" Style="{StaticResource Text.Muted}" Margin="0,8,0,4"/>
                                     <TextBox Text="{Binding AutoPlayNextDelaySeconds, UpdateSourceTrigger=LostFocus}" Style="{StaticResource TextBox.Search}"/>
                                     <TextBlock Text="{Binding Ui.SettingsAutoPlayNextHint}" Style="{StaticResource Text.Muted}" FontSize="9" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                                    <TextBlock Text="{Binding Ui.SettingsKeyLayout}" Style="{StaticResource Text.Muted}" Margin="0,12,0,4"/>
                                     <ComboBox ItemsSource="{Binding KeyLayouts}" DisplayMemberPath="DisplayName"
-                                              SelectedItem="{Binding SelectedLayout}" Style="{StaticResource ComboBox.Debra}" Margin="0,12,0,0"/>
+                                              SelectedItem="{Binding SelectedLayout}" Style="{StaticResource ComboBox.Debra}"/>
+                                    <TextBlock Text="{Binding Ui.SettingsKeyModeHint}" Style="{StaticResource Text.Muted}" FontSize="9" Margin="0,4,0,0" TextWrapping="Wrap"/>
                                     <Button Content="{Binding Ui.SettingsEditKeybinds}" Style="{StaticResource Button.Gold}" Margin="0,12,0,0" HorizontalAlignment="Left" Command="{Binding OpenKeybindEditorCommand}"/>
                                     <Button Content="{Binding Ui.SettingsOpenKeymaps}" Style="{StaticResource Button.Ghost}" Margin="0,8,0,0" HorizontalAlignment="Left" Command="{Binding OpenKeymapsFolderCommand}"/>
                                     <TextBlock Text="{Binding Ui.SettingsReleaseManifest}" Style="{StaticResource Text.Muted}" Margin="0,20,0,4"/>
@@ -307,7 +396,7 @@
                                             Command="{Binding CheckForUpdatesCommand}"/>
                                 </StackPanel>
                             </ScrollViewer>
-                        </Border>
+                        </controls:ChromeFadeCard>
 
                         <Grid x:Name="MainPanelsGrid" Visibility="{Binding ShowMainPanels, Converter={StaticResource BoolToVis}}"
                               HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
@@ -359,7 +448,8 @@
                             </GridSplitter>
 
                             <!-- LIBRARY (drag-and-drop .mid / .midi / folders) -->
-                            <Border x:Name="LibraryDropTarget" Grid.Column="0" Background="{DynamicResource Brush.CardBackground}" CornerRadius="14"
+                            <controls:ChromeFadeCard x:Name="LibraryDropTarget" Grid.Column="0"
+                                    SurfaceBackground="{DynamicResource Brush.CardBackground}" CornerRadius="14"
                                     BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" Margin="0,0,6,0" Padding="14,12"
                                     HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                                     behaviors:FileDropZoneBehavior.IsEnabled="True"
@@ -369,9 +459,6 @@
                                     DragLeave="LibraryDropTarget_OnDragLeave"
                                     Drop="LibraryDropTarget_OnDrop"
                                     Visibility="{Binding ShowLibraryPanel, Converter={StaticResource BoolToVis}}">
-                                <Border.Effect>
-                                    <DropShadowEffect Color="{DynamicResource PanelShadow}" BlurRadius="14" ShadowDepth="2" Opacity="0.25"/>
-                                </Border.Effect>
                                 <DockPanel>
                                     <TextBlock DockPanel.Dock="Top" Text="{Binding Ui.SectionLibrary}" Style="{StaticResource Text.SectionHeader}" Margin="0,0,0,10"/>
                                     <TextBlock DockPanel.Dock="Bottom" Text="{Binding LibraryStatsText}" Style="{StaticResource Text.Muted}" Margin="0,6,0,0"/>
@@ -423,17 +510,15 @@
                                              PreviewMouseLeftButtonUp="SongList_OnPreviewMouseLeftButtonUp"
                                              PreviewMouseMove="LibraryList_OnPreviewMouseMove"/>
                                 </DockPanel>
-                            </Border>
+                            </controls:ChromeFadeCard>
 
                             <!-- DISCORD CATALOGUE -->
                             <!-- HISTORY (left nav) -->
-                            <Border x:Name="TourTarget_History" Grid.Column="0" Background="{DynamicResource Brush.CardBackground}" CornerRadius="14"
+                            <controls:ChromeFadeCard x:Name="TourTarget_History" Grid.Column="0"
+                                    SurfaceBackground="{DynamicResource Brush.CardBackground}" CornerRadius="14"
                                     BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" Margin="0,0,6,0" Padding="14,12"
                                     HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                                     Visibility="{Binding ShowHistoryPanel, Converter={StaticResource BoolToVis}}">
-                                <Border.Effect>
-                                    <DropShadowEffect Color="{DynamicResource PanelShadow}" BlurRadius="14" ShadowDepth="2" Opacity="0.25"/>
-                                </Border.Effect>
                                 <DockPanel>
                                     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
                                         <TextBlock Text="{Binding Ui.SectionHistory}" Style="{StaticResource Text.SectionHeader}" VerticalAlignment="Center"/>
@@ -471,35 +556,34 @@
                                         </ListBox.ItemTemplate>
                                     </ListBox>
                                 </DockPanel>
-                            </Border>
+                            </controls:ChromeFadeCard>
 
-                            <Border x:Name="TourTarget_Catalogue" Grid.Column="0" Background="{DynamicResource Brush.CardBackground}" CornerRadius="14"
+                            <controls:ChromeFadeCard x:Name="TourTarget_Catalogue" Grid.Column="0"
+                                    SurfaceBackground="{DynamicResource Brush.CardBackground}" CornerRadius="14"
                                     BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" Margin="0,0,6,0" Padding="14,12"
                                     HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                                     Visibility="{Binding ShowCataloguePanel, Converter={StaticResource BoolToVis}}">
-                                <Border.Effect>
-                                    <DropShadowEffect Color="{DynamicResource PanelShadow}" BlurRadius="14" ShadowDepth="2" Opacity="0.25"/>
-                                </Border.Effect>
                                 <DockPanel>
-                                    <TextBlock DockPanel.Dock="Top" Text="{Binding Ui.SectionCatalogue}" Style="{StaticResource Text.SectionHeader}" Margin="0,0,0,6"/>
-                                    <TextBlock DockPanel.Dock="Top" Text="{Binding Ui.CatalogueSubtitle}" Style="{StaticResource Text.Muted}" FontSize="9" Margin="0,0,0,6"/>
+                                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+                                        <Button DockPanel.Dock="Right" Content="{Binding Ui.CatalogueRefresh}" Style="{StaticResource Button.Gold}"
+                                                Command="{Binding RefreshDiscordCatalogueCommand}"
+                                                IsEnabled="{Binding IsCatalogueLoading, Converter={StaticResource BoolToVisInvert}}"
+                                                Padding="10,4" FontSize="11" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding Ui.SectionCatalogue}" Style="{StaticResource Text.SectionHeader}" VerticalAlignment="Center"/>
+                                    </DockPanel>
+                                    <TextBlock DockPanel.Dock="Top" Text="{Binding Ui.CatalogueSubtitle}" Style="{StaticResource Text.Muted}" FontSize="9" Margin="0,0,0,8"/>
                                     <TextBlock DockPanel.Dock="Bottom" Text="{Binding CatalogueStatsText}" Style="{StaticResource Text.Muted}" Margin="0,6,0,0"/>
                                     <TextBlock DockPanel.Dock="Bottom" Text="{Binding CatalogueStatusText}" FontSize="9" Foreground="{DynamicResource Brush.TextMuted}"
                                                TextWrapping="Wrap" Margin="0,0,0,4"/>
-                                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
-                                        <Button Content="{Binding Ui.CatalogueRefresh}" Style="{StaticResource Button.Gold}" Command="{Binding RefreshDiscordCatalogueCommand}"
-                                                IsEnabled="{Binding IsCatalogueLoading, Converter={StaticResource BoolToVisInvert}}"/>
-                                        <Button Content="{Binding Ui.CataloguePlay}" Style="{StaticResource Button.Ghost}" Margin="6,0,0,0"
-                                                Command="{Binding PlayCatalogueTrackCommand}"/>
-                                        <Button Content="{Binding Ui.CatalogueFavorite}" Style="{StaticResource Button.Ghost}" Margin="6,0,0,0"
-                                                Command="{Binding AddCatalogueToFavoritesCommand}"/>
-                                    </StackPanel>
-                                    <Grid DockPanel.Dock="Top" Margin="0,0,0,8">
-                                        <TextBox Style="{StaticResource TextBox.Search}" Text="{Binding CatalogueSearchText, UpdateSourceTrigger=PropertyChanged}"/>
-                                        <StackPanel Orientation="Horizontal" IsHitTestVisible="False" Margin="12,8,0,0"
+                                    <Grid DockPanel.Dock="Top" Margin="0,0,0,8" Height="32">
+                                        <TextBox Style="{StaticResource TextBox.Search.Compact}"
+                                                 Text="{Binding CatalogueSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                                 VerticalContentAlignment="Center"/>
+                                        <StackPanel Orientation="Horizontal" IsHitTestVisible="False" VerticalAlignment="Center" Margin="10,0,8,0"
                                                     Visibility="{Binding CatalogueSearchText, Converter={StaticResource BoolToVisInvert}}">
-                                            <TextBlock Text="🔍" Margin="0,0,6,0" Foreground="{DynamicResource Brush.GoldDim}"/>
-                                            <TextBlock Text="{Binding Ui.CatalogueSearch}" Foreground="{DynamicResource Brush.TextMuted}"/>
+                                            <TextBlock Text="🔍" Margin="0,0,6,0" Foreground="{DynamicResource Brush.GoldDim}" FontSize="11"/>
+                                            <TextBlock Text="{Binding Ui.CatalogueSearch}" Foreground="{DynamicResource Brush.TextMuted}" FontSize="11"
+                                                       TextTrimming="CharacterEllipsis"/>
                                         </StackPanel>
                                     </Grid>
                                     <Grid DockPanel.Dock="Top" Margin="0,0,0,8">
@@ -527,10 +611,12 @@
                                              PreviewMouseLeftButtonUp="SongList_OnPreviewMouseLeftButtonUp"
                                              PreviewMouseMove="CatalogueList_OnPreviewMouseMove"/>
                                 </DockPanel>
-                            </Border>
+                            </controls:ChromeFadeCard>
 
                             <!-- PLAYLIST (default middle column) -->
-                            <Border x:Name="TourTarget_Playlist" Grid.Column="2" Background="{DynamicResource Brush.CardBackground}" CornerRadius="14" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" Margin="0,0,6,0" Padding="14,12"
+                            <controls:ChromeFadeCard x:Name="TourTarget_Playlist" Grid.Column="2"
+                                    SurfaceBackground="{DynamicResource Brush.CardBackground}" CornerRadius="14"
+                                    BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" Margin="0,0,6,0" Padding="14,12"
                                     HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                                     behaviors:FileDropZoneBehavior.IsEnabled="True"
                                     AllowDrop="True"
@@ -539,9 +625,6 @@
                                     DragLeave="PlaylistPanel_OnDragLeave"
                                     Drop="PlaylistPanel_OnDrop"
                                     Visibility="{Binding ShowPlaylistPanel, Converter={StaticResource BoolToVis}}">
-                                <Border.Effect>
-                                    <DropShadowEffect Color="{DynamicResource PanelShadow}" BlurRadius="14" ShadowDepth="2" Opacity="0.25"/>
-                                </Border.Effect>
                                 <DockPanel>
                                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
                                         <TextBlock Text="{Binding Ui.SectionPlaylist}" Style="{StaticResource Text.SectionHeader}"/>
@@ -681,14 +764,13 @@
                                              PreviewMouseMove="PlaylistList_OnPreviewMouseMove"
                                              MouseDoubleClick="Playlist_OnDoubleClick"/>
                                 </DockPanel>
-                            </Border>
+                            </controls:ChromeFadeCard>
 
                             <!-- FAVORITES (left column; playlist stays visible beside it) -->
-                            <Border x:Name="FavoritesDropTarget" Grid.Column="0" Background="{DynamicResource Brush.CardBackground}" CornerRadius="14" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" Margin="0,0,6,0" Padding="14,12"
+                            <controls:ChromeFadeCard x:Name="FavoritesDropTarget" Grid.Column="0"
+                                    SurfaceBackground="{DynamicResource Brush.CardBackground}" CornerRadius="14"
+                                    BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" Margin="0,0,6,0" Padding="14,12"
                                     Visibility="{Binding ShowFavoritesPanel, Converter={StaticResource BoolToVis}}">
-                                <Border.Effect>
-                                    <DropShadowEffect Color="{DynamicResource PanelShadow}" BlurRadius="14" ShadowDepth="2" Opacity="0.25"/>
-                                </Border.Effect>
                                 <DockPanel>
                                     <TextBlock DockPanel.Dock="Top" Text="{Binding Ui.SectionFavorites}" Style="{StaticResource Text.SectionHeader}" Margin="0,0,0,10"/>
                                     <TextBlock DockPanel.Dock="Bottom" Text="{Binding FavoritesStatsText}" Style="{StaticResource Text.Muted}" Margin="0,6,0,0"/>
@@ -717,12 +799,10 @@
                                              PreviewMouseMove="FavoritesList_OnPreviewMouseMove"
                                              MouseDoubleClick="Favorites_OnDoubleClick"/>
                                 </DockPanel>
-                            </Border>
-
-                            <!-- NOW PLAYING (fills remaining width to align with window chrome) -->
+                            </controls:ChromeFadeCard>
                             <Border x:Name="TourTarget_NowPlaying" Grid.Column="3" Background="Transparent" BorderThickness="0" Padding="0" Margin="0,0,0,0"
                                     HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                                <controls:DebraNowPlayingArt HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                <controls:DebraNowPlayingArt HorizontalAlignment="Stretch" VerticalAlignment="Top"
                                     NowPlayingTitle="{Binding NowPlayingTitle}"
                                     NowPlayingSubtitle="{Binding NowPlayingSubtitle}"
                                     NowPlayingDurationDisplay="{Binding NowPlayingDurationDisplay}"
@@ -738,10 +818,9 @@
                                             Grid.ColumnSpan="2"
                                             Margin="5,7,5,6"
                                             HorizontalAlignment="Stretch"/>
-            </Grid>
         </Grid>
-    </Viewbox>
-    <controls:TourGuideOverlay x:Name="TourGuide" Panel.ZIndex="100" Visibility="Collapsed"
-                               HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+
+        <controls:TourGuideOverlay x:Name="TourGuide" Panel.ZIndex="100" Visibility="Collapsed"
+                                   HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
     </Grid>
 </Window>

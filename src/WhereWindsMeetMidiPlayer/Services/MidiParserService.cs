@@ -69,6 +69,59 @@ public sealed class MidiParserService
         };
     }
 
+    public IReadOnlyList<MidiTrackInfo> GetTracks(string filePath)
+    {
+        if (!File.Exists(filePath))
+            return [];
+
+        var midiFile = MidiFile.Read(filePath, MidiTextEncoding.ReadingSettings);
+        var tracks = new List<MidiTrackInfo>();
+        var trackIndex = 0;
+
+        foreach (var trackChunk in midiFile.GetTrackChunks())
+        {
+            var name = string.Empty;
+            foreach (var midiEvent in trackChunk.Events)
+            {
+                if (midiEvent is SequenceTrackNameEvent nameEvent)
+                {
+                    name = CleanTrackName(nameEvent.Text ?? string.Empty);
+                    break;
+                }
+            }
+
+            var noteCount = 0;
+            foreach (var note in trackChunk.GetNotes())
+            {
+                if (note.Channel == PercussionChannel || note.Velocity == 0)
+                    continue;
+                noteCount++;
+            }
+
+            if (noteCount > 0)
+            {
+                if (string.IsNullOrWhiteSpace(name))
+                    name = $"Track {trackIndex + 1}";
+
+                tracks.Add(new MidiTrackInfo
+                {
+                    Index = trackIndex,
+                    Name = name,
+                    NoteCount = noteCount
+                });
+            }
+
+            trackIndex++;
+        }
+
+        return tracks;
+    }
+
+    private static string CleanTrackName(string raw) =>
+        string.Concat(raw.Where(c =>
+            char.IsAsciiLetterOrDigit(c) || c is ' ' or '-' or '_' or '.' or '(' or ')'))
+            .Trim();
+
     private static double GetInitialBeatsPerMinute(TempoMap tempoMap)
     {
         try

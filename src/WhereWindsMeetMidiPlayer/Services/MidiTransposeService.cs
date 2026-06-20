@@ -8,7 +8,7 @@ namespace WhereWindsMeetMidiPlayer.Services;
 /// </summary>
 public static class MidiTransposeService
 {
-    public static int DetectBestTranspose(IReadOnlyList<NormalizedNote> notes)
+    public static int DetectBestTranspose(IReadOnlyList<NormalizedNote> notes, bool preferNearestNatural = false)
     {
         if (notes.Count == 0)
             return 0;
@@ -23,10 +23,13 @@ public static class MidiTransposeService
             {
                 var target = note.NoteNumber + transpose;
                 var folded = FoldIntoGameRange(target);
-                score += Math.Abs(target - folded);
+                score += preferNearestNatural
+                    ? Math.Abs(folded - NoteMappingService.SnapToNearestNatural(folded))
+                    : Math.Abs(target - folded);
             }
 
-            if (score < bestScore)
+            if (score < bestScore
+                || (score == bestScore && Math.Abs(transpose) < Math.Abs(bestTranspose)))
             {
                 bestScore = score;
                 bestTranspose = transpose;

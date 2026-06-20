@@ -68,7 +68,7 @@ public partial class MainWindow : Window
         try
         {
             MainBackgroundImage.Source = AssetImage.LoadBackground();
-            Background = TryFindResource("Brush.WindowBackground") as Brush ?? Background;
+            Background = Brushes.Transparent;
             ApplyTitleBarDecor();
         }
         catch
@@ -196,6 +196,9 @@ public partial class MainWindow : Window
     }
 
     private void Minimize_OnClick(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
+
+    private void Maximize_OnClick(object sender, RoutedEventArgs e) =>
+        WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
 
     private void Close_OnClick(object sender, RoutedEventArgs e) => Close();
 
@@ -604,12 +607,8 @@ public partial class MainWindow : Window
         data.GetDataPresent(DebraDialogs.SongDragFormat)
         || data.GetDataPresent(DebraDialogs.CatalogueTrackDragFormat);
 
-    private UIElement? GetLayoutRoot()
-    {
-        if (Content is Viewbox viewbox && viewbox.Child is UIElement child)
-            return child;
-        return Content as UIElement;
-    }
+    private UIElement? GetLayoutRoot() =>
+        Content as UIElement;
 
     private bool IsOverTitleBar(DragEventArgs e)
     {

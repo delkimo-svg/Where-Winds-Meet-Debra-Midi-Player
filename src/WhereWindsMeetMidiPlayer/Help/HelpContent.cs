@@ -9,7 +9,7 @@ public static class HelpContent
         Section("Help_S00", 3, 0),
         Section("Help_S01", 3, 3),
         Section("Help_S02", 3, 5),
-        Section("Help_S03", 4, 0),
+        Section("Help_S03", 5, 0),
         Section("Help_S04", 4, 0),
         Section("Help_S05", 4, 0),
         Section("Help_S06", 6, 0),
@@ -17,7 +17,7 @@ public static class HelpContent
         Section("Help_S08", 2, 0),
         Section("Help_S09", 2, 0),
         Section("Help_S10", 4, 2),
-        Section("Help_S11", 7, 0),
+        Section("Help_S11", 8, 0),
         Section("Help_S12", 4, 0),
         Section("Help_S13", 4, 0),
         Section("Help_S14", 5, 0)

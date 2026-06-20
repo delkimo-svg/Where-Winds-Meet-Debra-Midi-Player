@@ -16,6 +16,7 @@ public sealed class InputService
 
     private readonly GameWindowService _gameWindow;
     private Func<InputDeliveryMode> _getMode = () => InputDeliveryMode.Auto;
+    private Func<int> _getModifierDelayMs = () => 0;
 
     public long KeysSentCount { get; private set; }
     public string LastKeySent { get; private set; } = string.Empty;
@@ -24,6 +25,10 @@ public sealed class InputService
     public InputService(GameWindowService gameWindow) => _gameWindow = gameWindow;
 
     public void ConfigureMode(Func<InputDeliveryMode> getMode) => _getMode = getMode;
+
+    public void ConfigureModifierDelay(Func<int> getDelayMs) => _getModifierDelayMs = getDelayMs;
+
+    private int ModifierDelayMs => Math.Max(0, _getModifierDelayMs());
 
     public void ResetDiagnostics()
     {
@@ -65,14 +70,14 @@ public sealed class InputService
             {
                 PostKey(hwnd, modVk, true);
                 PostKey(hwnd, keyVk, true);
-                Thread.Sleep(1);
+                Thread.Sleep(ModifierDelayMs > 0 ? ModifierDelayMs : 1);
                 PostKey(hwnd, keyVk, false);
                 PostKey(hwnd, modVk, false);
             }
             else
             {
                 PostKey(hwnd, keyVk, true);
-                Thread.Sleep(1);
+                Thread.Sleep(ModifierDelayMs > 0 ? ModifierDelayMs : 1);
                 PostKey(hwnd, keyVk, false);
             }
         }
@@ -91,14 +96,14 @@ public sealed class InputService
                 {
                     SendScancode(modVk, false);
                     SendScancode(keyVk, false);
-                    Thread.Sleep(2);
+                    Thread.Sleep(ModifierDelayMs > 0 ? ModifierDelayMs : 2);
                     SendScancode(keyVk, true);
                     SendScancode(modVk, true);
                 }
                 else
                 {
                     SendScancode(keyVk, false);
-                    Thread.Sleep(2);
+                    Thread.Sleep(ModifierDelayMs > 0 ? ModifierDelayMs : 2);
                     SendScancode(keyVk, true);
                 }
             });

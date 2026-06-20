@@ -76,6 +76,13 @@ public static class TourGuideContent
         },
         new TourStep
         {
+            Title = L.T("Tour_14_Title"),
+            Description = L.T("Tour_14_Desc"),
+            TargetName = "TourTarget_PlayerMore",
+            Placement = TourCalloutPlacement.Above
+        },
+        new TourStep
+        {
             Title = L.T("Tour_11_Title"),
             Description = L.T("Tour_11_Desc"),
             TargetName = "TourTarget_Settings",

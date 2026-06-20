@@ -92,13 +92,16 @@ public partial class DebraSidebar : UserControl
         var navTopRatio = isWuxia ? 0.132 : 0.09;
         var navZoneRatio = isWuxia ? 0.765 : 0.80;
         var navWidthRatio = isWuxia ? 0.72 : 0.94;
+        var navZoneHeight = h * navZoneRatio;
         var navWidth = hostWidth * navWidthRatio;
 
         NavOverlay.Margin = new Thickness(0, h * navTopRatio, 0, 0);
-        NavOverlay.Height = h * navZoneRatio;
+        NavOverlay.Height = navZoneHeight;
         NavOverlay.Width = navWidth;
         NavOverlay.HorizontalAlignment = HorizontalAlignment.Center;
         NavHost.Width = navWidth;
+
+        NavOverlay.RenderTransformOrigin = new Point(0.5, 0);
 
         if (isWuxia)
         {
@@ -107,7 +110,6 @@ public partial class DebraSidebar : UserControl
             group.Children.Add(new TranslateTransform(_bannerCenterBiasX, 0));
             NavOverlay.LayoutTransform = null;
             NavOverlay.RenderTransform = group;
-            NavOverlay.RenderTransformOrigin = new Point(0.5, 0.5);
         }
         else
         {
