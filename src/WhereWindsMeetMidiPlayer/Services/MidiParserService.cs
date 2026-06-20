@@ -55,6 +55,14 @@ public sealed class MidiParserService
             return cmp != 0 ? cmp : a.NoteNumber.CompareTo(b.NoteNumber);
         });
 
+        // Illegal MIDI: duplicate NoteOn for the same key/channel at the same time — keep one (highest velocity).
+        notes = notes
+            .GroupBy(n => (n.StartMs, n.NoteNumber, n.Channel))
+            .Select(g => g.OrderByDescending(n => n.Velocity).First())
+            .OrderBy(n => n.StartMs)
+            .ThenBy(n => n.NoteNumber)
+            .ToList();
+
         var durationMsTotal = notes.Count == 0
             ? 0
             : notes.Max(n => n.StartMs + n.DurationMs);

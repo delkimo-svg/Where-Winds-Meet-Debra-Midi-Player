@@ -693,7 +693,7 @@ public sealed class PlaybackEngine : IDisposable
 
         {
 
-            var mapped = new List<(NormalizedNote Note, string Combo)>();
+            var rollIndex = 0;
 
             foreach (var note in chord
                 .GroupBy(n => n.NoteNumber)
@@ -709,58 +709,6 @@ public sealed class PlaybackEngine : IDisposable
                     continue;
 
 
-
-                var duplicateKey = mapped.FindIndex(m => m.Combo == combo);
-
-                if (duplicateKey >= 0)
-
-                {
-
-                    if (note.Velocity > mapped[duplicateKey].Note.Velocity)
-
-                        mapped[duplicateKey] = (note, combo);
-
-                    continue;
-
-                }
-
-
-
-                mapped.Add((note, combo));
-
-            }
-
-
-
-            if (mapped.Count == 0)
-
-                continue;
-
-
-
-            if (chordRollDelayMs <= 0 && mapped.Count > 1)
-
-            {
-
-                var best = mapped
-
-                    .OrderByDescending(m => m.Note.Velocity)
-
-                    .ThenByDescending(m => m.Note.NoteNumber)
-
-                    .First();
-
-                mapped = new List<(NormalizedNote, string)> { best };
-
-            }
-
-
-
-            var rollIndex = 0;
-
-            foreach (var (note, combo) in mapped.OrderBy(m => m.Note.NoteNumber))
-
-            {
 
                 schedule.Add(new ScheduledNote
 
