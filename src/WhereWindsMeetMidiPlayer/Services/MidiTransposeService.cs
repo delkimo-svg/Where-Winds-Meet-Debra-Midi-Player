@@ -8,15 +8,16 @@ namespace WhereWindsMeetMidiPlayer.Services;
 /// </summary>
 public static class MidiTransposeService
 {
-    public static int DetectBestTranspose(IReadOnlyList<NormalizedNote> notes, bool preferNearestNatural = false)
+    public static int DetectBestTranspose(IReadOnlyList<NormalizedNote> notes, bool preferNearestNatural = false, int maxSemitones = 12)
     {
         if (notes.Count == 0)
             return 0;
 
+        maxSemitones = Math.Clamp(maxSemitones, 12, 60);
         var bestTranspose = 0;
         var bestScore = int.MaxValue;
 
-        for (var transpose = -12; transpose <= 12; transpose++)
+        for (var transpose = -maxSemitones; transpose <= maxSemitones; transpose++)
         {
             var score = 0;
             foreach (var note in notes)
@@ -74,6 +75,7 @@ public static class MidiTransposeService
         TrackIndex = n.TrackIndex,
         Channel = n.Channel,
         NoteNumber = n.NoteNumber,
-        Skipped = n.Skipped
+        Skipped = n.Skipped,
+        FingerNumber = n.FingerNumber
     };
 }

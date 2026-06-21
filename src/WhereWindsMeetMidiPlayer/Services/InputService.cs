@@ -15,8 +15,15 @@ public sealed class InputService
     private const uint MapvkVkToVsc = 0;
 
     private readonly GameWindowService _gameWindow;
+    private readonly object _liveQueueLock = new();
+    private readonly Queue<string> _liveQueue = new();
     private Func<InputDeliveryMode> _getMode = () => InputDeliveryMode.Auto;
     private Func<int> _getModifierDelayMs = () => 0;
+    private Func<int> _getLiveNoteDelayMs = () => 0;
+    private Func<int> _getLiveIdenticalKeyGapMs = () => 0;
+    private int _liveQueueWorkerActive;
+    private long _lastLivePressTick;
+    private string? _lastLiveCombo;
 
     public long KeysSentCount { get; private set; }
     public string LastKeySent { get; private set; } = string.Empty;
@@ -28,7 +35,79 @@ public sealed class InputService
 
     public void ConfigureModifierDelay(Func<int> getDelayMs) => _getModifierDelayMs = getDelayMs;
 
+    public void ConfigureLiveInputTiming(Func<int> getNoteDelayMs, Func<int> getIdenticalKeyGapMs)
+    {
+        _getLiveNoteDelayMs = getNoteDelayMs;
+        _getLiveIdenticalKeyGapMs = getIdenticalKeyGapMs;
+    }
+
     private int ModifierDelayMs => Math.Max(0, _getModifierDelayMs());
+
+    /// <summary>
+    /// Serializes live PC/MIDI key taps with optional spacing (same rules as MIDI playback).
+    /// Prevents parallel PostMessage calls from dropping or interleaving fast notes.
+    /// </summary>
+    public void QueuePressKeyCombo(string combo)
+    {
+        if (string.IsNullOrWhiteSpace(combo))
+            return;
+
+        lock (_liveQueueLock)
+        {
+            _liveQueue.Enqueue(combo);
+            if (_liveQueueWorkerActive == 0)
+            {
+                _liveQueueWorkerActive = 1;
+                Task.Run(ProcessLiveQueue);
+            }
+        }
+    }
+
+    public void ClearLiveQueue()
+    {
+        lock (_liveQueueLock)
+        {
+            _liveQueue.Clear();
+            _lastLiveCombo = null;
+            _lastLivePressTick = 0;
+        }
+    }
+
+    private void ProcessLiveQueue()
+    {
+        while (true)
+        {
+            string combo;
+            lock (_liveQueueLock)
+            {
+                if (_liveQueue.Count == 0)
+                {
+                    _liveQueueWorkerActive = 0;
+                    return;
+                }
+
+                combo = _liveQueue.Dequeue();
+            }
+
+            var noteDelayMs = Math.Max(0, _getLiveNoteDelayMs());
+            if (noteDelayMs > 0)
+                Thread.Sleep(noteDelayMs);
+
+            var gapMs = Math.Max(0, _getLiveIdenticalKeyGapMs());
+            if (gapMs > 0 &&
+                _lastLiveCombo is not null &&
+                _lastLiveCombo.Equals(combo, StringComparison.OrdinalIgnoreCase))
+            {
+                var elapsed = Environment.TickCount64 - _lastLivePressTick;
+                if (elapsed < gapMs)
+                    Thread.Sleep((int)(gapMs - elapsed));
+            }
+
+            PressKeyCombo(combo);
+            _lastLiveCombo = combo;
+            _lastLivePressTick = Environment.TickCount64;
+        }
+    }
 
     public void ResetDiagnostics()
     {

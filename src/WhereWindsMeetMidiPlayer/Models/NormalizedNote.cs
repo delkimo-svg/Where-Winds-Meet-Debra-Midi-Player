@@ -11,4 +11,6 @@ public sealed class NormalizedNote
     public int Channel { get; set; }
     public bool Skipped { get; set; }
     public int OriginalNoteNumber { get; set; }
+    /// <summary>Piano finger (1–5) from MIDI LyricEvent or sidecar. 0 = none.</summary>
+    public int FingerNumber { get; set; }
 }

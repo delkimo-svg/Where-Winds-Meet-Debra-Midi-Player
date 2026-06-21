@@ -40,6 +40,8 @@ public partial class DebraNowPlayingArt : UserControl
 
     private void ApplyThemeArt()
     {
+        CardBackdrop.Source = LoadArt(ThemeService.GetPanelDecorWashFile());
+
         HeroPortrait.Fill = new ImageBrush(LoadArt(ThemeService.GetNowPlayingHeroFile()))
         {
             Stretch = Stretch.UniformToFill

@@ -2,6 +2,8 @@ using System.Windows.Input;
 
 namespace WhereWindsMeetMidiPlayer.Infrastructure;
 
+using WhereWindsMeetMidiPlayer.Helpers;
+
 public static class KeyComboParser
 {
     public static bool TryFromWpfKey(Key key, ModifierKeys modifiers, out string combo)
@@ -28,14 +30,36 @@ public static class KeyComboParser
         return true;
     }
 
+    public static bool TryGetMainKeyFromWpfKey(Key key, out string mainKey)
+    {
+        mainKey = KeyToToken(key) ?? string.Empty;
+        return mainKey.Length > 0;
+    }
+
+    public static string? GetMainKeyToken(string combo)
+    {
+        if (string.IsNullOrWhiteSpace(combo))
+            return null;
+
+        var parts = combo.Split('+');
+        return parts.Length == 0 ? null : parts[^1];
+    }
+
+    public static bool HasModifierPrefix(string combo, string modifier)
+    {
+        if (string.IsNullOrWhiteSpace(combo) || string.IsNullOrWhiteSpace(modifier))
+            return false;
+
+        return combo.StartsWith(modifier + "+", StringComparison.OrdinalIgnoreCase)
+            || combo.Contains("+" + modifier + "+", StringComparison.OrdinalIgnoreCase);
+    }
+
     public static string ToDisplayLabel(string combo)
     {
         if (string.IsNullOrWhiteSpace(combo))
             return "—";
 
-        return combo
-            .Replace("Shift+", "⇧", StringComparison.OrdinalIgnoreCase)
-            .Replace("Ctrl+", "⌃", StringComparison.OrdinalIgnoreCase);
+        return PracticeKeyLabelHelper.FormatCompact(combo);
     }
 
     private static string? KeyToToken(Key key)

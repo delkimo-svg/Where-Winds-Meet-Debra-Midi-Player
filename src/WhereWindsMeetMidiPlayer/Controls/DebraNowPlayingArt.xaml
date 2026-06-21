@@ -66,6 +66,10 @@
 
     <Grid ClipToBounds="False" VerticalAlignment="Top" HorizontalAlignment="Stretch">
 
+        <Image x:Name="CardBackdrop" Stretch="UniformToFill" Opacity="0.16"
+               HorizontalAlignment="Center" VerticalAlignment="Center"
+               IsHitTestVisible="False" RenderOptions.BitmapScalingMode="HighQuality"/>
+
         <Border CornerRadius="12" Background="{DynamicResource Brush.NowPlayingCard}"
 
                 Opacity="{Binding PlayerChromeOpacity, RelativeSource={RelativeSource AncestorType=Window}}"

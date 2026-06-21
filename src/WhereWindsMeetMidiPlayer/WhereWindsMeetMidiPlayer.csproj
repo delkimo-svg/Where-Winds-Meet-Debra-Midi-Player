@@ -6,9 +6,9 @@
 
     <OutputType>WinExe</OutputType>
     <AssemblyName>DebraMidiPlayer</AssemblyName>
-    <Version>1.1.5</Version>
-    <AssemblyVersion>1.1.5.0</AssemblyVersion>
-    <FileVersion>1.1.5.0</FileVersion>
+    <Version>1.2.0</Version>
+    <AssemblyVersion>1.2.0.0</AssemblyVersion>
+    <FileVersion>1.2.0.0</FileVersion>
 
     <TargetFramework>net8.0-windows</TargetFramework>
 
@@ -31,6 +31,10 @@
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
 
     <PackageReference Include="Melanchall.DryWetMidi" Version="8.0.3" />
+
+    <PackageReference Include="MeltySynth" Version="2.4.1" />
+
+    <PackageReference Include="NAudio" Version="2.2.1" />
 
   </ItemGroup>
 

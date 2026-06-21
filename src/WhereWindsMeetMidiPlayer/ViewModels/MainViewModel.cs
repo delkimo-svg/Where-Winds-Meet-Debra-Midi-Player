@@ -16,6 +16,7 @@ using WhereWindsMeetMidiPlayer.Infrastructure;
 using WhereWindsMeetMidiPlayer.Localization;
 using WhereWindsMeetMidiPlayer.Models;
 using WhereWindsMeetMidiPlayer.Services;
+using WhereWindsMeetMidiPlayer.Services.Audio;
 using WhereWindsMeetMidiPlayer.Services.Discord;
 
 namespace WhereWindsMeetMidiPlayer.ViewModels;
@@ -34,6 +35,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private readonly AppSettingsService _settings = new();
     private readonly DispatcherTimer _uiTimer;
     private readonly CollectionViewSource _libraryViewSource = new();
+    private readonly CollectionViewSource _practiceLibraryViewSource = new();
     private readonly CollectionViewSource _favoritesViewSource = new();
     private readonly CollectionViewSource _catalogueViewSource = new();
     private readonly CollectionViewSource _playlistViewSource = new();
@@ -46,6 +48,15 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private readonly SongTempoStore _songTempo = new();
     private readonly SongPlaybackCalibrationStore _songPlayback = new();
     private readonly MidiPlaybackPreparer _midiPlaybackPreparer;
+    private readonly MidiLiveInputService _liveMidi;
+    private readonly PracticePrepareService _practicePrepare;
+    private readonly PracticeSessionService _practiceSession;
+    private readonly MidiSoundEngine _midiSoundEngine = new();
+    private readonly PracticeSoundService _practiceSound;
+    private readonly ChartSoundScheduler _playbackSoundScheduler;
+    private List<SoundChartNote> _playbackSoundNotes = [];
+    private readonly PracticeKeyboardHighlightService _practiceKeyboardPress = new();
+    private readonly DiscordAcademyService _discordAcademy = new();
 
     private bool _suppressVolumeSync;
     private bool _suppressCatalogueStats;
@@ -72,6 +83,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     [ObservableProperty] private NavigationSection _selectedSection = NavigationSection.Catalogue;
     [ObservableProperty] private string _librarySearchText = string.Empty;
+    [ObservableProperty] private string _practiceLibrarySearchText = string.Empty;
     [ObservableProperty] private Song? _selectedLibrarySong;
     [ObservableProperty] private Song? _selectedPlaylistSong;
     [ObservableProperty] private Song? _selectedFavoriteSong;
@@ -117,6 +129,50 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] private bool _focusGameBeforePlay;
     [ObservableProperty] private int _prePlayCountdownSeconds = 1;
     [ObservableProperty] private string _gameConnectionStatus = string.Empty;
+    [ObservableProperty] private bool _isLiveMidiEnabled;
+    [ObservableProperty] private string _liveMidiStatusText = string.Empty;
+    [ObservableProperty] private Song? _selectedPracticeSong;
+    [ObservableProperty] private string _practiceTitle = string.Empty;
+    [ObservableProperty] private bool _isPracticePlaying;
+    [ObservableProperty] private double _practiceProgress;
+    [ObservableProperty] private string _practiceTimeText = "0:00";
+    [ObservableProperty] private string _practiceDurationText = "0:00";
+    [ObservableProperty] private bool _isPracticeLearnMode;
+    [ObservableProperty] private bool _isPracticeFollowMode = true;
+    [ObservableProperty] private bool _isPracticeGameKeysView = true;
+    [ObservableProperty] private bool _isPracticeFullPianoView;
+
+    private bool _suppressPracticeModeSync;
+    private bool _suppressPracticeViewSync;
+    private bool _suppressPracticeLabelSync;
+    private bool _suppressPracticeSoundSave;
+    private bool _suppressPracticeGameSoundSave;
+    private bool _suppressPracticeTempoChange;
+    private bool _practiceSessionOwnsLiveMidi;
+    private readonly HashSet<string> _practicePcKeysHeld = new(StringComparer.OrdinalIgnoreCase);
+
+    [ObservableProperty] private bool _isPracticeSolfegeLabels;
+    [ObservableProperty] private bool _isPracticeLetterLabels = true;
+    [ObservableProperty] private bool _isPracticeKeyboardLabels;
+    [ObservableProperty] private bool _isPracticeLibraryPanelOpen;
+    [ObservableProperty] private bool _isPracticeSoundEnabled;
+    [ObservableProperty] private bool _isPracticeGameSoundOnly;
+    [ObservableProperty] private bool _isAcademyPracticeMode;
+    [ObservableProperty] private string _academyGuideText = string.Empty;
+    [ObservableProperty] private bool _isPracticeAcademyOverlayOpen;
+    [ObservableProperty] private bool _isPracticeLessonArmed;
+    [ObservableProperty] private bool _isPracticeCountdownActive;
+    [ObservableProperty] private string _practiceCountdownDisplay = string.Empty;
+    [ObservableProperty] private int _practiceAcademyCountdownSeconds = 5;
+
+    [ObservableProperty] private int _practiceTempoPercent = 100;
+    [ObservableProperty] private PracticeHandKeyPreview? _practiceHandKeyPreview;
+    [ObservableProperty] private bool _isAcademyTourVisible;
+    [ObservableProperty] private string _academyTourText = string.Empty;
+    [ObservableProperty] private string _academyTourStepLabel = string.Empty;
+    [ObservableProperty] private int[] _academyTourHighlightNotes = [];
+    [ObservableProperty] private AcademyTourHintKind _academyTourPictogramHint = AcademyTourHintKind.None;
+    [ObservableProperty] private bool _isAcademyTourSongPickerVisible;
 
     [ObservableProperty] private string _catalogueSearchText = string.Empty;
     [ObservableProperty] private string? _catalogueStyleFilter;
@@ -130,10 +186,18 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] private bool _isUpdateAvailable;
     [ObservableProperty] private string _appVersionLabel = AppReleaseInfo.CurrentVersionLabel;
     [ObservableProperty] private string _releaseManifestUrl = string.Empty;
+    [ObservableProperty] private string _libraryRefreshFolderPath = string.Empty;
+    [ObservableProperty] private bool _libraryIncludeSubfolders = true;
+    [ObservableProperty] private string _practiceLibraryRefreshFolderPath = string.Empty;
+    [ObservableProperty] private bool _practiceLibraryIncludeSubfolders = true;
+    [ObservableProperty] private string _practiceRightHandColorHex = "#4A9EFF";
+    [ObservableProperty] private string _practiceLeftHandColorHex = "#F59E0B";
+    [ObservableProperty] private bool _isPracticeHandColorPickerOpen;
 
     private DiscordCredentials? _discordCredentials;
 
     public ObservableCollection<Song> LibrarySongs { get; } = [];
+    public ObservableCollection<Song> PracticeLibrarySongs { get; } = [];
     public ObservableCollection<Song> FavoriteSongs { get; } = [];
     public BulkObservableCollection<CatalogueTrack> CatalogueTracks { get; } = [];
     public BulkObservableCollection<string> CatalogueStyles { get; } = [];
@@ -146,6 +210,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public ObservableCollection<ThemeOption> AvailableThemes { get; } = [];
     public ObservableCollection<NoteMappingModeOption> NoteMappingModes { get; } = [];
     public ObservableCollection<MidiTrackOption> MidiTrackOptions { get; } = [];
+    public ObservableCollection<MidiInputDeviceOption> MidiInputDevices { get; } = [];
+    public ObservableCollection<PracticeTrackOption> PracticeTrackOptions { get; } = [];
     public ObservableCollection<SongSortOption> LibrarySortOptions { get; } = [];
     public ObservableCollection<SongSortOption> PlaylistSortOptions { get; } = [];
     public ObservableCollection<CatalogueSortOption> CatalogueSortOptions { get; } = [];
@@ -158,6 +224,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] private LanguageOption? _selectedLanguage;
     [ObservableProperty] private ThemeOption? _selectedTheme;
     [ObservableProperty] private MidiTrackOption? _selectedMidiTrack;
+    [ObservableProperty] private MidiInputDeviceOption? _selectedMidiInputDevice;
 
     private bool _suppressThemeChange;
 
@@ -196,18 +263,53 @@ public partial class MainViewModel : ObservableObject, IDisposable
     }
 
     public ICollectionView FilteredLibrarySongs => _libraryViewSource.View;
+    public ICollectionView FilteredPracticeLibrarySongs => _practiceLibraryViewSource.View;
     public ICollectionView FilteredCatalogueTracks => _catalogueViewSource.View;
     public ICollectionView FilteredPlaylistSongs => _playlistViewSource.View;
     public ICollectionView FilteredFavoriteSongs => _favoritesViewSource.View;
 
-    public bool ShowMainPanels => SelectedSection != NavigationSection.Settings;
+    public bool ShowMainPanels => SelectedSection is not NavigationSection.Settings
+        and not NavigationSection.Practice;
     public bool ShowSettingsPanel => SelectedSection == NavigationSection.Settings;
+    public bool ShowPracticePanel => SelectedSection == NavigationSection.Practice;
+    public bool ShowDebraPlayerChrome => SelectedSection != NavigationSection.Practice;
     public bool ShowLibraryPanel => SelectedSection == NavigationSection.Library;
     public bool ShowFavoritesPanel => SelectedSection == NavigationSection.Favorites;
     public bool ShowPlaylistPanel =>
-        ShowMainPanels && SelectedSection is not NavigationSection.Settings;
+        ShowMainPanels && SelectedSection is not NavigationSection.Settings
+            and not NavigationSection.Practice;
     public bool ShowHistoryPanel => SelectedSection == NavigationSection.History;
     public bool ShowCataloguePanel => SelectedSection == NavigationSection.Catalogue;
+
+    public bool ShowPracticeCenterPlay =>
+        IsPracticeLessonArmed && !IsPracticePlaying && !IsPracticeCountdownActive && _practiceSession.State == PlaybackState.Stopped;
+
+    public bool ShowPracticeHandPreview =>
+        PracticeHandKeyPreview is not null
+        && !IsPracticePlaying
+        && !IsPracticeCountdownActive
+        && _practiceSession.Notes.Count > 0;
+
+    public IReadOnlyList<string> PracticeHandColorSwatches => PracticePrepareService.DefaultTrackColors;
+
+    public PracticeSessionService PracticeSession => _practiceSession;
+
+    public AcademyPanelViewModel AcademyPanel { get; }
+
+    public PracticeKeyboardHighlightService PracticeKeyboardPressState => _practiceKeyboardPress;
+
+    public PracticeKeyboardViewMode PracticeKeyboardViewMode =>
+        IsPracticeFullPianoView ? PracticeKeyboardViewMode.FullPiano88 : PracticeKeyboardViewMode.GameAdapted36;
+
+    public PracticeNoteLabelMode PracticeNoteLabelMode =>
+        IsPracticeKeyboardLabels ? PracticeNoteLabelMode.KeyboardKeys
+        : IsPracticeSolfegeLabels ? PracticeNoteLabelMode.Solfege
+        : PracticeNoteLabelMode.LetterNames;
+
+    public PracticeNoteLabelMode PracticeFallingNoteLabelMode =>
+        IsAcademyPracticeMode ? PracticeNoteLabelMode.FingerNumbers : PracticeNoteLabelMode;
+
+    public IReadOnlyDictionary<int, string> PracticeKeyCombos => _keyMapping.Mapping;
 
     public FlowDirection UiFlowDirection => LocalizationService.Instance.FlowDirection;
 
@@ -263,6 +365,14 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public int EffectiveTempoBpm =>
         (int)Math.Round(SongTempoBpm * PlaybackTempoPercent / 100.0, MidpointRounding.AwayFromZero);
 
+    public string PracticeTempoDisplay => $"{PracticeTempoPercent}%";
+
+    public string PracticeSoundToggleLabel =>
+        IsPracticeSoundEnabled ? L.T(UiText.PracticeSoundOn) : L.T(UiText.PracticeSoundOff);
+
+    public string PracticeGameSoundOnlyToggleLabel =>
+        IsPracticeGameSoundOnly ? L.T(UiText.PracticeGameSoundOnlyOn) : L.T(UiText.PracticeGameSoundOnlyOff);
+
     private static string AllStylesLabel => L.T(UiText.AllStyles);
 
     public MainViewModel()
@@ -274,6 +384,41 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _midiPlaybackPreparer = new MidiPlaybackPreparer(_midiParser, _noteRange);
         _input = new InputService(_gameWindow);
         _playback = new PlaybackEngine(_input);
+        _liveMidi = new MidiLiveInputService(_input, _keyMapping, _noteRange, BuildLiveMidiContext);
+        _liveMidi.DevicesChanged += (_, _) => UiDispatcher.Post(RefreshMidiInputDevices);
+        _liveMidi.RawNoteOn += OnLiveRawNote;
+        _liveMidi.RawNoteOff += OnLiveRawNoteOff;
+        _practicePrepare = new PracticePrepareService(_midiParser, _noteRange);
+        _practiceSession = new PracticeSessionService();
+        _practiceSound = new PracticeSoundService(_midiSoundEngine);
+        _playbackSoundScheduler = new ChartSoundScheduler(_midiSoundEngine);
+        _practiceSession.PositionChanged += OnPracticePositionChanged;
+        _practiceSession.StateChanged += OnPracticeStateChanged;
+        _practiceSession.Completed += OnPracticeCompleted;
+        _practiceSession.WaitingNotesChanged += OnPracticeWaitingNotesChanged;
+
+        AcademyPanel = new AcademyPanelViewModel(
+            () => _discordCredentials,
+            () => _settings.Settings.CompletedAcademyLessonIds,
+            MarkAcademyLessonComplete,
+            PreviewAcademyLessonAsync,
+            ReadyAcademyLessonAsync,
+            ListenAcademyLessonAsync,
+            () => IsPracticeAcademyOverlayOpen = false,
+            () => IsPracticeAcademyOverlayOpen,
+            () => (
+                _settings.Settings.LastAcademyModuleId,
+                _settings.Settings.LastAcademyExerciseLessonId,
+                _settings.Settings.LastAcademySongLessonId,
+                _settings.Settings.LastAcademyLessonId),
+            (moduleId, exerciseId, songId, lessonId) =>
+            {
+                _settings.Settings.LastAcademyModuleId = moduleId;
+                _settings.Settings.LastAcademyExerciseLessonId = exerciseId;
+                _settings.Settings.LastAcademySongLessonId = songId;
+                _settings.Settings.LastAcademyLessonId = lessonId;
+                ScheduleSettingsSave();
+            });
 
         _libraryViewSource.Source = LibrarySongs;
         _libraryViewSource.View.Filter = FilterLibrarySong;
@@ -283,6 +428,24 @@ public partial class MainViewModel : ObservableObject, IDisposable
             RefreshFavoriteSongs();
             NotifyTrashCommandsCanExecute();
             ClearLibraryCommand.NotifyCanExecuteChanged();
+            if (!_suppressLibraryPersist)
+            {
+                SyncPersistedLibraryPaths();
+                ScheduleSettingsSave();
+            }
+        };
+
+        _practiceLibraryViewSource.Source = PracticeLibrarySongs;
+        _practiceLibraryViewSource.View.Filter = FilterPracticeLibrarySong;
+        PracticeLibrarySongs.CollectionChanged += (_, _) =>
+        {
+            NotifyTrashCommandsCanExecute();
+            ClearPracticeLibraryCommand.NotifyCanExecuteChanged();
+            if (!_suppressPracticeLibraryPersist)
+            {
+                SyncPersistedPracticeLibraryPaths();
+                ScheduleSettingsSave();
+            }
         };
 
         _favoritesViewSource.Source = FavoriteSongs;
@@ -320,6 +483,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
             IsPlaying = state == PlaybackState.Playing;
             RefreshPlayPauseUi();
+            HandleMainPlaybackSoundState(state);
         });
 
         _uiTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
@@ -339,6 +503,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
         NavItems.Add(new NavItemViewModel { Section = NavigationSection.Library, Icon = "📚" });
         NavItems.Add(new NavItemViewModel { Section = NavigationSection.Catalogue, Icon = "☁" });
+        NavItems.Add(new NavItemViewModel { Section = NavigationSection.Practice, Icon = "🎹" });
         NavItems.Add(new NavItemViewModel { Section = NavigationSection.Favorites, Icon = "♥" });
         NavItems.Add(new NavItemViewModel { Section = NavigationSection.History, Icon = "🕐" });
         NavItems.Add(new NavItemViewModel { Section = NavigationSection.Settings, Icon = "⚙" });
@@ -433,13 +598,25 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
         _settings.Settings.Volume = Volume;
         ApplyVolumeToSystem();
+        ApplySynthVolume();
         TargetProcessName = _settings.Settings.TargetProcessName;
         GameWindowTitleContains = _settings.Settings.GameWindowTitleContains;
         ReleaseManifestUrl = _settings.Settings.ReleaseManifestUrl ?? string.Empty;
+        MigrateDefaultRefreshFolders();
+        LibraryRefreshFolderPath = _settings.Settings.LibraryRefreshFolder ?? string.Empty;
+        LibraryIncludeSubfolders = _settings.Settings.LibraryIncludeSubfolders;
+        PracticeLibraryRefreshFolderPath = _settings.Settings.PracticeLibraryRefreshFolder ?? string.Empty;
+        PracticeLibraryIncludeSubfolders = _settings.Settings.PracticeLibraryIncludeSubfolders;
+        PracticeRightHandColorHex = _settings.Settings.PracticeRightHandColorHex;
+        PracticeLeftHandColorHex = _settings.Settings.PracticeLeftHandColorHex;
+        PracticeHandColorResolver.ApplySettings(PracticeRightHandColorHex, PracticeLeftHandColorHex);
+        RefreshLibraryFoldersCommand.NotifyCanExecuteChanged();
+        RefreshPracticeLibraryFoldersCommand.NotifyCanExecuteChanged();
         FocusGameBeforePlay = false;
         _settings.Settings.FocusGameBeforePlay = false;
         PrePlayCountdownSeconds = 1;
         _settings.Settings.PrePlayCountdownSeconds = 1;
+        ApplyPracticeCountdownFromSettings();
         DiscordCredentialStore.MigrateFromSettings(_settings);
         _discordCredentials = DiscordCredentialStore.Load();
 
@@ -461,6 +638,15 @@ public partial class MainViewModel : ObservableObject, IDisposable
         RefreshKeyLayouts();
         LoadKeyMapping(SelectedLayout?.FileName ?? _settings.Settings.KeyMappingFile);
 
+        _liveMidi.StartDevicesWatcher();
+        RefreshMidiInputDevices();
+        RestoreSavedMidiInputDevice();
+        RefreshLiveMidiStatusText();
+
+        ApplyPracticeLabelModeFromSettings();
+        ApplyPracticeSoundFromSettings();
+        ApplyPracticeGameSoundFromSettings();
+
         ResetToBlankPlaylist();
 
         foreach (var item in _history.Items)
@@ -481,6 +667,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
     }
 
     private bool _suppressLayoutChange;
+    private bool _suppressLibraryPersist;
+    private bool _suppressPracticeLibraryPersist;
+    private bool _suppressPracticeSongPersist;
 
     private void EnsureKeyMaps()
     {
@@ -525,6 +714,283 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _keyMapping.LoadFromFile(path);
         _settings.Settings.KeyMappingFile = fileName;
         _settings.Save();
+        OnPropertyChanged(nameof(PracticeKeyCombos));
+    }
+
+    private void OnLiveRawNote(int rawMidi, int velocity) =>
+        UiDispatcher.Post(() => HandleLiveRawNote(rawMidi, velocity));
+
+    private void HandleLiveRawNote(int rawMidi, int velocity)
+    {
+        UpdatePracticeKeyboardPress(rawMidi, pressed: true);
+
+        if (SelectedSection == NavigationSection.Practice)
+            TryPlayPracticeLiveNote(rawMidi, velocity);
+
+        if (SelectedSection != NavigationSection.Practice)
+            return;
+
+        var ctx = BuildLiveMidiContext();
+        var shifted = rawMidi + ctx.OctaveShift * 12;
+        var mapped = LiveMidiMapper.MapToGameNoteNumber(
+            rawMidi,
+            velocity,
+            _noteRange,
+            ctx.SmartTranspose,
+            ctx.StrictNoteRange,
+            ctx.OctaveShift,
+            ctx.MappingMode);
+        _practiceSession.RecordPressedNote(shifted, mapped);
+
+        if (_practiceSession.IsWaitingForInput)
+        {
+            _practiceSession.TryRegisterHitFromRawMidi(
+                rawMidi,
+                velocity,
+                _noteRange,
+                ctx.SmartTranspose,
+                ctx.StrictNoteRange,
+                ctx.OctaveShift,
+                ctx.MappingMode);
+            ReconcilePracticeInput();
+        }
+    }
+
+    public bool TryHandlePracticeTransportKey(Key key)
+    {
+        if (SelectedSection != NavigationSection.Practice || key != Key.Space)
+            return false;
+
+        if (PlaybackHotkeyCapture is not null || IsTextInputFocused())
+            return false;
+
+        if (IsPracticeCountdownActive)
+            return true;
+
+        if (_practiceSession.State == PlaybackState.Stopped)
+        {
+            if (ShowPracticeCenterPlay)
+                ConfirmPracticePlayCommand.Execute(null);
+            else
+                StartPracticeCommand.Execute(null);
+            return true;
+        }
+
+        PausePracticeCommand.Execute(null);
+        return true;
+    }
+
+    public bool TryHandlePracticeKeyDown(Key key, ModifierKeys modifiers, bool isRepeat)
+    {
+        if (!IsPracticePcInputActive)
+            return false;
+
+        if (PlaybackHotkeyCapture is not null)
+            return false;
+
+        if (IsTextInputFocused())
+            return false;
+
+        if (!KeyComboParser.TryFromWpfKey(key, modifiers, out var combo))
+            return false;
+
+        var gameNote = _keyMapping.TryGetNoteForCombo(combo);
+        if (gameNote is null)
+            return false;
+
+        var alreadyHeld = _practicePcKeysHeld.Contains(combo);
+        if (!alreadyHeld)
+            _practicePcKeysHeld.Add(combo);
+
+        // OS key-repeat while holding: skip duplicate game taps; staccato re-presses still send.
+        if (!isRepeat && !IsAcademyPracticeMode && !_practiceSession.IsInPlaybackLeadIn)
+            _input.QueuePressKeyCombo(combo);
+
+        if (!alreadyHeld)
+            HandlePracticeGameNotePress(gameNote.Value);
+
+        return true;
+    }
+
+    public void TryHandlePracticeKeyUp(Key key, ModifierKeys modifiers)
+    {
+        if (!IsPracticePcInputActive)
+            return;
+
+        if (key is Key.LeftShift or Key.RightShift)
+        {
+            ReleaseHeldPracticeCombosWithModifier("Shift");
+            return;
+        }
+
+        if (key is Key.LeftCtrl or Key.RightCtrl)
+        {
+            ReleaseHeldPracticeCombosWithModifier("Ctrl");
+            return;
+        }
+
+        if (!KeyComboParser.TryGetMainKeyFromWpfKey(key, out var mainKey))
+            return;
+
+        var toRelease = _practicePcKeysHeld
+            .Where(held =>
+            {
+                var heldMain = KeyComboParser.GetMainKeyToken(held);
+                return heldMain is not null &&
+                    heldMain.Equals(mainKey, StringComparison.OrdinalIgnoreCase);
+            })
+            .ToList();
+
+        if (KeyComboParser.TryFromWpfKey(key, modifiers, out var exact) && _practicePcKeysHeld.Contains(exact))
+        {
+            if (!toRelease.Contains(exact))
+                toRelease.Add(exact);
+        }
+
+        foreach (var combo in toRelease)
+            ReleasePracticePcCombo(combo);
+    }
+
+    private void ReleaseHeldPracticeCombosWithModifier(string modifier)
+    {
+        foreach (var combo in _practicePcKeysHeld.Where(c => KeyComboParser.HasModifierPrefix(c, modifier)).ToList())
+            ReleasePracticePcCombo(combo);
+    }
+
+    private void ReleasePracticePcCombo(string combo)
+    {
+        if (!_practicePcKeysHeld.Remove(combo))
+            return;
+
+        var gameNote = _keyMapping.TryGetNoteForCombo(combo);
+        if (gameNote is null)
+            return;
+
+        HandlePracticeGameNoteRelease(gameNote.Value);
+    }
+
+    private bool IsPracticeFreePlayActive =>
+        SelectedSection == NavigationSection.Practice &&
+        _practiceSession.State == PlaybackState.Stopped;
+
+    /// <summary>Chart synth is playing along with the session (not lead-in).</summary>
+    private bool IsPracticeChartSoundActive =>
+        IsPracticeSoundEnabled &&
+        _practiceSession.State == PlaybackState.Playing &&
+        _practiceSession.CurrentPositionMs >= 0;
+
+    /// <summary>Live MIDI/PC preview is muted while chart playback sound is active to avoid doubles.</summary>
+    private bool ShouldSuppressLivePracticeInputSound =>
+        IsPracticeChartSoundActive;
+
+    private bool IsPracticePcInputActive =>
+        SelectedSection == NavigationSection.Practice &&
+        (_practiceSession.State is PlaybackState.Playing or PlaybackState.Paused ||
+         IsPracticeFreePlayActive);
+
+    private void HandlePracticeGameNotePress(int gameNoteNumber, int velocity = 127)
+    {
+        _practiceKeyboardPress.PressGame(gameNoteNumber);
+        _practiceKeyboardPress.PressDisplay(gameNoteNumber);
+        _practiceSession.RecordPressedNote(gameNoteNumber, gameNoteNumber);
+        _practiceSession.TryRegisterHit(gameNoteNumber);
+        ReconcilePracticeInput();
+
+        TryPlayPracticeLiveNote(gameNoteNumber, velocity);
+    }
+
+    private void HandlePracticeGameNoteRelease(int gameNoteNumber)
+    {
+        _practiceKeyboardPress.ReleaseGame(gameNoteNumber);
+        _practiceKeyboardPress.ReleaseDisplay(gameNoteNumber);
+
+        TryStopPracticeLiveNote(gameNoteNumber);
+    }
+
+    private void TryPlayPracticeLiveNote(int noteNumber, int velocity)
+    {
+        if (SelectedSection != NavigationSection.Practice || ShouldSuppressLivePracticeInputSound || IsPracticeGameSoundOnly)
+            return;
+
+        if (!_practiceSound.IsEnabled)
+            SyncPracticeSoundState();
+
+        if (_practiceSound.IsEnabled)
+            _practiceSound.PlayLiveNote(noteNumber, velocity);
+    }
+
+    private void TryStopPracticeLiveNote(int noteNumber)
+    {
+        if (SelectedSection != NavigationSection.Practice || ShouldSuppressLivePracticeInputSound || IsPracticeGameSoundOnly)
+            return;
+
+        if (!_practiceSound.IsEnabled)
+            SyncPracticeSoundState();
+
+        if (_practiceSound.IsEnabled)
+            _practiceSound.StopLiveNote(noteNumber);
+    }
+
+    private static bool IsTextInputFocused()
+    {
+        var focused = Keyboard.FocusedElement;
+        return focused is System.Windows.Controls.Primitives.TextBoxBase;
+    }
+
+    private void ReconcilePracticeInput()
+    {
+        if (!_practiceSession.IsWaitingForInput)
+            return;
+
+        _practiceSession.TryReconcileActiveInput(
+            _practiceKeyboardPress.ActiveGameNotes,
+            _practiceKeyboardPress.ActiveDisplayNotes);
+    }
+
+    private void OnLiveRawNoteOff(int rawMidi) =>
+        UiDispatcher.Post(() => HandleLiveRawNoteOff(rawMidi));
+
+    private void HandleLiveRawNoteOff(int rawMidi)
+    {
+        UpdatePracticeKeyboardPress(rawMidi, pressed: false);
+
+        if (SelectedSection == NavigationSection.Practice)
+            TryStopPracticeLiveNote(rawMidi);
+    }
+
+    private void UpdatePracticeKeyboardPress(int rawMidi, bool pressed)
+    {
+        var ctx = BuildLiveMidiContext();
+        var shifted = rawMidi + ctx.OctaveShift * 12;
+        var mapped = LiveMidiMapper.MapToGameNoteNumber(
+            rawMidi,
+            127,
+            _noteRange,
+            ctx.SmartTranspose,
+            ctx.StrictNoteRange,
+            ctx.OctaveShift,
+            ctx.MappingMode);
+
+        if (pressed)
+        {
+            _practiceKeyboardPress.PressDisplay(shifted);
+            if (mapped is not null)
+            {
+                _practiceKeyboardPress.PressGame(mapped.Value);
+                if (mapped.Value != shifted)
+                    _practiceKeyboardPress.PressDisplay(mapped.Value);
+            }
+        }
+        else
+        {
+            _practiceKeyboardPress.ReleaseDisplay(shifted);
+            if (mapped is not null)
+            {
+                _practiceKeyboardPress.ReleaseGame(mapped.Value);
+                if (mapped.Value != shifted)
+                    _practiceKeyboardPress.ReleaseDisplay(mapped.Value);
+            }
+        }
     }
 
     public void ShowLibrarySection()
@@ -534,9 +1000,13 @@ public partial class MainViewModel : ObservableObject, IDisposable
     }
 
     public event Action? TourRequested;
+    public event Action? PracticeTourRequested;
 
     [RelayCommand]
     private void ShowHelp() => TourRequested?.Invoke();
+
+    [RelayCommand]
+    private void ShowPracticeTour() => RequestPracticeTour(force: true);
 
     public const string DiscordInviteUrl = "https://discord.gg/uVyXZ3QFpd";
 
@@ -637,6 +1107,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         UpdateNavActive();
         OnPropertyChanged(nameof(ShowMainPanels));
         OnPropertyChanged(nameof(ShowSettingsPanel));
+        OnPropertyChanged(nameof(ShowPracticePanel));
         OnPropertyChanged(nameof(ShowLibraryPanel));
         OnPropertyChanged(nameof(ShowHistoryPanel));
         OnPropertyChanged(nameof(ShowCataloguePanel));
@@ -651,6 +1122,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
     }
 
     partial void OnLibrarySearchTextChanged(string value) => ScheduleRefreshLibraryView();
+
+    partial void OnPracticeLibrarySearchTextChanged(string value) => _practiceLibraryViewSource.View.Refresh();
 
     partial void OnCatalogueSearchTextChanged(string value) => ScheduleRefreshCatalogueView();
 
@@ -789,6 +1262,17 @@ public partial class MainViewModel : ObservableObject, IDisposable
         return song.DisplayTitle.Contains(LibrarySearchText, StringComparison.OrdinalIgnoreCase)
                || song.Title.Contains(LibrarySearchText, StringComparison.OrdinalIgnoreCase)
                || song.FilePath.Contains(LibrarySearchText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool FilterPracticeLibrarySong(object obj)
+    {
+        if (obj is not Song song)
+            return false;
+        if (string.IsNullOrWhiteSpace(PracticeLibrarySearchText))
+            return true;
+        return song.DisplayTitle.Contains(PracticeLibrarySearchText, StringComparison.OrdinalIgnoreCase)
+               || song.Title.Contains(PracticeLibrarySearchText, StringComparison.OrdinalIgnoreCase)
+               || song.FilePath.Contains(PracticeLibrarySearchText, StringComparison.OrdinalIgnoreCase);
     }
 
     private bool FilterPlaylistSong(object obj)
@@ -992,6 +1476,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
         try
         {
             await LoadDeferredPlaylistAsync().ConfigureAwait(false);
+
+            await UiDispatcher.RunAsync(() =>
+            {
+                RestorePersistedLibrary();
+                return Task.CompletedTask;
+            }).ConfigureAwait(false);
 
             _discordCredentials ??= DiscordCredentialStore.Load();
 
@@ -1306,8 +1796,336 @@ public partial class MainViewModel : ObservableObject, IDisposable
             SyncSongFavoriteFlag(song);
             LibrarySongs.Add(song);
         }
+
+        RememberImportDirectory(path);
         SelectedLibrarySong = song;
         RefreshLibraryStats();
+    }
+
+    private void RestorePersistedLibrary()
+    {
+        _suppressLibraryPersist = true;
+        try
+        {
+            MigrateImportFolderPaths();
+            MigrateDefaultRefreshFolders();
+            foreach (var path in _settings.Settings.LibrarySongPaths)
+            {
+                if (!File.Exists(path) || !IsMidiFile(path))
+                    continue;
+
+                try
+                {
+                    if (LibrarySongs.Any(s => s.FilePath.Equals(path, StringComparison.OrdinalIgnoreCase)))
+                        continue;
+
+                    var song = _library.AddFile(path, SmartTranspose, StrictNoteRange);
+                    SyncSongFavoriteFlag(song);
+                    LibrarySongs.Add(song);
+                }
+                catch
+                {
+                    // Skip unreadable paths from previous sessions.
+                }
+            }
+
+            var folder = _settings.Settings.LastImportFolder;
+            if (!string.IsNullOrWhiteSpace(folder) && Directory.Exists(folder))
+                ImportDroppedPaths(new[] { folder });
+
+            EnsurePlaylistSongsInLibrary();
+            RestorePersistedPracticeLibrary();
+            RestoreLastPracticeSongSelection();
+            RefreshLibraryStats();
+        }
+        finally
+        {
+            _suppressLibraryPersist = false;
+            _suppressPracticeLibraryPersist = false;
+            SyncPersistedLibraryPaths();
+            SyncPersistedPracticeLibraryPaths();
+            _settings.Save();
+        }
+    }
+
+    private void RestorePersistedPracticeLibrary()
+    {
+        _suppressPracticeLibraryPersist = true;
+        try
+        {
+            if (_settings.Settings.PracticeLibrarySongPaths.Count == 0
+                && _settings.Settings.LibrarySongPaths.Count > 0)
+            {
+                _settings.Settings.PracticeLibrarySongPaths =
+                    new List<string>(_settings.Settings.LibrarySongPaths);
+            }
+
+            foreach (var path in _settings.Settings.PracticeLibrarySongPaths)
+            {
+                if (!File.Exists(path) || !IsMidiFile(path))
+                    continue;
+
+                try
+                {
+                    if (PracticeLibrarySongs.Any(s => s.FilePath.Equals(path, StringComparison.OrdinalIgnoreCase)))
+                        continue;
+
+                    var song = _library.AddFile(path, SmartTranspose, StrictNoteRange);
+                    SyncSongFavoriteFlag(song);
+                    PracticeLibrarySongs.Add(song);
+                }
+                catch
+                {
+                    // Skip unreadable paths from previous sessions.
+                }
+            }
+        }
+        finally
+        {
+            _suppressPracticeLibraryPersist = false;
+        }
+    }
+
+    private void EnsurePlaylistSongsInLibrary()
+    {
+        foreach (var song in PlaylistSongs)
+        {
+            if (string.IsNullOrWhiteSpace(song.FilePath) || !File.Exists(song.FilePath))
+                continue;
+
+            if (LibrarySongs.Any(s => s.FilePath.Equals(song.FilePath, StringComparison.OrdinalIgnoreCase)))
+                continue;
+
+            try
+            {
+                var libSong = _library.AddFile(song.FilePath, SmartTranspose, StrictNoteRange, song.Title);
+                SyncSongFavoriteFlag(libSong);
+                LibrarySongs.Add(libSong);
+            }
+            catch
+            {
+                // Skip unreadable playlist entries.
+            }
+        }
+    }
+
+    private void RestoreLastPracticeSongSelection()
+    {
+        var path = _settings.Settings.LastPracticeSongPath;
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+            return;
+
+        var song = PracticeLibrarySongs.FirstOrDefault(s => s.FilePath.Equals(path, StringComparison.OrdinalIgnoreCase))
+                   ?? LibrarySongs.FirstOrDefault(s => s.FilePath.Equals(path, StringComparison.OrdinalIgnoreCase));
+        if (song is null)
+        {
+            try
+            {
+                song = _library.AddFile(path, SmartTranspose, StrictNoteRange);
+                SyncSongFavoriteFlag(song);
+                PracticeLibrarySongs.Add(song);
+            }
+            catch
+            {
+                return;
+            }
+        }
+        else if (!PracticeLibrarySongs.Contains(song))
+        {
+            PracticeLibrarySongs.Add(song);
+        }
+
+        _suppressPracticeSongPersist = true;
+        _suppressAcademyPracticeSongReload = true;
+        try
+        {
+            SelectedPracticeSong = song;
+        }
+        finally
+        {
+            _suppressAcademyPracticeSongReload = false;
+            _suppressPracticeSongPersist = false;
+        }
+    }
+
+    private void SyncPersistedLibraryPaths()
+    {
+        _settings.Settings.LibrarySongPaths = LibrarySongs
+            .Select(s => s.FilePath)
+            .Where(static p => !string.IsNullOrWhiteSpace(p))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private void SyncPersistedPracticeLibraryPaths()
+    {
+        _settings.Settings.PracticeLibrarySongPaths = PracticeLibrarySongs
+            .Select(s => s.FilePath)
+            .Where(static p => !string.IsNullOrWhiteSpace(p))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private void RememberImportDirectory(string path)
+    {
+        if (Directory.Exists(path))
+            TrackImportFolder(path);
+        else if (File.Exists(path))
+        {
+            var directory = Path.GetDirectoryName(path);
+            if (!string.IsNullOrWhiteSpace(directory) && Directory.Exists(directory))
+                _settings.Settings.LastImportFolder = directory;
+        }
+    }
+
+    private void MigrateImportFolderPaths()
+    {
+        var folder = _settings.Settings.LastImportFolder;
+        if (!string.IsNullOrWhiteSpace(folder) && Directory.Exists(folder))
+            TrackImportFolder(folder, save: false);
+    }
+
+    private void MigrateDefaultRefreshFolders()
+    {
+        var last = _settings.Settings.LastImportFolder;
+        if (string.IsNullOrWhiteSpace(last) || !Directory.Exists(last))
+            return;
+
+        if (string.IsNullOrWhiteSpace(_settings.Settings.LibraryRefreshFolder))
+            _settings.Settings.LibraryRefreshFolder = last;
+
+        if (string.IsNullOrWhiteSpace(_settings.Settings.PracticeLibraryRefreshFolder))
+            _settings.Settings.PracticeLibraryRefreshFolder = last;
+    }
+
+    private void TrackImportFolder(string folderPath, bool save = true)
+    {
+        if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
+            return;
+
+        _settings.Settings.LastImportFolder = folderPath;
+        var list = _settings.Settings.ImportFolderPaths;
+        if (!list.Any(p => string.Equals(p, folderPath, StringComparison.OrdinalIgnoreCase)))
+            list.Add(folderPath);
+
+        if (save)
+            ScheduleSettingsSave();
+    }
+
+    private static string? GetFolderInitialDirectory(string? folderPath) =>
+        !string.IsNullOrWhiteSpace(folderPath) && Directory.Exists(folderPath) ? folderPath : null;
+
+    [RelayCommand(CanExecute = nameof(CanRefreshLibraryFolder))]
+    private void RefreshLibraryFolders()
+    {
+        var folder = _settings.Settings.LibraryRefreshFolder;
+        if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder))
+        {
+            DebraDialogs.Info(L.T(UiText.SectionLibrary), L.T(UiText.LibraryRefreshNone));
+            return;
+        }
+
+        var before = LibrarySongs.Count;
+        ImportDroppedPaths(new[] { folder });
+
+        var added = LibrarySongs.Count - before;
+        RefreshLibraryStats();
+
+        if (added > 0)
+            DebraDialogs.Info(L.T(UiText.SectionLibrary), L.F(UiText.LibraryRefreshDone, added));
+        else
+            DebraDialogs.Info(L.T(UiText.SectionLibrary), L.T(UiText.LibraryRefreshUpToDate));
+    }
+
+    [RelayCommand(CanExecute = nameof(CanRefreshPracticeLibraryFolder))]
+    private void RefreshPracticeLibraryFolders()
+    {
+        var folder = _settings.Settings.PracticeLibraryRefreshFolder;
+        if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder))
+        {
+            DebraDialogs.Info(L.T(UiText.SectionPractice), L.T(UiText.LibraryRefreshNone));
+            return;
+        }
+
+        var before = PracticeLibrarySongs.Count;
+        ImportDroppedPathsForPractice(new[] { folder });
+
+        var added = PracticeLibrarySongs.Count - before;
+        RefreshLibraryStats();
+
+        if (added > 0)
+            DebraDialogs.Info(L.T(UiText.SectionPractice), L.F(UiText.LibraryRefreshDone, added));
+        else
+            DebraDialogs.Info(L.T(UiText.SectionPractice), L.T(UiText.LibraryRefreshUpToDate));
+    }
+
+    private bool CanRefreshLibraryFolder() =>
+        !string.IsNullOrWhiteSpace(_settings.Settings.LibraryRefreshFolder) &&
+        Directory.Exists(_settings.Settings.LibraryRefreshFolder);
+
+    private bool CanRefreshPracticeLibraryFolder() =>
+        !string.IsNullOrWhiteSpace(_settings.Settings.PracticeLibraryRefreshFolder) &&
+        Directory.Exists(_settings.Settings.PracticeLibraryRefreshFolder);
+
+    [RelayCommand]
+    private void ChooseLibraryRefreshFolder()
+    {
+        var dialog = new OpenFolderDialog
+        {
+            Title = L.T(UiText.SettingsLibraryRefreshFolder),
+            InitialDirectory = GetFolderInitialDirectory(LibraryRefreshFolderPath)
+        };
+        if (dialog.ShowDialog() != true)
+            return;
+
+        LibraryRefreshFolderPath = dialog.FolderName;
+    }
+
+    [RelayCommand]
+    private void ChoosePracticeLibraryRefreshFolder()
+    {
+        var dialog = new OpenFolderDialog
+        {
+            Title = L.T(UiText.SettingsPracticeLibraryRefreshFolder),
+            InitialDirectory = GetFolderInitialDirectory(PracticeLibraryRefreshFolderPath)
+                ?? GetFolderInitialDirectory(LibraryRefreshFolderPath)
+        };
+        if (dialog.ShowDialog() != true)
+            return;
+
+        PracticeLibraryRefreshFolderPath = dialog.FolderName;
+    }
+
+    partial void OnLibraryRefreshFolderPathChanged(string value)
+    {
+        _settings.Settings.LibraryRefreshFolder = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+        ScheduleSettingsSave();
+        RefreshLibraryFoldersCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnLibraryIncludeSubfoldersChanged(bool value)
+    {
+        _settings.Settings.LibraryIncludeSubfolders = value;
+        ScheduleSettingsSave();
+    }
+
+    partial void OnPracticeLibraryRefreshFolderPathChanged(string value)
+    {
+        _settings.Settings.PracticeLibraryRefreshFolder = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+        ScheduleSettingsSave();
+        RefreshPracticeLibraryFoldersCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnPracticeLibraryIncludeSubfoldersChanged(bool value)
+    {
+        _settings.Settings.PracticeLibraryIncludeSubfolders = value;
+        ScheduleSettingsSave();
+    }
+
+    private string? GetImportInitialDirectory()
+    {
+        var folder = _settings.Settings.LastImportFolder;
+        return !string.IsNullOrWhiteSpace(folder) && Directory.Exists(folder) ? folder : null;
     }
 
     /// <summary>Import MIDI files or folders dropped onto the library (Explorer drag-and-drop).</summary>
@@ -1329,11 +2147,85 @@ public partial class MainViewModel : ObservableObject, IDisposable
         {
             if (lastAdded is not null)
                 SelectedLibrarySong = lastAdded;
-            _settings.Save();
             RefreshLibraryStats();
         }
 
         return added;
+    }
+
+    public int ImportDroppedPathsForPractice(IEnumerable<string> paths)
+    {
+        var added = 0;
+        Song? lastAdded = null;
+
+        foreach (var path in paths)
+        {
+            foreach (var song in EnumerateSongsFromPracticePath(path))
+            {
+                added++;
+                lastAdded = song;
+            }
+        }
+
+        if (added > 0 && lastAdded is not null)
+            SelectedPracticeSong = lastAdded;
+
+        return added;
+    }
+
+    private IEnumerable<Song> EnumerateSongsFromPracticePath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return [];
+
+        try
+        {
+            if (File.Exists(path))
+            {
+                if (!IsMidiFile(path))
+                    return [];
+
+                RememberImportDirectory(path);
+                var song = EnsureSongInLibrary(path);
+                AddSongToPracticeLibrary(song);
+                return [song];
+            }
+
+            if (Directory.Exists(path))
+            {
+                RememberImportDirectory(path);
+                var searchOption = PracticeLibraryIncludeSubfolders
+                    ? SearchOption.AllDirectories
+                    : SearchOption.TopDirectoryOnly;
+                var imported = _library.ImportFolder(path, SmartTranspose, StrictNoteRange, searchOption);
+                var songs = new List<Song>(imported.Count);
+                foreach (var song in imported)
+                {
+                    if (!LibrarySongs.Any(s => s.FilePath.Equals(song.FilePath, StringComparison.OrdinalIgnoreCase)))
+                        LibrarySongs.Add(song);
+
+                    AddSongToPracticeLibrary(song);
+                    songs.Add(song);
+                }
+
+                return songs;
+            }
+        }
+        catch
+        {
+            // Skip unreadable paths.
+        }
+
+        return [];
+    }
+
+    private void AddSongToPracticeLibrary(Song song)
+    {
+        if (PracticeLibrarySongs.Any(s => s.FilePath.Equals(song.FilePath, StringComparison.OrdinalIgnoreCase)))
+            return;
+
+        SyncSongFavoriteFlag(song);
+        PracticeLibrarySongs.Add(song);
     }
 
     /// <summary>Import MIDI paths into the library and append/insert into the active playlist.</summary>
@@ -1376,13 +2268,17 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 if (!IsMidiFile(path))
                     return [];
 
+                RememberImportDirectory(path);
                 return [EnsureSongInLibrary(path)];
             }
 
             if (Directory.Exists(path))
             {
-                _settings.Settings.LastImportFolder = path;
-                var imported = _library.ImportFolder(path, SmartTranspose, StrictNoteRange);
+                RememberImportDirectory(path);
+                var searchOption = LibraryIncludeSubfolders
+                    ? SearchOption.AllDirectories
+                    : SearchOption.TopDirectoryOnly;
+                var imported = _library.ImportFolder(path, SmartTranspose, StrictNoteRange, searchOption);
                 var songs = new List<Song>(imported.Count);
                 foreach (var song in imported)
                 {
@@ -1422,11 +2318,18 @@ public partial class MainViewModel : ObservableObject, IDisposable
         || path.EndsWith(".midi", StringComparison.OrdinalIgnoreCase);
 
     [RelayCommand]
-    private void ImportLibrary()
+    private void ImportLibrary() => ImportMidiInteractive(navigateToLibrary: true);
+
+    [RelayCommand]
+    private void ImportPracticeSong() => ImportMidiInteractive(navigateToLibrary: false);
+
+    private void ImportMidiInteractive(bool navigateToLibrary)
     {
         var choice = DebraDialogs.Choose(
-            "Import MIDI",
-            "Import individual MIDI files or all MIDI files in a folder.",
+            L.T(UiText.PracticeImport),
+            navigateToLibrary
+                ? "Import individual MIDI files or all MIDI files in a folder."
+                : "Import MIDI files to practice. They are also saved in your library.",
             "MIDI files…",
             "Folder…");
         if (choice is null)
@@ -1438,23 +2341,42 @@ public partial class MainViewModel : ObservableObject, IDisposable
             {
                 Title = "Import MIDI files",
                 Filter = "MIDI files (*.mid;*.midi)|*.mid;*.midi",
-                Multiselect = true
+                Multiselect = true,
+                InitialDirectory = GetImportInitialDirectory()
             };
             if (dialog.ShowDialog() != true || dialog.FileNames.Length == 0)
                 return;
 
-            var added = ImportDroppedPaths(dialog.FileNames);
-            if (added > 0)
+            var added = navigateToLibrary
+                ? ImportDroppedPaths(dialog.FileNames)
+                : ImportDroppedPathsForPractice(dialog.FileNames);
+            if (added > 0 && navigateToLibrary)
                 ShowLibrarySection();
             return;
         }
 
-        var folderDialog = new OpenFolderDialog { Title = "Import MIDI folder" };
+        var folderDialog = new OpenFolderDialog
+        {
+            Title = "Import MIDI folder",
+            InitialDirectory = navigateToLibrary
+                ? GetFolderInitialDirectory(LibraryRefreshFolderPath) ?? GetImportInitialDirectory()
+                : GetFolderInitialDirectory(PracticeLibraryRefreshFolderPath)
+                    ?? GetFolderInitialDirectory(LibraryRefreshFolderPath)
+                    ?? GetImportInitialDirectory()
+        };
         if (folderDialog.ShowDialog() != true)
             return;
 
-        var folderAdded = ImportDroppedPaths(new[] { folderDialog.FolderName });
-        if (folderAdded > 0)
+        var folderAdded = navigateToLibrary
+            ? ImportDroppedPaths(new[] { folderDialog.FolderName })
+            : ImportDroppedPathsForPractice(new[] { folderDialog.FolderName });
+
+        if (navigateToLibrary && string.IsNullOrWhiteSpace(LibraryRefreshFolderPath))
+            LibraryRefreshFolderPath = folderDialog.FolderName;
+        else if (!navigateToLibrary && string.IsNullOrWhiteSpace(PracticeLibraryRefreshFolderPath))
+            PracticeLibraryRefreshFolderPath = folderDialog.FolderName;
+
+        if (folderAdded > 0 && navigateToLibrary)
             ShowLibrarySection();
     }
 
@@ -1553,6 +2475,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
         if (libraryItem is not null)
             LibrarySongs.Remove(libraryItem);
 
+        var practiceItem = PracticeLibrarySongs.FirstOrDefault(s =>
+            s.Id == song.Id
+            || s.FilePath.Equals(song.FilePath, StringComparison.OrdinalIgnoreCase));
+        if (practiceItem is not null)
+            PracticeLibrarySongs.Remove(practiceItem);
+
         _settings.Settings.FavoritePaths.RemoveAll(
             p => p.Equals(song.FilePath, StringComparison.OrdinalIgnoreCase));
         RebuildFavoritePathSet();
@@ -1561,6 +2489,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
         if (SelectedLibrarySong?.Id == song.Id)
             SelectedLibrarySong = null;
 
+        if (SelectedPracticeSong?.Id == song.Id)
+        {
+            StopPracticeSession();
+            SelectedPracticeSong = null;
+        }
+
         RefreshLibraryStats();
         SyncAllSongFavoriteFlags();
         RefreshFavoriteSongs();
@@ -1568,6 +2502,29 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     private bool CanRemoveFromLibrary(Song? song) =>
         ResolveLibrarySong(song ?? SelectedLibrarySong ?? _lastSelectedLibrarySong) is not null;
+
+    [RelayCommand(CanExecute = nameof(CanRemoveFromPracticeLibrary))]
+    private void RemoveFromPracticeLibrary(Song? song)
+    {
+        song = ResolvePracticeLibrarySong(song ?? SelectedPracticeSong ?? _lastSelectedLibrarySong);
+        if (song is null)
+            return;
+
+        var practiceItem = PracticeLibrarySongs.FirstOrDefault(s => s.Id == song.Id)
+                           ?? PracticeLibrarySongs.FirstOrDefault(s =>
+                               s.FilePath.Equals(song.FilePath, StringComparison.OrdinalIgnoreCase));
+        if (practiceItem is not null)
+            PracticeLibrarySongs.Remove(practiceItem);
+
+        if (SelectedPracticeSong?.Id == song.Id)
+        {
+            StopPracticeSession();
+            SelectedPracticeSong = null;
+        }
+    }
+
+    private bool CanRemoveFromPracticeLibrary(Song? song) =>
+        ResolvePracticeLibrarySong(song ?? SelectedPracticeSong ?? _lastSelectedLibrarySong) is not null;
 
     [RelayCommand(CanExecute = nameof(CanClearLibrary))]
     private void ClearLibrary()
@@ -1605,6 +2562,45 @@ public partial class MainViewModel : ObservableObject, IDisposable
     }
 
     private bool CanClearLibrary() => LibrarySongs.Count > 0;
+
+    [RelayCommand(CanExecute = nameof(CanClearPracticeLibrary))]
+    private void ClearPracticeLibrary()
+    {
+        var count = PracticeLibrarySongs.Count;
+        if (count == 0)
+            return;
+
+        if (!DebraDialogs.Confirm(
+                L.T(UiText.PracticeClearTitle),
+                L.F(UiText.PracticeClearMessage, count),
+                confirmLabel: L.T(UiText.PracticeClear),
+                cancelLabel: "Cancel"))
+            return;
+
+        if (SelectedPracticeSong is not null
+            && PracticeLibrarySongs.Any(s => s.Id == SelectedPracticeSong.Id))
+        {
+            StopPracticeSession();
+            SelectedPracticeSong = null;
+        }
+
+        PracticeLibrarySongs.Clear();
+        _settings.Settings.LastPracticeSongPath = null;
+        SyncPersistedPracticeLibraryPaths();
+        _settings.Save();
+    }
+
+    private bool CanClearPracticeLibrary() => PracticeLibrarySongs.Count > 0;
+
+    private Song? ResolvePracticeLibrarySong(Song? song)
+    {
+        if (song is null)
+            return null;
+
+        return PracticeLibrarySongs.FirstOrDefault(s => s.Id == song.Id)
+               ?? PracticeLibrarySongs.FirstOrDefault(s =>
+                   s.FilePath.Equals(song.FilePath, StringComparison.OrdinalIgnoreCase));
+    }
 
     private Song? ResolveLibrarySong(Song? song)
     {
@@ -2305,6 +3301,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
         var targetMs = (long)(Math.Clamp(normalizedPosition, 0, 1) * _playback.TotalDurationMs);
         _playback.SeekToMs(targetMs);
+        ResetMainPlaybackSoundSession();
         StartPlaybackFromCurrentPosition();
         IsPlaying = true;
         UpdateProgress();
@@ -2315,6 +3312,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         CancelAutoAdvanceTimer();
         _playback.Stop();
+        ResetMainPlaybackSoundSession();
         FinalizeHistory(PlaybackStatus.Stopped);
         IsPlaying = false;
         RefreshPlayPauseUi();
@@ -2417,6 +3415,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     private async Task StartSongAsync(Song song)
     {
+        if (IsLiveMidiEnabled)
+            DisableLiveMidiForFilePlayback();
+
         try
         {
             _suppressPlaybackUi = true;
@@ -2427,31 +3428,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
             ApplyPlaybackCalibrationOnLoad(song.FilePath);
 
-            var smartTranspose = SmartTranspose;
-            var strictNoteRange = StrictNoteRange;
-            var chordRollDelayMs = ChordRollDelayMs;
-            var noteDelayMs = NoteDelayMs;
-            var octaveShift = PlaybackOctaveShift;
-            var trackIndex = SelectedMidiTrack?.TrackIndex ?? -1;
-            var mappingMode = SelectedNoteMappingMode?.Mode ?? NoteMappingMode.Chromatic36;
-            var filePath = song.FilePath;
-
-            var prepared = await Task.Run(() =>
-            {
-                return _midiPlaybackPreparer.Prepare(
-                    filePath,
-                    new MidiPrepareRequest
-                    {
-                        SmartTranspose = smartTranspose,
-                        StrictNoteRange = strictNoteRange,
-                        OctaveShift = octaveShift,
-                        TrackIndex = trackIndex,
-                        MappingMode = mappingMode,
-                        ChordRollDelayMs = chordRollDelayMs,
-                        NoteDelayMs = noteDelayMs
-                    },
-                    _keyMapping);
-            }).ConfigureAwait(false);
+            var prepared = await PrepareSongOnBackgroundAsync(song).ConfigureAwait(false);
 
             var parsed = prepared.Parsed;
             var ranged = prepared.Ranged;
@@ -2513,6 +3490,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
                     ResetPlaybackTempoForSong(parsed.BeatsPerMinute);
                     ApplySongTempoOnLoad(song.FilePath);
+                    _playbackSoundNotes = prepared.SoundSchedule;
+                    ResetMainPlaybackSoundSession();
                     _playback.LoadSchedule(schedule, parsed.DurationMs);
                     TotalTimeText = TimeFormat.FromMilliseconds(parsed.DurationMs);
                     _input.ResetDiagnostics();
@@ -2554,12 +3533,1046 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
+    private Task<MidiPrepareResult> PrepareSongOnBackgroundAsync(Song song) =>
+        Task.Run(() => _midiPlaybackPreparer.Prepare(
+            song.FilePath,
+            new MidiPrepareRequest
+            {
+                SmartTranspose = SmartTranspose,
+                StrictNoteRange = StrictNoteRange,
+                OctaveShift = PlaybackOctaveShift,
+                TrackIndex = SelectedMidiTrack?.TrackIndex ?? -1,
+                MappingMode = SelectedNoteMappingMode?.Mode ?? NoteMappingMode.Chromatic36,
+                ChordRollDelayMs = ChordRollDelayMs,
+                NoteDelayMs = NoteDelayMs
+            },
+            _keyMapping));
+
+    private async Task ReprepareCurrentSongScheduleAsync()
+    {
+        if (_nowPlaying is null)
+            return;
+
+        var song = _nowPlaying;
+        var positionMs = _playback.CurrentPositionMs;
+        var resumeState = _playback.State;
+
+        try
+        {
+            var prepared = await PrepareSongOnBackgroundAsync(song).ConfigureAwait(false);
+            var schedule = prepared.Schedule;
+
+            if (schedule.Count == 0)
+                return;
+
+            await UiDispatcher.RunAsync(() =>
+            {
+                _suppressPlaybackUi = true;
+                try
+                {
+                    var ranged = prepared.Ranged;
+                    var parsed = prepared.Parsed;
+
+                    _nowPlayingNoteCount = ranged.Notes.Count;
+                    NowPlayingNotesDisplay = _nowPlayingNoteCount.ToString("N0");
+                    song.NoteCount = ranged.Notes.Count;
+                    song.OutOfRangeNoteCount = ranged.OutOfRangeNoteCount;
+                    TotalTimeText = TimeFormat.FromMilliseconds(parsed.DurationMs);
+
+                    _playbackSoundNotes = prepared.SoundSchedule;
+                    ResetMainPlaybackSoundSession();
+                    _playback.ReloadSchedule(schedule, parsed.DurationMs, positionMs, resumeState);
+
+                    if (resumeState == PlaybackState.Playing)
+                        StartPlaybackFromCurrentPosition();
+
+                    IsPlaying = resumeState == PlaybackState.Playing;
+                    UpdateProgress();
+                    RefreshPlayPauseUi();
+                }
+                finally
+                {
+                    _suppressPlaybackUi = false;
+                }
+            }).ConfigureAwait(true);
+        }
+        catch (Exception ex)
+        {
+            AppPaths.WriteDiagnosticLog("reprepare-playback", ex);
+        }
+    }
+
+    private LiveMidiContext BuildLiveMidiContext() => new()
+    {
+        SmartTranspose = IsAcademyPracticeMode ? false : SmartTranspose,
+        StrictNoteRange = IsAcademyPracticeMode ? false : StrictNoteRange,
+        OctaveShift = IsAcademyPracticeMode ? 0 : PlaybackOctaveShift,
+        MappingMode = IsAcademyPracticeMode
+            ? NoteMappingMode.Chromatic36
+            : SelectedNoteMappingMode?.Mode ?? NoteMappingMode.Chromatic36,
+        SuppressGameInput = IsAcademyPracticeMode
+    };
+
+    [RelayCommand]
+    private void RefreshMidiInputDevices()
+    {
+        var names = _liveMidi.GetDeviceNames();
+        var previous = SelectedMidiInputDevice?.Name;
+        _suppressMidiInputDeviceChange = true;
+        MidiInputDevices.Clear();
+
+        foreach (var name in names)
+            MidiInputDevices.Add(new MidiInputDeviceOption { Name = name });
+
+        if (MidiInputDevices.Count == 0)
+        {
+            SelectedMidiInputDevice = null;
+            _suppressMidiInputDeviceChange = false;
+            if (IsLiveMidiEnabled)
+                StopLiveMidiListening();
+            RefreshLiveMidiStatusText();
+            return;
+        }
+
+        var saved = _settings.Settings.LastMidiInputDeviceName;
+        var pick = MidiInputDevices.FirstOrDefault(d =>
+                string.Equals(d.Name, previous, StringComparison.OrdinalIgnoreCase))
+            ?? MidiInputDevices.FirstOrDefault(d =>
+                string.Equals(d.Name, saved, StringComparison.OrdinalIgnoreCase))
+            ?? MidiInputDevices[0];
+
+        SelectedMidiInputDevice = pick;
+        _suppressMidiInputDeviceChange = false;
+
+        if (IsLiveMidiEnabled && pick is not null)
+        {
+            try
+            {
+                _liveMidi.Reconnect(pick.Name);
+            }
+            catch (Exception ex)
+            {
+                IsLiveMidiEnabled = false;
+                DebraDialogs.Error(
+                    L.T(UiText.SettingsLiveMidi),
+                    string.Format(L.T(UiText.SettingsLiveMidiError), ex.Message));
+            }
+        }
+
+        RefreshLiveMidiStatusText();
+    }
+
+    private void RestoreSavedMidiInputDevice()
+    {
+        var saved = _settings.Settings.LastMidiInputDeviceName;
+        if (string.IsNullOrWhiteSpace(saved))
+            return;
+
+        SelectedMidiInputDevice = MidiInputDevices.FirstOrDefault(d =>
+            string.Equals(d.Name, saved, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void RefreshLiveMidiStatusText()
+    {
+        if (IsLiveMidiEnabled && _liveMidi.ConnectedDeviceName is { } connected)
+            LiveMidiStatusText = string.Format(L.T(UiText.SettingsLiveMidiListening), connected);
+        else if (MidiInputDevices.Count == 0)
+            LiveMidiStatusText = L.T(UiText.SettingsLiveMidiNoDevices);
+        else
+            LiveMidiStatusText = L.T(UiText.SettingsLiveMidiDisconnected);
+    }
+
+    private void SyncPracticeSoundState()
+    {
+        var inPractice = SelectedSection == NavigationSection.Practice;
+        _practiceSound.IsEnabled = inPractice;
+        if (!inPractice)
+            _practiceSound.StopAllNotes();
+    }
+
+    private async Task SyncPracticeLiveInputAsync()
+    {
+        if (SelectedSection != NavigationSection.Practice)
+            return;
+
+        if (SelectedMidiInputDevice is null)
+            RefreshMidiInputDevices();
+
+        if (SelectedMidiInputDevice is null)
+            return;
+
+        if (!_practiceSessionOwnsLiveMidi)
+            await EnableLiveMidiForPracticeAsync().ConfigureAwait(true);
+    }
+
+    private void DisableLiveMidiForFilePlayback()
+    {
+        if (!IsLiveMidiEnabled)
+            return;
+
+        _suppressLiveMidiToggle = true;
+        IsLiveMidiEnabled = false;
+        _suppressLiveMidiToggle = false;
+        StopLiveMidiListening();
+    }
+
+    private async Task EnableLiveMidiForPracticeAsync()
+    {
+        RefreshMidiInputDevices();
+        if (SelectedMidiInputDevice is null)
+            return;
+
+        _practiceSessionOwnsLiveMidi = true;
+
+        try
+        {
+            _liveMidi.SetEnabled(true, SelectedMidiInputDevice.Name);
+            _suppressLiveMidiToggle = true;
+            IsLiveMidiEnabled = true;
+            _suppressLiveMidiToggle = false;
+            RefreshLiveMidiStatusText();
+        }
+        catch (Exception ex)
+        {
+            _practiceSessionOwnsLiveMidi = false;
+            AppPaths.WriteDiagnosticLog("practice-live-midi", ex);
+        }
+
+        await Task.CompletedTask;
+    }
+
+    private void DisableLiveMidiAfterPractice()
+    {
+        if (!_practiceSessionOwnsLiveMidi)
+            return;
+
+        _practiceSessionOwnsLiveMidi = false;
+        _practiceKeyboardPress.Clear();
+        DisableLiveMidiForFilePlayback();
+    }
+
+    private void ApplyPracticeLabelModeFromSettings()
+    {
+        _suppressPracticeLabelSync = true;
+        switch (_settings.Settings.PracticeNoteLabelMode)
+        {
+            case PracticeNoteLabelMode.Solfege:
+                IsPracticeSolfegeLabels = true;
+                IsPracticeLetterLabels = false;
+                IsPracticeKeyboardLabels = false;
+                break;
+            case PracticeNoteLabelMode.KeyboardKeys:
+                IsPracticeKeyboardLabels = true;
+                IsPracticeSolfegeLabels = false;
+                IsPracticeLetterLabels = false;
+                break;
+            default:
+                IsPracticeLetterLabels = true;
+                IsPracticeSolfegeLabels = false;
+                IsPracticeKeyboardLabels = false;
+                break;
+        }
+        _suppressPracticeLabelSync = false;
+        OnPropertyChanged(nameof(PracticeNoteLabelMode));
+        OnPropertyChanged(nameof(PracticeFallingNoteLabelMode));
+    }
+
+    private void SavePracticeLabelMode(PracticeNoteLabelMode mode)
+    {
+        _settings.Settings.PracticeNoteLabelMode = mode;
+        ScheduleSettingsSave();
+        OnPropertyChanged(nameof(PracticeNoteLabelMode));
+        OnPropertyChanged(nameof(PracticeFallingNoteLabelMode));
+        RefreshPracticeFallingNoteLayout();
+    }
+
+    private void RefreshPracticeFallingNoteLayout() =>
+        _practiceSession.NotifyFallingNoteLayoutChanged();
+
+    private void StopLiveMidiListening()
+    {
+        _liveMidi.SetEnabled(false, null);
+        RefreshLiveMidiStatusText();
+    }
+
+    private async Task EnableLiveMidiAsync()
+    {
+        if (SelectedMidiInputDevice is null)
+        {
+            RefreshMidiInputDevices();
+            if (SelectedMidiInputDevice is null)
+            {
+                IsLiveMidiEnabled = false;
+                DebraDialogs.Warning(
+                    L.T(UiText.SettingsLiveMidi),
+                    L.T(UiText.SettingsLiveMidiNoDevices));
+                return;
+            }
+        }
+
+        _playback.Stop();
+        FinalizeHistory(PlaybackStatus.Stopped);
+        IsPlaying = false;
+        RefreshPlayPauseUi();
+
+        if (!await PrepareGameConnectionAsync().ConfigureAwait(true))
+        {
+            IsLiveMidiEnabled = false;
+            return;
+        }
+
+        try
+        {
+            _liveMidi.SetEnabled(true, SelectedMidiInputDevice.Name);
+            _settings.Settings.LastMidiInputDeviceName = SelectedMidiInputDevice.Name;
+            ScheduleSettingsSave();
+            RefreshLiveMidiStatusText();
+        }
+        catch (Exception ex)
+        {
+            IsLiveMidiEnabled = false;
+            RefreshLiveMidiStatusText();
+            DebraDialogs.Error(
+                L.T(UiText.SettingsLiveMidi),
+                string.Format(L.T(UiText.SettingsLiveMidiError), ex.Message));
+        }
+    }
+
+    private bool _suppressLiveMidiToggle;
+    private bool _suppressMidiInputDeviceChange;
+
+    partial void OnIsLiveMidiEnabledChanged(bool value)
+    {
+        if (_suppressLiveMidiToggle)
+            return;
+
+        if (value)
+            _ = EnableLiveMidiAsync();
+        else
+            StopLiveMidiListening();
+    }
+
+    partial void OnSelectedMidiInputDeviceChanged(MidiInputDeviceOption? value)
+    {
+        if (_suppressMidiInputDeviceChange)
+            return;
+
+        if (value is not null)
+        {
+            _settings.Settings.LastMidiInputDeviceName = value.Name;
+            ScheduleSettingsSave();
+        }
+
+        if (IsLiveMidiEnabled)
+        {
+            try
+            {
+                _liveMidi.Reconnect(value?.Name);
+                RefreshLiveMidiStatusText();
+            }
+            catch (Exception ex)
+            {
+                IsLiveMidiEnabled = false;
+                RefreshLiveMidiStatusText();
+                DebraDialogs.Error(
+                    L.T(UiText.SettingsLiveMidi),
+                    string.Format(L.T(UiText.SettingsLiveMidiError), ex.Message));
+            }
+        }
+        else
+            RefreshLiveMidiStatusText();
+    }
+
+    private MidiPrepareRequest BuildPracticePrepareRequest() => new()
+    {
+        SmartTranspose = IsAcademyPracticeMode ? false : SmartTranspose,
+        StrictNoteRange = IsAcademyPracticeMode ? false : StrictNoteRange,
+        OctaveShift = IsAcademyPracticeMode ? 0 : PlaybackOctaveShift,
+        TrackIndex = -1,
+        MappingMode = IsAcademyPracticeMode
+            ? NoteMappingMode.TransposeOnly
+            : SelectedNoteMappingMode?.Mode ?? NoteMappingMode.Chromatic36,
+        ChordRollDelayMs = ChordRollDelayMs,
+        NoteDelayMs = NoteDelayMs
+    };
+
+    private PracticeTrackOption? _practiceRightHandTrack;
+    private PracticeTrackOption? _practiceLeftHandTrack;
+
+    public bool ShowPracticeHandTrackPicker => PracticeTrackOptions.Count == 2;
+
+    public PracticeTrackOption? PracticeRightHandTrack => _practiceRightHandTrack;
+
+    public PracticeTrackOption? PracticeLeftHandTrack => _practiceLeftHandTrack;
+
+    private void RebuildPracticeTrackOptions(IReadOnlyList<MidiTrackInfo> tracks)
+    {
+        ClearPracticeTrackSubscriptions();
+        PracticeTrackOptions.Clear();
+        var trackList = tracks.Count > 0
+            ? tracks
+            : [new MidiTrackInfo { Index = 0, Name = "Track 1", NoteCount = 0 }];
+
+        for (var i = 0; i < trackList.Count; i++)
+        {
+            var track = trackList[i];
+            var option = new PracticeTrackOption
+            {
+                TrackIndex = track.Index,
+                DisplayName = string.IsNullOrWhiteSpace(track.Name)
+                    ? $"Track {track.Index + 1}"
+                    : track.Name,
+                IsEnabled = true,
+                ColorHex = PracticePrepareService.DefaultTrackColors[i % PracticePrepareService.DefaultTrackColors.Length]
+            };
+            option.PropertyChanged += OnPracticeTrackOptionChanged;
+            PracticeTrackOptions.Add(option);
+        }
+
+        UpdatePracticeHandTrackSlots();
+    }
+
+    private void UpdatePracticeHandTrackSlots(IReadOnlyList<PracticeVisualNote>? notes = null)
+    {
+        _practiceRightHandTrack = null;
+        _practiceLeftHandTrack = null;
+
+        if (PracticeTrackOptions.Count == 2)
+        {
+            var (right, left) = PracticeHandTrackLayout.Classify(
+                PracticeTrackOptions[0],
+                PracticeTrackOptions[1],
+                notes);
+            PracticeHandTrackLayout.ApplyHandColors(right, left);
+            _practiceRightHandTrack = right;
+            _practiceLeftHandTrack = left;
+        }
+
+        OnPropertyChanged(nameof(ShowPracticeHandTrackPicker));
+        OnPropertyChanged(nameof(PracticeRightHandTrack));
+        OnPropertyChanged(nameof(PracticeLeftHandTrack));
+    }
+
+    private List<PracticeVisualNote> ColorizePracticeVisualNotes(IReadOnlyList<PracticeVisualNote> notes)
+    {
+        if (IsAcademyPracticeMode)
+            return AcademyFingerMapper.StampAcademyNotes(notes, _activeAcademyHand).ToList();
+
+        if (PracticeTrackOptions.Count == 2)
+        {
+            UpdatePracticeHandTrackSlots(notes);
+            return PracticeNoteColorHelper.ApplyTrackColors(notes, PracticeTrackOptions);
+        }
+
+        return PracticeNoteColorHelper.ApplyPitchHandColors(
+            notes,
+            PracticeHandColorResolver.LeftHandHex,
+            PracticeHandColorResolver.RightHandHex);
+    }
+
+    private void OnPracticeHandColorsChanged()
+    {
+        if (_practiceSession.Notes.Count == 0)
+        {
+            if (PracticeTrackOptions.Count == 2)
+                UpdatePracticeHandTrackSlots();
+            RefreshPracticeHandKeyPreview();
+            OnPropertyChanged(nameof(PracticeHandKeyPreview));
+            return;
+        }
+
+        var colored = ColorizePracticeVisualNotes(_practiceSession.Notes);
+        _practiceSession.UpdateNoteColors(colored);
+        if (PracticeTrackOptions.Count == 2)
+            UpdatePracticeHandTrackSlots(colored);
+        RefreshPracticeHandKeyPreview();
+        OnPropertyChanged(nameof(PracticeHandKeyPreview));
+    }
+
+    partial void OnPracticeRightHandColorHexChanged(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return;
+
+        _settings.Settings.PracticeRightHandColorHex = value.Trim();
+        PracticeHandColorResolver.RightHandHex = value.Trim();
+        ScheduleSettingsSave();
+        OnPracticeHandColorsChanged();
+    }
+
+    partial void OnPracticeLeftHandColorHexChanged(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return;
+
+        _settings.Settings.PracticeLeftHandColorHex = value.Trim();
+        PracticeHandColorResolver.LeftHandHex = value.Trim();
+        ScheduleSettingsSave();
+        OnPracticeHandColorsChanged();
+    }
+
+    [RelayCommand]
+    private void TogglePracticeHandColorPicker() =>
+        IsPracticeHandColorPickerOpen = !IsPracticeHandColorPickerOpen;
+
+    [RelayCommand]
+    private void SelectPracticeRightHandColor(string hex)
+    {
+        if (string.IsNullOrWhiteSpace(hex))
+            return;
+
+        PracticeRightHandColorHex = hex.Trim();
+    }
+
+    [RelayCommand]
+    private void SelectPracticeLeftHandColor(string hex)
+    {
+        if (string.IsNullOrWhiteSpace(hex))
+            return;
+
+        PracticeLeftHandColorHex = hex.Trim();
+    }
+
+    private void SyncPracticeTrackOptions(IReadOnlyList<MidiTrackInfo> tracks)
+    {
+        var trackList = tracks.Count > 0
+            ? tracks
+            : [new MidiTrackInfo { Index = 0, Name = "Track 1", NoteCount = 0 }];
+
+        if (PracticeTrackOptions.Count == trackList.Count && PracticeTrackOptions.Count > 0)
+        {
+            if (PracticeTrackOptions.Count == 2 && !IsAcademyPracticeMode)
+                UpdatePracticeHandTrackSlots();
+            return;
+        }
+
+        ClearPracticeTrackSubscriptions();
+        PracticeTrackOptions.Clear();
+        RebuildPracticeTrackOptions(trackList);
+    }
+
+    private void ClearPracticeTrackSubscriptions()
+    {
+        foreach (var option in PracticeTrackOptions)
+            option.PropertyChanged -= OnPracticeTrackOptionChanged;
+    }
+
+    private void OnPracticeTrackOptionChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(PracticeTrackOption.IsEnabled))
+            return;
+
+        if (ShowPracticeHandTrackPicker &&
+            PracticeTrackOptions.All(t => !t.IsEnabled) &&
+            sender is PracticeTrackOption option)
+        {
+            option.IsEnabled = true;
+            return;
+        }
+
+        ApplyPracticeEnabledTracks();
+    }
+
+    private HashSet<int> GetEnabledPracticeTrackIndices()
+    {
+        var enabled = PracticeTrackOptions
+            .Where(t => t.IsEnabled)
+            .Select(t => t.TrackIndex)
+            .ToHashSet();
+
+        if (enabled.Count > 0)
+            return enabled;
+
+        return PracticeTrackOptions.Select(t => t.TrackIndex).ToHashSet();
+    }
+
+    private void ApplyPracticeEnabledTracks()
+    {
+        _practiceSession.SetEnabledTrackIndices(GetEnabledPracticeTrackIndices());
+        _practiceSound.ResetSession();
+        RefreshPracticeHandKeyPreview();
+
+        if (IsPracticeSoundEnabled && _practiceSession.State == PlaybackState.Playing)
+            _practiceSound.ProcessChartPosition(
+                _practiceSession.VisibleNotes,
+                _practiceSession.CurrentPositionMs);
+    }
+
+    private static List<PracticeTrackOption> SnapshotAllPracticeTracksEnabled(
+        IReadOnlyList<PracticeTrackOption> options)
+    {
+        return options.Select(o => new PracticeTrackOption
+        {
+            TrackIndex = o.TrackIndex,
+            DisplayName = o.DisplayName,
+            ColorHex = o.ColorHex,
+            IsEnabled = true
+        }).ToList();
+    }
+
+    private async Task ReloadPracticeChartAsync(Song song)
+    {
+        try
+        {
+            var tracks = await Task.Run(() => _midiParser.GetTracks(song.FilePath)).ConfigureAwait(false);
+            var viewMode = PracticeKeyboardViewMode;
+
+            await UiDispatcher.RunAsync(() =>
+            {
+                SyncPracticeTrackOptions(tracks);
+            }).ConfigureAwait(true);
+
+            var trackOptionsSnapshot = SnapshotAllPracticeTracksEnabled(PracticeTrackOptions);
+
+            var result = await Task.Run(() => _practicePrepare.Prepare(
+                song.FilePath,
+                BuildPracticePrepareRequest(),
+                _keyMapping,
+                trackOptionsSnapshot,
+                viewMode)).ConfigureAwait(false);
+
+            await UiDispatcher.RunAsync(() =>
+            {
+                if (PracticeTrackOptions.Count == 0 && result.Tracks.Count > 0)
+                    SyncPracticeTrackOptions(result.Tracks);
+
+                if (!IsAcademyPracticeMode && PracticeTrackOptions.Count == 2)
+                    UpdatePracticeHandTrackSlots();
+
+                var visualNotes = ColorizePracticeVisualNotes(result.VisualNotes);
+
+                _practiceSession.SetTempoPercent(PracticeTempoPercent);
+                _practiceSession.Load(visualNotes, result.DurationMs);
+                _practiceSession.SetEnabledTrackIndices(GetEnabledPracticeTrackIndices());
+                PracticeDurationText = TimeFormat.FromMillisecondsLong(result.DurationMs);
+                PracticeTimeText = "0:00";
+                PracticeProgress = 0;
+                IsPracticePlaying = false;
+                OnPropertyChanged(nameof(PracticeKeyboardViewMode));
+
+                if (ShowPracticeHandTrackPicker || IsAcademyPracticeMode || _practiceSession.Notes.Count > 0)
+                    RefreshPracticeHandKeyPreview();
+
+                SyncPracticeSoundState();
+                _ = SyncPracticeLiveInputAsync();
+            }).ConfigureAwait(true);
+        }
+        catch (Exception ex)
+        {
+            AppPaths.WriteDiagnosticLog("practice-load", ex);
+            await UiDispatcher.RunAsync(() =>
+                DebraDialogs.Error(L.T(UiText.SectionPractice), $"Failed to load practice chart: {ex.Message}"))
+                .ConfigureAwait(true);
+        }
+    }
+
+    private void StopPracticeSession()
+    {
+        _practiceSession.Stop();
+        _practiceKeyboardPress.Clear();
+        _practicePcKeysHeld.Clear();
+        _practiceSound.ResetSession();
+        SyncPracticeSoundState();
+        IsPracticePlaying = false;
+        PracticeProgress = 0;
+        PracticeTimeText = "0:00";
+        EndAcademyPracticeMode();
+    }
+
+    [RelayCommand]
+    private async Task StartPracticeAsync()
+    {
+        if (SelectedPracticeSong is null)
+        {
+            DebraDialogs.Warning(L.T(UiText.SectionPractice), L.T(UiText.PracticeSelectSong));
+            return;
+        }
+
+        _playback.Stop();
+        await ReloadPracticeChartAsync(SelectedPracticeSong).ConfigureAwait(true);
+
+        if (_practiceSession.Notes.Count == 0)
+        {
+            DebraDialogs.Warning(L.T(UiText.SectionPractice), L.T(UiText.PracticeNoNotes));
+            return;
+        }
+
+        await RunPracticeCountdownAsync().ConfigureAwait(true);
+        await RunPracticeStartCoreAsync().ConfigureAwait(true);
+    }
+
+    [RelayCommand]
+    private void PausePractice()
+    {
+        if (_practiceSession.State == PlaybackState.Playing)
+            _practiceSession.Pause();
+        else if (_practiceSession.State == PlaybackState.Paused)
+            _practiceSession.Start();
+    }
+
+    [RelayCommand]
+    private void StopPractice()
+    {
+        StopPracticeSession();
+    }
+
+    [RelayCommand]
+    private void ClosePracticeLibraryPanel() => IsPracticeLibraryPanelOpen = false;
+
+    [RelayCommand]
+    private async Task LoadPracticeLibrarySongAsync(Song? song)
+    {
+        if (song is null)
+            return;
+
+        EndAcademyPracticeMode();
+
+        if (SelectedPracticeSong?.Id == song.Id)
+            await ReloadPracticeChartAsync(song).ConfigureAwait(true);
+        else
+            SelectedPracticeSong = song;
+
+        IsPracticeLibraryPanelOpen = false;
+    }
+
+    [RelayCommand]
+    private void ReloadPracticeChart()
+    {
+        if (SelectedPracticeSong is not null)
+            _ = ReloadPracticeChartAsync(SelectedPracticeSong);
+    }
+
+    [RelayCommand]
+    private void SeekPracticeToPosition(double normalizedPosition)
+    {
+        if (_practiceSession.DurationMs <= 0)
+            return;
+
+        var targetMs = (long)(Math.Clamp(normalizedPosition, 0, 1) * _practiceSession.DurationMs);
+        _practiceSession.SeekToMs(targetMs);
+    }
+
+    private void OnPracticePositionChanged(long positionMs) =>
+        UiDispatcher.Post(() =>
+        {
+            var displayMs = Math.Max(0, positionMs);
+            PracticeTimeText = TimeFormat.FromMilliseconds(displayMs);
+            var duration = _practiceSession.DurationMs;
+            PracticeProgress = duration > 0 ? Math.Clamp(displayMs * 100.0 / duration, 0, 100) : 0;
+
+            if (IsPracticeSoundEnabled && _practiceSession.State == PlaybackState.Playing && positionMs >= 0)
+                _practiceSound.ProcessChartPosition(_practiceSession.VisibleNotes, positionMs);
+        });
+
+    private void OnPracticeWaitingNotesChanged() =>
+        UiDispatcher.Post(() =>
+        {
+            ReconcilePracticeInput();
+
+            if (!IsPracticeSoundEnabled)
+                return;
+
+            foreach (var note in _practiceSession.WaitingNotes)
+                _practiceSound.PlayChartNoteOnce(note);
+        });
+
+    private void OnPracticeStateChanged(PlaybackState state) =>
+        UiDispatcher.Post(() =>
+        {
+            IsPracticePlaying = state == PlaybackState.Playing;
+            OnPropertyChanged(nameof(ShowPracticeCenterPlay));
+            OnPropertyChanged(nameof(ShowPracticeHandPreview));
+
+            if (state == PlaybackState.Playing)
+            {
+                SyncPracticeSoundState();
+                _ = SyncPracticeLiveInputAsync();
+            }
+        });
+
+    private void OnPracticeCompleted() =>
+        UiDispatcher.Post(() =>
+        {
+            IsPracticePlaying = false;
+            PracticeProgress = 100;
+            _practiceSound.ResetSession();
+            SyncPracticeSoundState();
+            _ = SyncPracticeLiveInputAsync();
+        });
+
+    partial void OnIsPracticeSoundEnabledChanged(bool value)
+    {
+        OnPropertyChanged(nameof(PracticeSoundToggleLabel));
+
+        if (_suppressPracticeSoundSave)
+            return;
+
+        _settings.Settings.PracticeSoundEnabled = value;
+        _settings.Save();
+        SyncPracticeSoundState();
+    }
+
+    partial void OnIsPracticeGameSoundOnlyChanged(bool value)
+    {
+        OnPropertyChanged(nameof(PracticeGameSoundOnlyToggleLabel));
+
+        if (_suppressPracticeGameSoundSave)
+            return;
+
+        _settings.Settings.PracticeGameSoundOnly = value;
+        _settings.Save();
+    }
+
+    private void ApplyPracticeCountdownFromSettings()
+    {
+        // Legacy builds saved 30 when the text box could not be edited.
+        if (_settings.Settings.AcademyPracticeCountdownSeconds == 30)
+        {
+            _settings.Settings.AcademyPracticeCountdownSeconds = 5;
+            ScheduleSettingsSave();
+        }
+
+        PracticeAcademyCountdownSeconds = Math.Clamp(
+            _settings.Settings.AcademyPracticeCountdownSeconds > 0
+                ? _settings.Settings.AcademyPracticeCountdownSeconds
+                : 5,
+            0,
+            30);
+    }
+
+    private void ApplyPracticeSoundFromSettings()
+    {
+        _suppressPracticeSoundSave = true;
+        IsPracticeSoundEnabled = _settings.Settings.PracticeSoundEnabled;
+        _suppressPracticeSoundSave = false;
+        OnPropertyChanged(nameof(PracticeSoundToggleLabel));
+        SyncPracticeSoundState();
+    }
+
+    private void ApplyPracticeGameSoundFromSettings()
+    {
+        _suppressPracticeGameSoundSave = true;
+        IsPracticeGameSoundOnly = _settings.Settings.PracticeGameSoundOnly;
+        _suppressPracticeGameSoundSave = false;
+        OnPropertyChanged(nameof(PracticeGameSoundOnlyToggleLabel));
+    }
+
+    partial void OnIsPracticeLearnModeChanged(bool value)
+    {
+        if (_suppressPracticeModeSync)
+            return;
+
+        _practiceSession.Mode = value ? PracticeMode.Learn : PracticeMode.Follow;
+
+        if (value && IsPracticeFollowMode)
+        {
+            _suppressPracticeModeSync = true;
+            IsPracticeFollowMode = false;
+            _suppressPracticeModeSync = false;
+        }
+        else if (!value && !IsPracticeFollowMode)
+        {
+            _suppressPracticeModeSync = true;
+            IsPracticeFollowMode = true;
+            _suppressPracticeModeSync = false;
+        }
+    }
+
+    partial void OnIsPracticeFollowModeChanged(bool value)
+    {
+        if (_suppressPracticeModeSync)
+            return;
+
+        if (value)
+        {
+            _practiceSession.Mode = PracticeMode.Follow;
+            if (IsPracticeLearnMode)
+            {
+                _suppressPracticeModeSync = true;
+                IsPracticeLearnMode = false;
+                _suppressPracticeModeSync = false;
+            }
+        }
+        else if (!IsPracticeLearnMode)
+        {
+            _suppressPracticeModeSync = true;
+            IsPracticeLearnMode = true;
+            _suppressPracticeModeSync = false;
+            _practiceSession.Mode = PracticeMode.Learn;
+        }
+    }
+
+    partial void OnIsPracticeGameKeysViewChanged(bool value)
+    {
+        if (_suppressPracticeViewSync)
+            return;
+
+        if (value && IsPracticeFullPianoView)
+        {
+            _suppressPracticeViewSync = true;
+            IsPracticeFullPianoView = false;
+            _suppressPracticeViewSync = false;
+        }
+        else if (!value && !IsPracticeFullPianoView)
+        {
+            _suppressPracticeViewSync = true;
+            IsPracticeFullPianoView = true;
+            _suppressPracticeViewSync = false;
+        }
+
+        OnPropertyChanged(nameof(PracticeKeyboardViewMode));
+        if (SelectedPracticeSong is not null)
+            _ = ReloadPracticeChartAsync(SelectedPracticeSong);
+    }
+
+    partial void OnIsPracticeFullPianoViewChanged(bool value)
+    {
+        if (_suppressPracticeViewSync)
+            return;
+
+        if (value && IsPracticeGameKeysView)
+        {
+            _suppressPracticeViewSync = true;
+            IsPracticeGameKeysView = false;
+            _suppressPracticeViewSync = false;
+        }
+        else if (!value && !IsPracticeGameKeysView)
+        {
+            _suppressPracticeViewSync = true;
+            IsPracticeGameKeysView = true;
+            _suppressPracticeViewSync = false;
+        }
+
+        OnPropertyChanged(nameof(PracticeKeyboardViewMode));
+        if (SelectedPracticeSong is not null)
+            _ = ReloadPracticeChartAsync(SelectedPracticeSong);
+    }
+
+    partial void OnIsAcademyPracticeModeChanged(bool value)
+    {
+        OnPropertyChanged(nameof(PracticeFallingNoteLabelMode));
+        OnPropertyChanged(nameof(PracticeNoteLabelMode));
+        RefreshPracticeFallingNoteLayout();
+    }
+
+    partial void OnIsPracticeSolfegeLabelsChanged(bool value)
+    {
+        if (_suppressPracticeLabelSync)
+            return;
+
+        if (value)
+        {
+            if (IsPracticeLetterLabels || IsPracticeKeyboardLabels)
+            {
+                _suppressPracticeLabelSync = true;
+                IsPracticeLetterLabels = false;
+                IsPracticeKeyboardLabels = false;
+                _suppressPracticeLabelSync = false;
+            }
+            SavePracticeLabelMode(PracticeNoteLabelMode.Solfege);
+        }
+        else if (!IsPracticeLetterLabels && !IsPracticeKeyboardLabels)
+        {
+            _suppressPracticeLabelSync = true;
+            IsPracticeLetterLabels = true;
+            _suppressPracticeLabelSync = false;
+            SavePracticeLabelMode(PracticeNoteLabelMode.LetterNames);
+        }
+    }
+
+    partial void OnIsPracticeLetterLabelsChanged(bool value)
+    {
+        if (_suppressPracticeLabelSync)
+            return;
+
+        if (value)
+        {
+            if (IsPracticeSolfegeLabels || IsPracticeKeyboardLabels)
+            {
+                _suppressPracticeLabelSync = true;
+                IsPracticeSolfegeLabels = false;
+                IsPracticeKeyboardLabels = false;
+                _suppressPracticeLabelSync = false;
+            }
+            SavePracticeLabelMode(PracticeNoteLabelMode.LetterNames);
+        }
+        else if (!IsPracticeSolfegeLabels && !IsPracticeKeyboardLabels)
+        {
+            _suppressPracticeLabelSync = true;
+            IsPracticeLetterLabels = true;
+            _suppressPracticeLabelSync = false;
+            SavePracticeLabelMode(PracticeNoteLabelMode.LetterNames);
+        }
+    }
+
+    partial void OnIsPracticeKeyboardLabelsChanged(bool value)
+    {
+        if (_suppressPracticeLabelSync)
+            return;
+
+        if (value)
+        {
+            if (IsPracticeSolfegeLabels || IsPracticeLetterLabels)
+            {
+                _suppressPracticeLabelSync = true;
+                IsPracticeSolfegeLabels = false;
+                IsPracticeLetterLabels = false;
+                _suppressPracticeLabelSync = false;
+            }
+            SavePracticeLabelMode(PracticeNoteLabelMode.KeyboardKeys);
+        }
+        else if (!IsPracticeSolfegeLabels && !IsPracticeLetterLabels)
+        {
+            _suppressPracticeLabelSync = true;
+            IsPracticeLetterLabels = true;
+            _suppressPracticeLabelSync = false;
+            SavePracticeLabelMode(PracticeNoteLabelMode.LetterNames);
+        }
+    }
+
+    partial void OnSelectedPracticeSongChanged(Song? value)
+    {
+        if (_suppressAcademyPracticeSongReload)
+            return;
+
+        if (value is not null && IsAcademyPracticeMode)
+            EndAcademyPracticeMode();
+
+        if (!_suppressPracticeSongPersist)
+        {
+            _settings.Settings.LastPracticeSongPath = value?.FilePath;
+            ScheduleSettingsSave();
+        }
+
+        if (value is null)
+        {
+            PracticeTitle = string.Empty;
+            _practiceSession.Stop();
+            ClearPracticeTrackSubscriptions();
+            PracticeTrackOptions.Clear();
+            UpdatePracticeHandTrackSlots();
+            SyncPracticeSoundState();
+            _ = SyncPracticeLiveInputAsync();
+            return;
+        }
+
+        PracticeTitle = CatalogueTitleHelper.GetDisplayTitle(value.Title, value.FilePath);
+        ClearPracticeTrackSubscriptions();
+        PracticeTrackOptions.Clear();
+        UpdatePracticeHandTrackSlots();
+        IsPracticeLibraryPanelOpen = false;
+        _ = ReloadPracticeChartAsync(value);
+    }
+
     private void ApplyInputAndWindowSettings()
     {
         _gameWindow.SetTargetProcessName(TargetProcessName);
         _gameWindow.SetCustomKeywords(_settings.Settings.CustomWindowKeywords);
         _input.ConfigureMode(() => InputDeliveryMode.LocalPostMessage);
         _input.ConfigureModifierDelay(() => ModifierDelayMs);
+        _input.ConfigureLiveInputTiming(
+            () => NoteDelayMs,
+            () => _settings.Settings.IdenticalKeyGapMs);
     }
 
     partial void OnTargetProcessNameChanged(string value)
@@ -3319,6 +5332,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         if (!active)
             return;
 
+        SyncMainPlaybackSound(_playback.CurrentPositionMs);
+
         if (DateTime.UtcNow - _lastPlaybackStatusUtc < TimeSpan.FromSeconds(2))
             return;
 
@@ -3720,19 +5735,21 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     private void RefreshNavLabels()
     {
-        if (NavItems.Count < 5)
+        if (NavItems.Count < 6)
             return;
 
         NavItems[0].Label = L.T(UiText.NavLibrary);
         NavItems[1].Label = L.T(UiText.NavCatalogue);
-        NavItems[2].Label = L.T(UiText.NavFavorites);
-        NavItems[3].Label = L.T(UiText.NavHistory);
-        NavItems[4].Label = L.T(UiText.NavSettings);
+        NavItems[2].Label = L.T(UiText.NavPractice);
+        NavItems[3].Label = L.T(UiText.NavFavorites);
+        NavItems[4].Label = L.T(UiText.NavHistory);
+        NavItems[5].Label = L.T(UiText.NavSettings);
     }
 
     private void NotifyTrashCommandsCanExecute()
     {
         RemoveFromLibraryCommand.NotifyCanExecuteChanged();
+        RemoveFromPracticeLibraryCommand.NotifyCanExecuteChanged();
         RemoveFromPlaylistCommand.NotifyCanExecuteChanged();
         RemoveFromFavoritesCommand.NotifyCanExecuteChanged();
     }
@@ -3750,21 +5767,58 @@ public partial class MainViewModel : ObservableObject, IDisposable
         ScheduleSettingsSave();
     }
 
+    private bool _playbackTimingReloadScheduled;
+
+    private void SchedulePlaybackTimingReload()
+    {
+        if (_nowPlaying is null)
+            return;
+
+        if (_playbackTimingReloadScheduled)
+            return;
+
+        _playbackTimingReloadScheduled = true;
+        UiDispatcher.Post(async () =>
+        {
+            _playbackTimingReloadScheduled = false;
+            if (_nowPlaying is null)
+                return;
+
+            if (_playback.State is PlaybackState.Playing or PlaybackState.Paused)
+                await ReprepareCurrentSongScheduleAsync();
+        });
+    }
+
     partial void OnNoteDelayMsChanged(int value)
     {
-        _settings.Settings.NoteDelayMs = Math.Clamp(value, 0, 50);
+        var clamped = Math.Clamp(value, 0, 50);
+        if (clamped != value)
+            NoteDelayMs = clamped;
+
+        _settings.Settings.NoteDelayMs = clamped;
+        ApplyInputAndWindowSettings();
         ScheduleSettingsSave();
+        SchedulePlaybackTimingReload();
     }
 
     partial void OnChordRollDelayMsChanged(int value)
     {
-        _settings.Settings.ChordRollDelayMs = Math.Max(0, value);
+        var clamped = Math.Max(0, value);
+        if (clamped != value)
+            ChordRollDelayMs = clamped;
+
+        _settings.Settings.ChordRollDelayMs = clamped;
         ScheduleSettingsSave();
+        SchedulePlaybackTimingReload();
     }
 
     partial void OnModifierDelayMsChanged(int value)
     {
-        _settings.Settings.ModifierDelayMs = Math.Clamp(value, 0, 50);
+        var clamped = Math.Clamp(value, 0, 50);
+        if (clamped != value)
+            ModifierDelayMs = clamped;
+
+        _settings.Settings.ModifierDelayMs = clamped;
         ScheduleSettingsSave();
         _input.ConfigureModifierDelay(() => ModifierDelayMs);
     }
@@ -3945,7 +5999,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 return;
 
             if (_playback.State is PlaybackState.Playing or PlaybackState.Paused)
-                await StartSongAsync(_nowPlaying);
+                await ReprepareCurrentSongScheduleAsync();
         });
     }
 
@@ -4083,6 +6137,23 @@ public partial class MainViewModel : ObservableObject, IDisposable
         NotifyPlaybackTempoUi();
     }
 
+    partial void OnPracticeTempoPercentChanged(int value)
+    {
+        if (_suppressPracticeTempoChange)
+            return;
+
+        var clamped = Math.Clamp(value, 50, 200);
+        if (clamped != value)
+        {
+            _suppressPracticeTempoChange = true;
+            PracticeTempoPercent = clamped;
+            _suppressPracticeTempoChange = false;
+        }
+
+        _practiceSession.SetTempoPercent(clamped);
+        OnPropertyChanged(nameof(PracticeTempoDisplay));
+    }
+
     partial void OnVolumeChanged(int value)
     {
         var clamped = Math.Clamp(value, 0, 100);
@@ -4103,6 +6174,37 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private void ApplyVolumeToSystem()
     {
         _systemVolume.SetMasterVolumePercent(Volume);
+        ApplySynthVolume();
+    }
+
+    private void ApplySynthVolume() =>
+        _practiceSound.SetMasterVolume(Volume / 100f);
+
+    private void ResetMainPlaybackSoundSession() => _playbackSoundScheduler.Reset();
+
+    private void HandleMainPlaybackSoundState(PlaybackState state)
+    {
+        if (SelectedSection == NavigationSection.Practice)
+            return;
+
+        if (state == PlaybackState.Stopped)
+            ResetMainPlaybackSoundSession();
+        else if (state == PlaybackState.Paused)
+            _midiSoundEngine.AllNotesOff();
+    }
+
+    private void SyncMainPlaybackSound(long positionMs)
+    {
+        if (SelectedSection == NavigationSection.Practice)
+            return;
+
+        if (_playback.State != PlaybackState.Playing)
+            return;
+
+        if (_playbackSoundNotes.Count == 0)
+            return;
+
+        _playbackSoundScheduler.ProcessPosition(_playbackSoundNotes, positionMs);
     }
 
     partial void OnGameWindowTitleContainsChanged(string value)
@@ -4115,6 +6217,31 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         _settings.Settings.FocusGameBeforePlay = value;
         ScheduleSettingsSave();
+    }
+
+    partial void OnPracticeAcademyCountdownSecondsChanged(int value)
+    {
+        var clamped = Math.Clamp(value, 0, 30);
+        if (clamped != value)
+            PracticeAcademyCountdownSeconds = clamped;
+
+        _settings.Settings.AcademyPracticeCountdownSeconds = clamped;
+        ScheduleSettingsSave();
+    }
+
+    partial void OnIsPracticeLessonArmedChanged(bool value) =>
+        OnPropertyChanged(nameof(ShowPracticeCenterPlay));
+
+    partial void OnIsPracticeCountdownActiveChanged(bool value) =>
+        OnPropertyChanged(nameof(ShowPracticeCenterPlay));
+
+    partial void OnIsPracticeAcademyOverlayOpenChanged(bool value)
+    {
+        OnPropertyChanged(nameof(ShowAcademyTourOnPiano));
+        if (value)
+            _ = ActivatePracticeAcademyOverlayAsync();
+        else
+            EndAcademyTour();
     }
 
     partial void OnPrePlayCountdownSecondsChanged(int value)
@@ -4132,6 +6259,23 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     partial void OnSelectedSectionChanged(NavigationSection value)
     {
+        if (value != NavigationSection.Practice)
+        {
+            StopPracticeSession();
+            DisableLiveMidiAfterPractice();
+            _input.ClearLiveQueue();
+        }
+
+        if (value == NavigationSection.Practice)
+        {
+            IsPracticeAcademyOverlayOpen = false;
+            EndAcademyTour();
+            AcademyPanel.EnsureLoaded();
+            SyncPracticeSoundState();
+            _ = SyncPracticeLiveInputAsync();
+            RequestPracticeTour();
+        }
+
         _activePlaybackList = value switch
         {
             NavigationSection.Catalogue => ActivePlaybackList.Catalogue,
@@ -4144,11 +6288,30 @@ public partial class MainViewModel : ObservableObject, IDisposable
         UpdateNavActive();
         OnPropertyChanged(nameof(ShowMainPanels));
         OnPropertyChanged(nameof(ShowSettingsPanel));
+        OnPropertyChanged(nameof(ShowPracticePanel));
         OnPropertyChanged(nameof(ShowLibraryPanel));
         OnPropertyChanged(nameof(ShowHistoryPanel));
         OnPropertyChanged(nameof(ShowCataloguePanel));
         OnPropertyChanged(nameof(ShowFavoritesPanel));
         OnPropertyChanged(nameof(ShowPlaylistPanel));
+        OnPropertyChanged(nameof(ShowDebraPlayerChrome));
+    }
+
+    public void RequestPracticeTour(bool force = false)
+    {
+        if (!force && _settings.Settings.PracticeTourDismissed)
+            return;
+
+        PracticeTourRequested?.Invoke();
+    }
+
+    public void CompletePracticeTour(bool dontShowAgain)
+    {
+        if (dontShowAgain)
+        {
+            _settings.Settings.PracticeTourDismissed = true;
+            ScheduleSettingsSave();
+        }
     }
 
     public double GetMainPanelLeftRatio() =>
@@ -4172,11 +6335,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     public void ApplyWindowState(Window window)
     {
-        if (_settings.Settings.WindowLeft is { } left)
-            window.Left = left;
-        if (_settings.Settings.WindowTop is { } top)
-            window.Top = top;
-
         const double defaultWidth = 1024;
         const double defaultHeight = 682;
         const double minWindowWidth = 940;
@@ -4193,6 +6351,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
         window.Width = Math.Clamp(width, minWindowWidth, maxWindowWidth);
         window.Height = Math.Clamp(height, minWindowHeight, maxWindowHeight);
+
+        WindowPlacementHelper.CenterOnLaunchAnchor(window, _gameWindow);
     }
 
     private static double? SafeCoord(double value) =>
@@ -4202,7 +6362,11 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         _uiTimer.Stop();
         _globalHotkey.Dispose();
+        _liveMidi.Dispose();
+        _practiceSession.Dispose();
         _playback.Dispose();
+        _practiceSound.Dispose();
+        _midiSoundEngine.Dispose();
         _systemVolume.Dispose();
         _settings.Save();
         _history.Save();

@@ -13,6 +13,8 @@ public static class AppPaths
     public static string CatalogueIndexFile => Path.Combine(AppDataRoot, "catalogue-index.json");
     public static string SongTempoFile => Path.Combine(AppDataRoot, "song-tempo.json");
     public static string SongPlaybackFile => Path.Combine(AppDataRoot, "song-playback.json");
+    public static string AcademyCacheFolder => Path.Combine(AppDataRoot, "academy-cache");
+    public static string AcademyManifestCacheFile => Path.Combine(AppDataRoot, "academy-manifest-cache.json");
     public static string DiscordCredentialsFile => Path.Combine(AppDataRoot, "discord-credentials.dat");
 
     public static void EnsureCreated()
@@ -21,6 +23,7 @@ public static class AppPaths
         Directory.CreateDirectory(PlaylistsFolder);
         Directory.CreateDirectory(KeyMapsFolder);
         Directory.CreateDirectory(CatalogueCacheFolder);
+        Directory.CreateDirectory(AcademyCacheFolder);
     }
 
     public static void WriteDiagnosticLog(string tag, Exception ex)

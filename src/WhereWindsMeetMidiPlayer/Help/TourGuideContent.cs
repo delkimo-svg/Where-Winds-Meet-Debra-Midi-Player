@@ -90,6 +90,13 @@ public static class TourGuideContent
         },
         new TourStep
         {
+            Title = L.T("Tour_15_Title"),
+            Description = L.T("Tour_15_Desc"),
+            TargetName = "PracticeDropTarget",
+            ShowSection = NavigationSection.Practice
+        },
+        new TourStep
+        {
             Title = L.T("Tour_12_Title"),
             Description = L.T("Tour_12_Desc"),
             Placement = TourCalloutPlacement.Center

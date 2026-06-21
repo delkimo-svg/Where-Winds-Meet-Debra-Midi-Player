@@ -20,6 +20,15 @@ public sealed class DiscordCredentials
 
     /// <summary>Pinned message the bot edits with debra-update-manifest.json on each release.</summary>
     public string? ReleaseManifestMessageId { get; set; }
+
+    /// <summary>Pinned message containing academy-manifest.json for Piano Academy lessons.</summary>
+    public string? AcademyManifestMessageId { get; set; }
+
+    /// <summary>Channel containing the pinned academy manifest (often private).</summary>
+    public string? AcademyManifestChannelId { get; set; }
+
+    /// <summary>Category containing academy lesson channels (optional; manifest-driven).</summary>
+    public string? AcademyCategoryChannelId { get; set; }
 }
 
 /// <summary>
@@ -81,6 +90,27 @@ public static class DiscordCredentialStore
             !string.IsNullOrWhiteSpace(bundled.ReleaseManifestMessageId))
         {
             target.ReleaseManifestMessageId = bundled.ReleaseManifestMessageId;
+            changed = true;
+        }
+
+        if (string.IsNullOrWhiteSpace(target.AcademyManifestChannelId) &&
+            !string.IsNullOrWhiteSpace(bundled.AcademyManifestChannelId))
+        {
+            target.AcademyManifestChannelId = bundled.AcademyManifestChannelId;
+            changed = true;
+        }
+
+        if (string.IsNullOrWhiteSpace(target.AcademyManifestMessageId) &&
+            !string.IsNullOrWhiteSpace(bundled.AcademyManifestMessageId))
+        {
+            target.AcademyManifestMessageId = bundled.AcademyManifestMessageId;
+            changed = true;
+        }
+
+        if (string.IsNullOrWhiteSpace(target.AcademyCategoryChannelId) &&
+            !string.IsNullOrWhiteSpace(bundled.AcademyCategoryChannelId))
+        {
+            target.AcademyCategoryChannelId = bundled.AcademyCategoryChannelId;
             changed = true;
         }
 

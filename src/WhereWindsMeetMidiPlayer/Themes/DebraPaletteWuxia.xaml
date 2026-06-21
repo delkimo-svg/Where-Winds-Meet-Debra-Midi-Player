@@ -11,6 +11,8 @@
     <sys:String x:Key="Theme.PlayerCornerBl">debra-player-wuxia-corner-bl.png</sys:String>
     <sys:String x:Key="Theme.PlayerThumbImage">debra-thumb-wuxia.png</sys:String>
     <sys:String x:Key="Theme.HeaderDecorImage">debra-header-wuxia-mist.png</sys:String>
+    <sys:String x:Key="Theme.PracticeRollDecor">debra-wuxia-hero.png</sys:String>
+    <sys:String x:Key="Theme.PanelDecorWash">debra-bg-wuxia.png</sys:String>
 
     <Color x:Key="BgDeep">#141518</Color>
     <Color x:Key="BgPanel">#1C1E22</Color>

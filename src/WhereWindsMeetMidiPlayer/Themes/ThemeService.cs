@@ -66,6 +66,12 @@ public static class ThemeService
     public static string? GetHeaderDecorImageFile() =>
         GetThemeString("Theme.HeaderDecorImage");
 
+    public static string GetPracticeRollDecorFile() =>
+        GetThemeString("Theme.PracticeRollDecor") ?? GetNowPlayingHeroFile();
+
+    public static string GetPanelDecorWashFile() =>
+        GetThemeString("Theme.PanelDecorWash") ?? GetBackgroundImageFile();
+
     private static string? GetThemeString(string key) =>
         Application.Current?.TryFindResource(key) as string;
 

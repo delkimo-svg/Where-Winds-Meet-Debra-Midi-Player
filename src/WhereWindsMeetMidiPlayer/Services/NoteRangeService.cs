@@ -22,7 +22,8 @@ public sealed class NoteRangeService
                 Velocity = note.Velocity,
                 TrackIndex = note.TrackIndex,
                 Channel = note.Channel,
-                NoteNumber = note.NoteNumber
+                NoteNumber = note.NoteNumber,
+                FingerNumber = note.FingerNumber
             };
 
             if (IsInRange(adjusted.NoteNumber))

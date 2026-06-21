@@ -21,6 +21,27 @@ public static class DebraDialogs
     public static bool Confirm(string title, string message, string confirmLabel = "Yes", string cancelLabel = "Cancel", bool danger = false) =>
         ShowChoice(title, message, confirmLabel, cancelLabel) == true;
 
+    public static bool ConfirmWithDontRemind(
+        string title,
+        string message,
+        string confirmLabel,
+        string cancelLabel,
+        string dontRemindLabel,
+        out bool dontRemind)
+    {
+        var checkbox = new CheckBox
+        {
+            Content = dontRemindLabel,
+            Margin = new Thickness(0, 8, 0, 0),
+            Foreground = ToBrush("#4A3038"),
+            FontSize = 12
+        };
+        var body = BuildBody(title, message, checkbox);
+        var result = ShowWindow(title, body, confirmLabel, cancelLabel) == true;
+        dontRemind = checkbox.IsChecked == true;
+        return result;
+    }
+
     public static void Info(string title, string message) => ShowAlert(title, message);
     public static void Warning(string title, string message) => ShowAlert(title, message);
     public static void Error(string title, string message) => ShowAlert(title, message);

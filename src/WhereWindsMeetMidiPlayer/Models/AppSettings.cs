@@ -10,6 +10,28 @@ public sealed class AppSettings
     public int Volume { get; set; } = 64;
     public List<string> FavoritePaths { get; set; } = [];
     public string? LastImportFolder { get; set; }
+    /// <summary>Folders imported via “Import folder” (legacy; refresh uses dedicated folder settings).</summary>
+    public List<string> ImportFolderPaths { get; set; } = [];
+    /// <summary>Default folder scanned by Library → Refresh.</summary>
+    public string? LibraryRefreshFolder { get; set; }
+    /// <summary>When true, Library refresh scans subfolders.</summary>
+    public bool LibraryIncludeSubfolders { get; set; } = true;
+    /// <summary>Default folder scanned by Practice library → Refresh.</summary>
+    public string? PracticeLibraryRefreshFolder { get; set; }
+    /// <summary>When true, Practice library refresh scans subfolders.</summary>
+    public bool PracticeLibraryIncludeSubfolders { get; set; } = true;
+    /// <summary>Persisted library MIDI file paths (restored on launch).</summary>
+    public List<string> LibrarySongPaths { get; set; } = [];
+    /// <summary>Persisted practice library MIDI file paths (restored on launch).</summary>
+    public List<string> PracticeLibrarySongPaths { get; set; } = [];
+    /// <summary>Last practice chart file path (restored on launch).</summary>
+    public string? LastPracticeSongPath { get; set; }
+    /// <summary>User dismissed the first-visit Practice guided tour.</summary>
+    public bool PracticeTourDismissed { get; set; }
+    /// <summary>Falling-note / hand highlight color for the right hand.</summary>
+    public string PracticeRightHandColorHex { get; set; } = "#4A9EFF";
+    /// <summary>Falling-note / hand highlight color for the left hand.</summary>
+    public string PracticeLeftHandColorHex { get; set; } = "#F59E0B";
     public NoteMappingMode DefaultNoteMappingMode { get; set; } = NoteMappingMode.Chromatic36;
     public bool SmartTranspose { get; set; } = true;
     public bool StrictNoteRange { get; set; }
@@ -99,4 +121,37 @@ public sealed class AppSettings
 
     /// <summary>Win32 virtual-key code for next track (default F6).</summary>
     public int PlaybackHotkeyNext { get; set; } = PlaybackHotkeyDefaults.Next;
+
+    /// <summary>Last selected MIDI input device name for live keyboard mode.</summary>
+    public string? LastMidiInputDeviceName { get; set; }
+
+    /// <summary>Falling-note tip labels in practice mode.</summary>
+    public PracticeNoteLabelMode PracticeNoteLabelMode { get; set; } = PracticeNoteLabelMode.LetterNames;
+
+    /// <summary>Play chart and live MIDI through the built-in software synth during practice.</summary>
+    public bool PracticeSoundEnabled { get; set; }
+
+    /// <summary>Mute built-in synth for live key input; game instrument only (keys still injected).</summary>
+    public bool PracticeGameSoundOnly { get; set; }
+
+    /// <summary>User dismissed the practice "no MIDI keyboard" reminder (PC keyboard is fine).</summary>
+    public bool PracticeNoMidiKeyboardWarningDismissed { get; set; }
+
+    /// <summary>Completed Piano Academy lesson IDs (local progress).</summary>
+    public List<string> CompletedAcademyLessonIds { get; set; } = [];
+
+    /// <summary>Countdown seconds before academy armed practice starts (default 5).</summary>
+    public int AcademyPracticeCountdownSeconds { get; set; } = 5;
+
+    /// <summary>Last selected Piano Academy module id (e.g. BB).</summary>
+    public string? LastAcademyModuleId { get; set; }
+
+    /// <summary>Last selected exercise lesson id within the module.</summary>
+    public string? LastAcademyExerciseLessonId { get; set; }
+
+    /// <summary>Last selected practice-song lesson id within the module.</summary>
+    public string? LastAcademySongLessonId { get; set; }
+
+    /// <summary>Lesson id last previewed (exercise or song).</summary>
+    public string? LastAcademyLessonId { get; set; }
 }

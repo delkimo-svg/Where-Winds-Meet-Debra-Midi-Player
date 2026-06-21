@@ -4,5 +4,8 @@
   "categoryChannelId": "YOUR_CATEGORY_CHANNEL_ID",
   "releaseChannelId": "YOUR_RELEASES_CHANNEL_ID",
   "releaseManifestChannelId": "YOUR_RELEASES_CHANNEL_ID",
-  "releaseManifestMessageId": ""
+  "releaseManifestMessageId": "",
+  "academyManifestChannelId": "YOUR_ACADEMY_MANIFEST_CHANNEL_ID",
+  "academyManifestMessageId": "",
+  "academyCategoryChannelId": ""
 }

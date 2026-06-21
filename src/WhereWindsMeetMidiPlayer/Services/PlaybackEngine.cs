@@ -138,6 +138,35 @@ public sealed class PlaybackEngine : IDisposable
 
     }
 
+    /// <summary>Swap schedule during playback; keeps song position and playing/paused state.</summary>
+    public void ReloadSchedule(
+        IReadOnlyList<ScheduledNote> notes,
+        long totalDurationMs,
+        long positionMs,
+        PlaybackState resumeState)
+    {
+        lock (_gate)
+        {
+            CancelLoop();
+
+            _schedule = notes is List<ScheduledNote> list ? list : notes.ToList();
+            TotalDurationMs = totalDurationMs;
+
+            var max = Math.Max(0, TotalDurationMs);
+            _pausedAtMs = max > 0 ? Math.Clamp(positionMs, 0, max) : 0;
+            _clock.Reset();
+
+            if (resumeState == PlaybackState.Playing)
+                SetState(PlaybackState.Playing);
+            else if (resumeState == PlaybackState.Paused)
+                SetState(PlaybackState.Paused);
+            else
+                SetState(PlaybackState.Stopped);
+
+            RaisePositionChanged();
+        }
+    }
+
 
 
     public void Play()

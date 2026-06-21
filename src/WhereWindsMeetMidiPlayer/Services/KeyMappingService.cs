@@ -34,6 +34,18 @@ public sealed class KeyMappingService
     public string? GetKeyCombo(int noteNumber) =>
         _mapping.TryGetValue(noteNumber, out var combo) ? combo : null;
 
+    public int? TryGetNoteForCombo(string combo)
+    {
+        if (string.IsNullOrWhiteSpace(combo))
+            return null;
+
+        foreach (var (midi, mapped) in _mapping)
+            if (string.Equals(mapped, combo, StringComparison.OrdinalIgnoreCase))
+                return midi;
+
+        return null;
+    }
+
     public void SetKeyCombo(int noteNumber, string combo) => _mapping[noteNumber] = combo;
 
     public IReadOnlyDictionary<int, string> CloneMapping() =>

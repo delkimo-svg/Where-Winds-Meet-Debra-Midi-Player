@@ -20,6 +20,8 @@ public partial class App : Application
         if (!ValidateInstallLayout())
             return;
 
+        WindowPlacementHelper.RememberLaunchForegroundWindow();
+
         var settings = new AppSettingsService();
         settings.Load();
         ThemeService.Initialize(settings.Settings.UiTheme);

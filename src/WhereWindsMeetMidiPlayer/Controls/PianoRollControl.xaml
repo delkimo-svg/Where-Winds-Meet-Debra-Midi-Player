@@ -1,0 +1,47 @@
+<UserControl x:Class="WhereWindsMeetMidiPlayer.Controls.PianoRollControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             ClipToBounds="True"
+             Background="Transparent">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="68"/>
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" ClipToBounds="True">
+            <Image x:Name="RollBackdrop" Stretch="UniformToFill" Opacity="0.2"
+                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                   IsHitTestVisible="False" RenderOptions.BitmapScalingMode="HighQuality"/>
+            <Border Background="#55000000" IsHitTestVisible="False"/>
+            <Canvas x:Name="LaneCanvas" ClipToBounds="True"
+                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+            <Border VerticalAlignment="Bottom" Height="4" Opacity="0.92" ClipToBounds="False">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                        <GradientStop Color="#00FFFFFF" Offset="0"/>
+                        <GradientStop Color="{DynamicResource GoldBright}" Offset="0.35"/>
+                        <GradientStop Color="{DynamicResource Gold}" Offset="0.72"/>
+                        <GradientStop Color="{DynamicResource GoldDim}" Offset="1"/>
+                    </LinearGradientBrush>
+                </Border.Background>
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="10" ShadowDepth="0" Opacity="0.55"
+                                      Color="{DynamicResource Gold}"/>
+                </Border.Effect>
+            </Border>
+            <TextBlock x:Name="EmptyHint" Text="Select a song to see falling notes"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                       Foreground="{DynamicResource Brush.TextMuted}" FontSize="12"
+                       Visibility="Collapsed"/>
+        </Grid>
+
+        <Border Grid.Row="1" Background="#55000000"
+                BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0"
+                ClipToBounds="True" Padding="0,3,0,2">
+            <Canvas x:Name="KeyboardCanvas" ClipToBounds="True"
+                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+        </Border>
+    </Grid>
+</UserControl>

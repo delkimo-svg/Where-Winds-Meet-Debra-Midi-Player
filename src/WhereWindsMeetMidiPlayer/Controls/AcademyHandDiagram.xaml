@@ -1,0 +1,48 @@
+<UserControl x:Class="WhereWindsMeetMidiPlayer.Controls.AcademyHandDiagram"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Name="Root">
+    <StackPanel HorizontalAlignment="Center">
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+            <!-- Left hand: pinky (5) → thumb (1) -->
+            <StackPanel x:Name="LeftHandPanel" Margin="0,0,14,0" Width="108">
+                <TextBlock Text="Left hand" FontSize="9" HorizontalAlignment="Center"
+                           Foreground="{DynamicResource Brush.TextMuted}" Margin="0,0,0,4"/>
+                <Grid Width="104" Height="58" HorizontalAlignment="Center">
+                    <Border x:Name="LeftPalm" Width="76" Height="20" CornerRadius="10"
+                            VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,1"
+                            BorderThickness="1"/>
+                    <StackPanel x:Name="LeftFingerRow" Orientation="Horizontal"
+                                HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,2,0,0">
+                        <Border x:Name="Lh5" Style="{StaticResource AcademyFinger.Badge}" Tag="5" Height="30"/>
+                        <Border x:Name="Lh4" Style="{StaticResource AcademyFinger.Badge}" Tag="4" Height="36"/>
+                        <Border x:Name="Lh3" Style="{StaticResource AcademyFinger.Badge}" Tag="3" Height="40"/>
+                        <Border x:Name="Lh2" Style="{StaticResource AcademyFinger.Badge}" Tag="2" Height="36"/>
+                        <Border x:Name="Lh1" Style="{StaticResource AcademyFinger.Badge}" Tag="1" Height="28"/>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+
+            <!-- Right hand: thumb (1) → pinky (5) -->
+            <StackPanel x:Name="RightHandPanel" Width="108">
+                <TextBlock Text="Right hand" FontSize="9" HorizontalAlignment="Center"
+                           Foreground="{DynamicResource Brush.TextMuted}" Margin="0,0,0,4"/>
+                <Grid Width="104" Height="58" HorizontalAlignment="Center">
+                    <Border x:Name="RightPalm" Width="76" Height="20" CornerRadius="10"
+                            VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,1"
+                            BorderThickness="1"/>
+                    <StackPanel x:Name="RightFingerRow" Orientation="Horizontal"
+                                HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,2,0,0">
+                        <Border x:Name="Rh1" Style="{StaticResource AcademyFinger.Badge}" Tag="1" Height="28"/>
+                        <Border x:Name="Rh2" Style="{StaticResource AcademyFinger.Badge}" Tag="2" Height="36"/>
+                        <Border x:Name="Rh3" Style="{StaticResource AcademyFinger.Badge}" Tag="3" Height="40"/>
+                        <Border x:Name="Rh4" Style="{StaticResource AcademyFinger.Badge}" Tag="4" Height="36"/>
+                        <Border x:Name="Rh5" Style="{StaticResource AcademyFinger.Badge}" Tag="5" Height="30"/>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </StackPanel>
+        <TextBlock Text="Thumb = 1 · Pinky = 5" FontSize="8" HorizontalAlignment="Center"
+                   Foreground="{DynamicResource Brush.TextMuted}" Margin="0,6,0,0"/>
+    </StackPanel>
+</UserControl>

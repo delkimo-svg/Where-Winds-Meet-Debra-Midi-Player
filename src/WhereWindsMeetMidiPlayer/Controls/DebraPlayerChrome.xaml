@@ -341,24 +341,33 @@
                                                FontSize="10" VerticalAlignment="Center" Margin="0,0,4,0"
                                                ToolTip="{Binding Ui.SettingsNoteDelayHint, Mode=OneWay}"
                                                Style="{StaticResource ChromeTextFade}"/>
-                                    <TextBox Width="40" Height="24" Text="{Binding NoteDelayMs, UpdateSourceTrigger=LostFocus}"
-                                             Style="{StaticResource TextBox.Search}" VerticalContentAlignment="Center"
+                                    <TextBox Width="44" MinHeight="28" Height="28"
+                                             Style="{StaticResource TextBox.Search.Compact}"
+                                             Padding="6,2"
+                                             Text="{Binding NoteDelayMs, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                             VerticalContentAlignment="Center"
                                              ToolTip="{Binding Ui.SettingsNoteDelayHint, Mode=OneWay}"
                                              Opacity="{Binding PlayerChromeOpacity}"/>
                                     <TextBlock Text="{Binding Ui.ChromeChordRollShort}" Foreground="{DynamicResource Brush.TextMuted}"
                                                FontSize="10" VerticalAlignment="Center" Margin="12,0,4,0"
                                                ToolTip="{Binding Ui.SettingsChordRollHint, Mode=OneWay}"
                                                Style="{StaticResource ChromeTextFade}"/>
-                                    <TextBox Width="40" Height="24" Text="{Binding ChordRollDelayMs, UpdateSourceTrigger=LostFocus}"
-                                             Style="{StaticResource TextBox.Search}" VerticalContentAlignment="Center"
+                                    <TextBox Width="44" MinHeight="28" Height="28"
+                                             Style="{StaticResource TextBox.Search.Compact}"
+                                             Padding="6,2"
+                                             Text="{Binding ChordRollDelayMs, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                             VerticalContentAlignment="Center"
                                              ToolTip="{Binding Ui.SettingsChordRollHint, Mode=OneWay}"
                                              Opacity="{Binding PlayerChromeOpacity}"/>
                                     <TextBlock Text="{Binding Ui.ChromeModifierDelayShort}" Foreground="{DynamicResource Brush.TextMuted}"
                                                FontSize="10" VerticalAlignment="Center" Margin="12,0,4,0"
                                                ToolTip="{Binding Ui.SettingsModifierDelayHint, Mode=OneWay}"
                                                Style="{StaticResource ChromeTextFade}"/>
-                                    <TextBox Width="40" Height="24" Text="{Binding ModifierDelayMs, UpdateSourceTrigger=LostFocus}"
-                                             Style="{StaticResource TextBox.Search}" VerticalContentAlignment="Center"
+                                    <TextBox Width="44" MinHeight="28" Height="28"
+                                             Style="{StaticResource TextBox.Search.Compact}"
+                                             Padding="6,2"
+                                             Text="{Binding ModifierDelayMs, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                             VerticalContentAlignment="Center"
                                              ToolTip="{Binding Ui.SettingsModifierDelayHint, Mode=OneWay}"
                                              Opacity="{Binding PlayerChromeOpacity}"/>
                                 </StackPanel>

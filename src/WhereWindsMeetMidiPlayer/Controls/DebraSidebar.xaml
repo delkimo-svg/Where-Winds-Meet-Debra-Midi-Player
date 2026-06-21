@@ -88,6 +88,9 @@
                                 <DataTrigger Binding="{Binding Section}" Value="{x:Static vm:NavigationSection.Catalogue}">
                                     <Setter TargetName="IconPath" Property="Data" Value="{StaticResource Icon.Catalogue}"/>
                                 </DataTrigger>
+                                <DataTrigger Binding="{Binding Section}" Value="{x:Static vm:NavigationSection.Practice}">
+                                    <Setter TargetName="IconPath" Property="Data" Value="{StaticResource Icon.Practice}"/>
+                                </DataTrigger>
                                 <DataTrigger Binding="{Binding Section}" Value="{x:Static vm:NavigationSection.Favorites}">
                                     <Setter TargetName="IconPath" Property="Data" Value="{StaticResource Icon.Favorite}"/>
                                 </DataTrigger>
@@ -172,6 +175,9 @@
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding Section}" Value="{x:Static vm:NavigationSection.Catalogue}">
                                     <Setter TargetName="IconPath" Property="Data" Value="{StaticResource Icon.Catalogue}"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding Section}" Value="{x:Static vm:NavigationSection.Practice}">
+                                    <Setter TargetName="IconPath" Property="Data" Value="{StaticResource Icon.Practice}"/>
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding Section}" Value="{x:Static vm:NavigationSection.Favorites}">
                                     <Setter TargetName="IconPath" Property="Data" Value="{StaticResource Icon.Favorite}"/>

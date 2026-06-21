@@ -34,8 +34,22 @@ $essentialAssets = @(
     'debra-sidebar-castle-bg.png',
     'debra-sidebar-bottom-banner.png',
     'debra-sidebar-castle-scene.png',
-    'debra-wwm-header-logo.png'
+    'debra-wwm-header-logo.png',
+    'academy-manifest.json'
 )
+
+function Ensure-GeneralUserSoundFont([string]$projDir) {
+    $soundsDir = Join-Path $projDir 'Assets\Sounds'
+    $sf2 = Join-Path $soundsDir 'GeneralUser-GS.sf2'
+    if (Test-Path $sf2) { return }
+    $script = Join-Path $root 'scripts\download-generaluser-sf2.ps1'
+    if (-not (Test-Path $script)) {
+        Write-Host '  WARNING: GeneralUser-GS.sf2 missing and download script not found.' -ForegroundColor Yellow
+        return
+    }
+    Write-Host '  Fetching GeneralUser GS SoundFont for piano playback...'
+    & powershell -NoProfile -ExecutionPolicy Bypass -File $script -DestDir $soundsDir
+}
 
 function Prune-Assets([string]$publishDir) {
     $assetsDir = Join-Path $publishDir 'Assets'
@@ -121,6 +135,7 @@ Get-Process -Name 'DebraMidiPlayer','WhereWindsMeetMidiPlayer' -ErrorAction Sile
 
 if ($Target -in 'portable', 'both', 'all') {
     Write-Host 'Publishing portable (self-contained single .exe + Assets)...'
+    Ensure-GeneralUserSoundFont (Join-Path $root 'src\WhereWindsMeetMidiPlayer')
     $staging = Join-Path $root 'release\portable-staging'
     $portable = Join-Path $root 'release\portable'
     dotnet publish $proj -c Release /p:PublishProfile=Win64-Portable.pubxml "/p:PublishDir=..\..\release\portable-staging\"

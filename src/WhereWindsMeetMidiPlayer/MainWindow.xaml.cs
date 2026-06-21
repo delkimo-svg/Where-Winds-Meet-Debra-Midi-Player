@@ -34,6 +34,7 @@ public partial class MainWindow : Window
         try
         {
             InitializeComponent();
+            BorderlessWindowMaximizeHelper.Attach(this);
             RegisterGlobalFileDropHandlers();
             ApplyWindowIcon();
         }
@@ -70,6 +71,7 @@ public partial class MainWindow : Window
             MainBackgroundImage.Source = AssetImage.LoadBackground();
             Background = Brushes.Transparent;
             ApplyTitleBarDecor();
+            ApplyPanelDecorBackdrops();
         }
         catch
         {
@@ -77,6 +79,13 @@ public partial class MainWindow : Window
         }
 
         ApplySidebarAlignmentForTheme();
+    }
+
+    private void ApplyPanelDecorBackdrops()
+    {
+        var wash = AssetImage.LoadOrPlaceholder(ThemeService.GetPanelDecorWashFile());
+        LibraryListBackdrop.Source = wash;
+        PracticeListBackdrop.Source = wash;
     }
 
     private void ApplyTitleBarDecor()
@@ -134,6 +143,7 @@ public partial class MainWindow : Window
             DataContext = _viewModel;
             ApplyThemeVisuals();
             _viewModel.TourRequested += StartTour;
+            _viewModel.PracticeTourRequested += StartPracticeTour;
             _viewModel.ApplyWindowState(this);
             ApplyMainPanelColumnRatio();
             _viewModel.StartGlobalHotkey();
@@ -162,7 +172,29 @@ public partial class MainWindow : Window
             TourGuideContent.GetSteps(),
             this,
             FindTourTarget,
-            section => _viewModel?.NavigateCommand.Execute(section));
+            section => _viewModel?.NavigateCommand.Execute(section),
+            new TourStartOptions { RefreshSteps = TourGuideContent.GetSteps });
+    }
+
+    private void StartPracticeTour()
+    {
+        if (_viewModel is null)
+            return;
+
+        Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, () =>
+        {
+            TourGuide.Start(
+                PracticeTourGuideContent.GetSteps(),
+                this,
+                FindTourTarget,
+                section => _viewModel?.NavigateCommand.Execute(section),
+                new TourStartOptions
+                {
+                    AllowDontShowAgain = true,
+                    RefreshSteps = PracticeTourGuideContent.GetSteps,
+                    OnCompleted = dontShowAgain => _viewModel?.CompletePracticeTour(dontShowAgain)
+                });
+        });
     }
 
     private FrameworkElement? FindTourTarget(string name)
@@ -246,9 +278,27 @@ public partial class MainWindow : Window
 
     private void Window_OnPreviewKeyDown(object sender, KeyEventArgs e)
     {
+        if (Keyboard.FocusedElement is System.Windows.Controls.Primitives.TextBoxBase)
+            return;
+
         if (_viewModel?.TryHandlePlaybackHotkeyCapture(e.Key) == true)
+        {
+            e.Handled = true;
+            return;
+        }
+
+        if (_viewModel?.TryHandlePracticeTransportKey(e.Key) == true)
+        {
+            e.Handled = true;
+            return;
+        }
+
+        if (_viewModel?.TryHandlePracticeKeyDown(e.Key, Keyboard.Modifiers, e.IsRepeat) == true)
             e.Handled = true;
     }
+
+    private void Window_OnPreviewKeyUp(object sender, KeyEventArgs e) =>
+        _viewModel?.TryHandlePracticeKeyUp(e.Key, Keyboard.Modifiers);
 
     private void Library_OnDoubleClick(object sender, MouseButtonEventArgs e)
     {
@@ -411,6 +461,14 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (ReferenceEquals(sender, PracticeDropTarget)
+            || sender is DependencyObject practiceSource && IsUnderPractice(practiceSource))
+        {
+            SetLibraryDropHighlight(false);
+            SetPlaylistDropHighlight(false);
+            return;
+        }
+
         UpdateExternalFileDropHighlights(e);
     }
 
@@ -490,6 +548,87 @@ public partial class MainWindow : Window
             e.Handled = true;
     }
 
+    private void PracticeDropTarget_OnDragOver(object sender, DragEventArgs e)
+    {
+        if (!TryAcceptExternalFileDragOver(e))
+            return;
+
+        e.Handled = true;
+        SetLibraryDropHighlight(false);
+        SetPlaylistDropHighlight(false);
+    }
+
+    private void PracticeDropTarget_OnDragLeave(object sender, DragEventArgs e) { }
+
+    private void PracticeCountdownBox_OnPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is TextBox textBox)
+        {
+            textBox.Focus();
+            textBox.SelectAll();
+            e.Handled = true;
+        }
+    }
+
+    private void PracticeLibraryBackdrop_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (_viewModel is not null)
+            _viewModel.IsPracticeLibraryPanelOpen = false;
+    }
+
+    private void PracticeLibrary_OnDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is not ListBox { SelectedItem: Song song })
+            return;
+
+        e.Handled = true;
+        if (_viewModel is not null)
+            _viewModel.LoadPracticeLibrarySongCommand.Execute(song);
+    }
+
+    private void PracticeSeekBar_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is not FrameworkElement host)
+            return;
+
+        SeekPracticeAt(host, e.GetPosition(host).X);
+        host.CaptureMouse();
+        e.Handled = true;
+    }
+
+    private void PracticeSeekBar_OnMouseMove(object sender, MouseEventArgs e)
+    {
+        if (sender is not FrameworkElement host || !host.IsMouseCaptured || e.LeftButton != MouseButtonState.Pressed)
+            return;
+
+        SeekPracticeAt(host, e.GetPosition(host).X);
+        e.Handled = true;
+    }
+
+    private void PracticeSeekBar_OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is not FrameworkElement host || !host.IsMouseCaptured)
+            return;
+
+        host.ReleaseMouseCapture();
+        e.Handled = true;
+    }
+
+    private void SeekPracticeAt(FrameworkElement host, double x)
+    {
+        if (_viewModel is null || host.ActualWidth <= 0)
+            return;
+
+        var normalized = Math.Clamp(x / host.ActualWidth, 0, 1);
+        _viewModel.SeekPracticeToPositionCommand.Execute(normalized);
+    }
+
+    private void PracticeDropTarget_OnDrop(object sender, DragEventArgs e)
+    {
+        if (HandleExternalFileDrop(e, ExternalFileDropTarget.Practice))
+            e.Handled = true;
+    }
+
     private void PlaylistPanel_OnDragOver(object sender, DragEventArgs e)
     {
         if (!TryAcceptExternalFileDragOver(e))
@@ -516,7 +655,8 @@ public partial class MainWindow : Window
     {
         Auto,
         Library,
-        Playlist
+        Playlist,
+        Practice
     }
 
     private bool HandleExternalFileDrop(DragEventArgs e, ExternalFileDropTarget target = ExternalFileDropTarget.Auto)
@@ -537,6 +677,8 @@ public partial class MainWindow : Window
         {
             if (IsPointerOverPlaylist(e))
                 target = ExternalFileDropTarget.Playlist;
+            else if (IsPointerOverPractice(e))
+                target = ExternalFileDropTarget.Practice;
             else if (IsPointerOverLibrary(e))
                 target = ExternalFileDropTarget.Library;
             else
@@ -547,6 +689,12 @@ public partial class MainWindow : Window
         {
             var insertIndex = TryGetPlaylistInsertIndex(e);
             _viewModel.ImportDroppedPathsToPlaylist(paths, insertIndex);
+            return true;
+        }
+
+        if (target == ExternalFileDropTarget.Practice)
+        {
+            _viewModel.ImportDroppedPathsForPractice(paths);
             return true;
         }
 
@@ -626,11 +774,18 @@ public partial class MainWindow : Window
         _viewModel?.ShowPlaylistPanel == true
         && IsPointerOverNamedTarget(e, TourTarget_Playlist, PlaylistList);
 
+    private bool IsPointerOverPractice(DragEventArgs e) =>
+        _viewModel?.ShowPracticePanel == true
+        && IsPointerOverNamedTarget(e, PracticeDropTarget);
+
     private static bool IsUnderLibrary(DependencyObject source) =>
         IsUnderNamedTarget(source, "LibraryDropTarget", "LibraryList", "LibraryDropHint");
 
     private static bool IsUnderPlaylist(DependencyObject source) =>
         IsUnderNamedTarget(source, "TourTarget_Playlist", "PlaylistList");
+
+    private static bool IsUnderPractice(DependencyObject source) =>
+        IsUnderNamedTarget(source, "PracticeDropTarget");
 
     private static bool IsUnderNamedTarget(DependencyObject source, params string[] names)
     {

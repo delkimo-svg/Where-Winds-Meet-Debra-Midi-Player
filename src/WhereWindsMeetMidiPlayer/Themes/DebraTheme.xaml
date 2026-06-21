@@ -8,6 +8,7 @@
     <conv:CatalogueDurationConverter x:Key="CatalogueDurationConverter"/>
     <conv:BoolToVisibilityConverter x:Key="BoolToVis"/>
     <conv:BoolToVisibilityConverter x:Key="BoolToVisInvert" Invert="True"/>
+    <conv:HexToBrushConverter x:Key="HexToBrushConverter"/>
     <conv:IndexPlusOneConverter x:Key="IndexPlusOneConverter"/>
     <conv:IsNowPlayingHighlightConverter x:Key="IsNowPlayingHighlight"/>
 
@@ -38,6 +39,14 @@
 
     <Style TargetType="ComboBox">
         <Setter Property="FontFamily" Value="{StaticResource Font.UI}"/>
+    </Style>
+
+    <Style x:Key="AcademyFinger.Badge" TargetType="Border">
+        <Setter Property="Width" Value="18"/>
+        <Setter Property="Height" Value="34"/>
+        <Setter Property="CornerRadius" Value="7,7,4,4"/>
+        <Setter Property="Margin" Value="2,0"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
     </Style>
 
     <Style x:Key="Text.SongRowTitle" TargetType="TextBlock">
@@ -208,6 +217,15 @@
         <Setter Property="Foreground" Value="{DynamicResource Brush.GoldBright}"/>
     </Style>
 
+    <Style x:Key="PracticeToolbarSeparator" TargetType="Border">
+        <Setter Property="Width" Value="2"/>
+        <Setter Property="Height" Value="24"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="CornerRadius" Value="1"/>
+        <Setter Property="Background" Value="{DynamicResource Brush.GoldDim}"/>
+        <Setter Property="Opacity" Value="0.95"/>
+    </Style>
+
     <Style x:Key="Toggle.Transport" TargetType="ToggleButton">
         <Setter Property="Width" Value="34"/>
         <Setter Property="Height" Value="34"/>
@@ -267,6 +285,34 @@
         </Setter>
     </Style>
 
+    <Style x:Key="Button.PracticeHeroPlay" TargetType="Button" BasedOn="{StaticResource Button.Play}">
+        <Setter Property="Width" Value="84"/>
+        <Setter Property="Height" Value="84"/>
+        <Setter Property="FontSize" Value="28"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid>
+                        <Ellipse>
+                            <Ellipse.Effect>
+                                <DropShadowEffect Color="{DynamicResource PlayGlow}" BlurRadius="22" ShadowDepth="0" Opacity="0.7"/>
+                            </Ellipse.Effect>
+                            <Ellipse.Fill>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                    <GradientStop Color="{DynamicResource PlayGradientTop}" Offset="0"/>
+                                    <GradientStop Color="{DynamicResource PlayGradientMid}" Offset="0.55"/>
+                                    <GradientStop Color="{DynamicResource PlayGradientBottom}" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Ellipse.Fill>
+                        </Ellipse>
+                        <Ellipse Width="84" Height="84" Stroke="{DynamicResource Brush.OnGold}" StrokeThickness="3" Opacity="0.75"/>
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <Style x:Key="TextBox.Search" TargetType="TextBox">
         <Setter Property="Background" Value="{DynamicResource Brush.InputBackground}"/>
         <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}"/>
@@ -291,6 +337,15 @@
         <Setter Property="FontSize" Value="11"/>
         <Setter Property="MinHeight" Value="32"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+
+    <Style x:Key="TextBox.PracticeCountdown" TargetType="TextBox" BasedOn="{StaticResource TextBox.Search.Compact}">
+        <Setter Property="MinHeight" Value="26"/>
+        <Setter Property="Height" Value="26"/>
+        <Setter Property="Padding" Value="4,2"/>
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
     </Style>
 
     <Style x:Key="ListBox.Debra" TargetType="ListBox">
@@ -632,6 +687,76 @@
                             <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Gold}"/>
                             <Setter Property="Foreground" Value="{DynamicResource Brush.Gold}"/>
                             <Setter Property="FontWeight" Value="SemiBold"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="Toggle.PracticeHandRight" TargetType="ToggleButton">
+        <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}"/>
+        <Setter Property="BorderBrush" Value="#4A9EFF"/>
+        <Setter Property="BorderThickness" Value="1.5"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="MinHeight" Value="28"/>
+        <Setter Property="Padding" Value="8,4"/>
+        <Setter Property="Margin" Value="0,0,4,0"/>
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToggleButton">
+                    <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="10" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                          TextElement.Foreground="{TemplateBinding Foreground}"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="#284A9EFF"/>
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="#4A9EFF"/>
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="#4A9EFF"/>
+                            <Setter Property="Foreground" Value="White"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="Toggle.PracticeHandLeft" TargetType="ToggleButton">
+        <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}"/>
+        <Setter Property="BorderBrush" Value="#F59E0B"/>
+        <Setter Property="BorderThickness" Value="1.5"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="MinHeight" Value="28"/>
+        <Setter Property="Padding" Value="8,4"/>
+        <Setter Property="Margin" Value="0,0,4,0"/>
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToggleButton">
+                    <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="10" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                          TextElement.Foreground="{TemplateBinding Foreground}"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="#28F59E0B"/>
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="#F59E0B"/>
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="#F59E0B"/>
+                            <Setter Property="Foreground" Value="White"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

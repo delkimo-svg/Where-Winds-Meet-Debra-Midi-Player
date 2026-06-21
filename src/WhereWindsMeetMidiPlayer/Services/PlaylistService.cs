@@ -171,12 +171,13 @@ public sealed class PlaylistService
         }
     }
 
-    public List<Song> ImportFolder(string folderPath, bool smartTranspose, bool strictMode)
+    public List<Song> ImportFolder(string folderPath, bool smartTranspose, bool strictMode,
+        SearchOption searchOption = SearchOption.AllDirectories)
     {
         if (!Directory.Exists(folderPath))
             throw new DirectoryNotFoundException(folderPath);
 
-        var files = Directory.EnumerateFiles(folderPath, "*.*", SearchOption.AllDirectories)
+        var files = Directory.EnumerateFiles(folderPath, "*.*", searchOption)
             .Where(f => f.EndsWith(".mid", StringComparison.OrdinalIgnoreCase)
                         || f.EndsWith(".midi", StringComparison.OrdinalIgnoreCase))
             .OrderBy(f => f, StringComparer.OrdinalIgnoreCase);

@@ -55,6 +55,7 @@ public static class NoteMappingService
         TrackIndex = n.TrackIndex,
         Channel = n.Channel,
         NoteNumber = n.NoteNumber,
-        Skipped = n.Skipped
+        Skipped = n.Skipped,
+        FingerNumber = n.FingerNumber
     };
 }

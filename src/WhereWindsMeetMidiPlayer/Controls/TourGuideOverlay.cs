@@ -22,6 +22,7 @@ public sealed class TourGuideOverlay : UserControl
     private readonly Button _nextButton;
     private readonly Button _skipButton;
     private readonly Button _fullGuideButton;
+    private readonly CheckBox _dontShowAgainCheck;
     private readonly DropShadowEffect _highlightGlow;
     private readonly DropShadowEffect _calloutShadow;
 
@@ -29,6 +30,9 @@ public sealed class TourGuideOverlay : UserControl
     private Window? _host;
     private Func<string, FrameworkElement?>? _findTarget;
     private Action<NavigationSection>? _navigate;
+    private Func<IReadOnlyList<TourStep>>? _refreshSteps;
+    private Action<bool>? _onCompleted;
+    private bool _allowDontShowAgain;
     private int _index;
 
     public TourGuideOverlay()
@@ -109,6 +113,14 @@ public sealed class TourGuideOverlay : UserControl
             HelpWindow.ShowForOwner(_host);
         };
 
+        _dontShowAgainCheck = new CheckBox
+        {
+            Content = L.T("Tour_DontShowAgain"),
+            Margin = new Thickness(0, 0, 0, 10),
+            FontSize = 12,
+            Visibility = Visibility.Collapsed
+        };
+
         var buttonRow = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
         buttonRow.Children.Add(_backButton);
         buttonRow.Children.Add(_nextButton);
@@ -126,6 +138,7 @@ public sealed class TourGuideOverlay : UserControl
         var calloutPanel = new StackPanel();
         calloutPanel.Children.Add(_titleText);
         calloutPanel.Children.Add(_bodyText);
+        calloutPanel.Children.Add(_dontShowAgainCheck);
         calloutPanel.Children.Add(footer);
 
         _callout = new Border
@@ -153,12 +166,19 @@ public sealed class TourGuideOverlay : UserControl
         IReadOnlyList<TourStep> steps,
         Window host,
         Func<string, FrameworkElement?> findTarget,
-        Action<NavigationSection>? navigate)
+        Action<NavigationSection>? navigate,
+        TourStartOptions? options = null)
     {
+        options ??= new TourStartOptions();
         _steps = steps;
         _host = host;
         _findTarget = findTarget;
         _navigate = navigate;
+        _refreshSteps = options.RefreshSteps;
+        _onCompleted = options.OnCompleted;
+        _allowDontShowAgain = options.AllowDontShowAgain;
+        _dontShowAgainCheck.IsChecked = false;
+        _dontShowAgainCheck.Visibility = _allowDontShowAgain ? Visibility.Visible : Visibility.Collapsed;
         _index = 0;
         ApplyThemeColors();
         ThemeService.ThemeChanged += OnThemeChanged;
@@ -199,7 +219,8 @@ public sealed class TourGuideOverlay : UserControl
 
     private void OnLanguageChanged(object? sender, EventArgs e)
     {
-        _steps = TourGuideContent.GetSteps();
+        _steps = _refreshSteps?.Invoke() ?? TourGuideContent.GetSteps();
+        _dontShowAgainCheck.Content = L.T("Tour_DontShowAgain");
         ApplyTourChromeLabels();
         if (Visibility == Visibility.Visible && _index < _steps.Count)
             ShowStep();
@@ -215,6 +236,7 @@ public sealed class TourGuideOverlay : UserControl
 
     private void End()
     {
+        var dontShowAgain = _allowDontShowAgain && _dontShowAgainCheck.IsChecked == true;
         ThemeService.ThemeChanged -= OnThemeChanged;
         LocalizationService.Instance.LanguageChanged -= OnLanguageChanged;
         if (_host is not null)
@@ -222,6 +244,10 @@ public sealed class TourGuideOverlay : UserControl
         Visibility = Visibility.Collapsed;
         IsHitTestVisible = false;
         _highlight.Visibility = Visibility.Collapsed;
+        _onCompleted?.Invoke(dontShowAgain);
+        _onCompleted = null;
+        _refreshSteps = null;
+        _allowDontShowAgain = false;
     }
 
     private void Move(int delta)

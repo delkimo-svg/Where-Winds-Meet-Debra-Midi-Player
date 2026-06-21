@@ -22,6 +22,7 @@ public sealed class MidiParserService
 
         foreach (var trackChunk in midiFile.GetTrackChunks())
         {
+            var fingerByNote = ExtractFingerAssignments(trackChunk, tempoMap);
             var timedNotes = trackChunk.GetNotes();
             foreach (var note in timedNotes)
             {
@@ -32,6 +33,7 @@ public sealed class MidiParserService
                 var length = note.LengthAs<MetricTimeSpan>(tempoMap);
                 var startMs = (long)Math.Round(start.TotalMicroseconds / 1000.0);
                 var durationMs = Math.Max(1, (long)Math.Round(length.TotalMicroseconds / 1000.0));
+                fingerByNote.TryGetValue((startMs, note.NoteNumber, note.Channel), out var fingerNumber);
 
                 notes.Add(new NormalizedNote
                 {
@@ -42,7 +44,8 @@ public sealed class MidiParserService
                     DurationMs = durationMs,
                     Velocity = note.Velocity,
                     TrackIndex = trackIndex,
-                    Channel = note.Channel
+                    Channel = note.Channel,
+                    FingerNumber = fingerNumber
                 });
             }
 
@@ -123,6 +126,52 @@ public sealed class MidiParserService
         }
 
         return tracks;
+    }
+
+    private static Dictionary<(long StartMs, int NoteNumber, int Channel), int> ExtractFingerAssignments(
+        TrackChunk trackChunk,
+        TempoMap tempoMap)
+    {
+        var result = new Dictionary<(long StartMs, int NoteNumber, int Channel), int>();
+        var pendingFinger = 0;
+
+        foreach (var timedEvent in trackChunk.GetTimedEvents())
+        {
+            switch (timedEvent.Event)
+            {
+                case LyricEvent lyric:
+                    pendingFinger = ParseFingerLyric(lyric.Text);
+                    break;
+                case NoteOnEvent noteOn when noteOn.Velocity > 0:
+                    if (pendingFinger > 0)
+                    {
+                        var startMs = (long)Math.Round(
+                            timedEvent.TimeAs<MetricTimeSpan>(tempoMap).TotalMicroseconds / 1000.0);
+                        result[(startMs, noteOn.NoteNumber, noteOn.Channel)] = pendingFinger;
+                    }
+
+                    pendingFinger = 0;
+                    break;
+            }
+        }
+
+        return result;
+    }
+
+    private static int ParseFingerLyric(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return 0;
+
+        text = text.Trim();
+        if (text.Length != 2)
+            return 0;
+
+        var prefix = char.ToLowerInvariant(text[0]);
+        if (prefix != 'f' || text[1] is < '1' or > '5')
+            return 0;
+
+        return text[1] - '0';
     }
 
     private static string CleanTrackName(string raw) =>

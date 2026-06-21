@@ -1,0 +1,383 @@
+{
+  "version": 1,
+  "title": "Debra Piano Academy",
+  "modules": [
+    {
+      "id": "BB",
+      "title": "First notes — middle C & five fingers",
+      "band": "beginner",
+      "sub": "beginner",
+      "sortOrder": 0,
+      "guide": "Welcome! We'll learn the keyboard in small, friendly steps.\n\nSit so middle C (near the center of the piano) is in front of you. Finger numbers: thumb = 1, pinky = 5.\n\nPick an exercise → listen with ▶ → press I'm ready → play when each note hits the line.",
+      "lessons": [
+        {
+          "id": "BB-G01",
+          "title": "Welcome — how Academy practice works",
+          "kind": "Guide",
+          "order": 0,
+          "guide": "Each lesson works like this:\n\n1. Read the tip in the sidebar (and the box on the notes area).\n2. Press ▶ beside the exercise to hear it.\n3. Press I'm ready, then ▶ in the center to play.\n\nLearn mode waits for you — no rush. Connect a MIDI keyboard in Settings for the best experience."
+        },
+        {
+          "id": "BB-EX01",
+          "title": "Find middle C (right hand)",
+          "kind": "Exercise",
+          "order": 1,
+          "hand": "Right",
+          "learnMode": true,
+          "enabledTracks": [0],
+          "guide": "Find middle C and tap it four times with your right thumb (finger 1). Think: steady, light, confident — like knocking on a door.",
+          "bundledMidiPath": "academy-pack/BB/Academy_BB_EX01_Find-Middle-C-RH.mid",
+          "tourSteps": [
+            {
+              "hint": "middle-c",
+              "text": "Look at the keyboard. Middle C sits just to the left of the group of two black keys. It's your home base on the piano.",
+              "highlightNotes": [60]
+            },
+            {
+              "hint": "hand",
+              "text": "Place your right thumb on middle C. Curve your fingers gently — like you're holding a small orange.",
+              "highlightNotes": [60]
+            },
+            {
+              "text": "Four middle-C notes will fall. Press when each one touches the line at the bottom.",
+              "highlightNotes": [60]
+            },
+            {
+              "hint": "listen",
+              "text": "Not sure yet? Press ▶ beside the exercise to hear it first. Then I'm ready when you want to play yourself.",
+              "highlightNotes": [60]
+            }
+          ]
+        },
+        {
+          "id": "BB-EX02",
+          "title": "Five-finger walk C–G (right hand)",
+          "kind": "Exercise",
+          "order": 2,
+          "hand": "Right",
+          "learnMode": true,
+          "enabledTracks": [0],
+          "guide": "Keep your hand on five keys: C–D–E–F–G. Walk up the ladder, then walk back down. Same keys — no reaching!",
+          "bundledMidiPath": "academy-pack/BB/Academy_BB_EX02_C-Five-Finger-RH.mid",
+          "tourSteps": [
+            {
+              "hint": "hand",
+              "text": "Right-hand home position: thumb (1) on C, then each finger on the next white key up to G.",
+              "highlightNotes": [60, 62, 64, 65, 67]
+            },
+            {
+              "hint": "steps-up",
+              "text": "Walk up: C → D → E → F → G. Lift one finger at a time — like climbing a tiny ladder.",
+              "highlightNotes": [60, 62, 64, 65, 67]
+            },
+            {
+              "hint": "steps-down",
+              "text": "Now walk back down: G → F → E → D → C. Same fingers, coming home.",
+              "highlightNotes": [67, 65, 64, 62, 60]
+            },
+            {
+              "hint": "go",
+              "text": "Numbers on the falling notes show which finger to use. I'm ready → center ▶ to start!",
+              "highlightNotes": []
+            }
+          ]
+        },
+        {
+          "id": "BB-EX03",
+          "title": "Quarter-note pulses on C",
+          "kind": "Exercise",
+          "order": 3,
+          "hand": "Right",
+          "learnMode": true,
+          "enabledTracks": [0],
+          "guide": "Four steady taps on middle C. Count 1–2–3–4 out loud — your thumb stays on the key between taps.",
+          "bundledMidiPath": "academy-pack/BB/Academy_BB_EX03_RH-Quarter-Pulses.mid",
+          "tourSteps": [
+            {
+              "hint": "count",
+              "text": "Count with the notes: 1 – 2 – 3 – 4. Keep the beat steady — not faster, not slower.",
+              "highlightNotes": [60]
+            },
+            {
+              "hint": "hand",
+              "text": "Thumb stays on C. Tap down on each number and lift quickly — short, bouncy notes.",
+              "highlightNotes": [60]
+            },
+            {
+              "hint": "listen",
+              "text": "Hear it once with ▶, then try matching the rhythm yourself.",
+              "highlightNotes": [60]
+            }
+          ]
+        },
+        {
+          "id": "BB-EX04",
+          "title": "Middle C area (left hand)",
+          "kind": "Exercise",
+          "order": 4,
+          "hand": "Left",
+          "learnMode": true,
+          "enabledTracks": [0],
+          "guide": "Same ladder, left hand — lower octave (C3–G3). Pinky (finger 5) starts on C. Walk up, then back down.",
+          "bundledMidiPath": "academy-pack/BB/Academy_BB_EX04_Middle-C-LH.mid",
+          "tourSteps": [
+            {
+              "hint": "hand",
+              "text": "Left hand: pinky (5) on C3, then fingers 4–3–2–1 on the next white keys up to G3.",
+              "highlightNotes": [48, 50, 52, 53, 55]
+            },
+            {
+              "hint": "steps-up",
+              "text": "Walk up C3 → G3. Orange keys show the left hand — same idea as the right-hand ladder.",
+              "highlightNotes": [48, 50, 52, 53, 55]
+            },
+            {
+              "hint": "mirror",
+              "text": "Walk back down to C3. Your left hand mirrors what you learned on the right.",
+              "highlightNotes": [55, 53, 52, 50, 48]
+            },
+            {
+              "hint": "go",
+              "text": "Take your time in Learn mode — each note waits for you. Ready? I'm ready → ▶",
+              "highlightNotes": []
+            }
+          ]
+        },
+        {
+          "id": "BB-S01",
+          "title": "Twinkle Twinkle Little Star",
+          "kind": "Song",
+          "order": 5,
+          "hand": "Right",
+          "learnMode": true,
+          "enabledTracks": [0],
+          "guide": "Your first full melody! Mostly stepwise notes in C major — sing the tune in your head as you play. Right hand only.",
+          "bundledMidiPath": "academy-pack/BB/Academy_BB_S01_Twinkle-Twinkle.mid",
+          "tourSteps": [
+            {
+              "hint": "hand",
+              "text": "Same five-finger home: RH thumb on C. Most notes stay on C–G — no big jumps.",
+              "highlightNotes": [60, 62, 64, 65, 67]
+            },
+            {
+              "hint": "listen",
+              "text": "Press ▶ to hear the melody first. Notice how it climbs and comes back down.",
+              "highlightNotes": []
+            },
+            {
+              "hint": "go",
+              "text": "Play each note when it hits the line. Learn mode waits — perfect for your first song!",
+              "highlightNotes": []
+            }
+          ]
+        },
+        {
+          "id": "BB-S02",
+          "title": "Mary Had a Little Lamb",
+          "kind": "Song",
+          "order": 6,
+          "hand": "Right",
+          "learnMode": true,
+          "enabledTracks": [0],
+          "guide": "A short, friendly melody — great for reading stepwise motion. Sing “Mary had a little lamb” as you play.",
+          "bundledMidiPath": "academy-pack/BB/Academy_BB_S02_Mary-Had-A-Little-Lamb.mid",
+          "tourSteps": [
+            {
+              "hint": "hand",
+              "text": "Right hand on C–G. This song hops between nearby notes — keep your hand relaxed.",
+              "highlightNotes": [60, 62, 64]
+            },
+            {
+              "hint": "listen",
+              "text": "Listen once with ▶. The pattern repeats — you'll hear it come back.",
+              "highlightNotes": []
+            },
+            {
+              "hint": "go",
+              "text": "Ready? I'm ready → center ▶. Finger numbers show which key to press.",
+              "highlightNotes": []
+            }
+          ]
+        },
+        {
+          "id": "BB-S03",
+          "title": "Ode to Joy (opening)",
+          "kind": "Song",
+          "order": 7,
+          "hand": "Right",
+          "learnMode": true,
+          "enabledTracks": [0],
+          "guide": "Beethoven's famous theme — eight recognizable notes. Steady rhythm, mostly steps in the right hand.",
+          "bundledMidiPath": "academy-pack/BB/Academy_BB_S03_Ode-To-Joy-Opening.mid",
+          "tourSteps": [
+            {
+              "hint": "listen",
+              "text": "You know this tune! Press ▶ and follow the rising shape of the melody.",
+              "highlightNotes": []
+            },
+            {
+              "hint": "hand",
+              "text": "RH five-finger position still works. Watch for E and G — fingers 3 and 5.",
+              "highlightNotes": [64, 67]
+            },
+            {
+              "hint": "go",
+              "text": "Take it slow in Learn mode. Each note waits until you play it correctly.",
+              "highlightNotes": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BM",
+      "title": "Steps, skips & left hand",
+      "band": "beginner",
+      "sub": "medium",
+      "sortOrder": 1,
+      "comingSoon": true,
+      "guide": "Left-hand five-finger position, steps vs skips, and alternating hands.",
+      "lessons": []
+    },
+    {
+      "id": "BH",
+      "title": "Both hands & simple harmony",
+      "band": "beginner",
+      "sub": "hard",
+      "sortOrder": 2,
+      "comingSoon": true,
+      "guide": "Play melody with simple bass notes and both hands together.",
+      "lessons": []
+    },
+    {
+      "id": "BE",
+      "title": "Three positions & phrasing",
+      "band": "beginner",
+      "sub": "expert",
+      "sortOrder": 3,
+      "comingSoon": true,
+      "guide": "C, G, and F five-finger positions and short musical phrases.",
+      "lessons": []
+    },
+    {
+      "id": "MB",
+      "title": "Scales & alternating hands",
+      "band": "medium",
+      "sub": "beginner",
+      "sortOrder": 4,
+      "comingSoon": true,
+      "guide": "One-hand scales and hand alternation at steady tempo.",
+      "lessons": []
+    },
+    {
+      "id": "MM",
+      "title": "Arpeggios & triads",
+      "band": "medium",
+      "sub": "medium",
+      "sortOrder": 5,
+      "comingSoon": true,
+      "guide": "Broken chords and basic triads in C, F, G.",
+      "lessons": []
+    },
+    {
+      "id": "MG",
+      "title": "Syncopation & LH patterns",
+      "band": "medium",
+      "sub": "good",
+      "sortOrder": 6,
+      "comingSoon": true,
+      "guide": "Off-beat rhythms and left-hand accompaniment patterns.",
+      "lessons": []
+    },
+    {
+      "id": "ME",
+      "title": "Performance pieces",
+      "band": "medium",
+      "sub": "expert",
+      "sortOrder": 7,
+      "comingSoon": true,
+      "guide": "Longer medium-level repertoire with polish and dynamics.",
+      "lessons": []
+    },
+    {
+      "id": "AB",
+      "title": "Hanon & minor keys",
+      "band": "advanced",
+      "sub": "beginner",
+      "sortOrder": 8,
+      "comingSoon": true,
+      "guide": "Technical patterns and introduction to minor scales.",
+      "lessons": []
+    },
+    {
+      "id": "AM",
+      "title": "Broken chords & voicing",
+      "band": "advanced",
+      "sub": "medium",
+      "sortOrder": 9,
+      "comingSoon": true,
+      "guide": "Advanced chord shapes and voice leading.",
+      "lessons": []
+    },
+    {
+      "id": "AG",
+      "title": "Pedaling & expression",
+      "band": "advanced",
+      "sub": "good",
+      "sortOrder": 10,
+      "comingSoon": true,
+      "guide": "Sustain pedal concepts and dynamic shaping.",
+      "lessons": []
+    },
+    {
+      "id": "AE",
+      "title": "Advanced repertoire",
+      "band": "advanced",
+      "sub": "expert",
+      "sortOrder": 11,
+      "comingSoon": true,
+      "guide": "Challenging pieces with independence and speed.",
+      "lessons": []
+    },
+    {
+      "id": "EB",
+      "title": "Etudes introduction",
+      "band": "expert",
+      "sub": "beginner",
+      "sortOrder": 12,
+      "comingSoon": true,
+      "guide": "Focused etude work for technique.",
+      "lessons": []
+    },
+    {
+      "id": "EM",
+      "title": "Polyphony & sight-reading",
+      "band": "expert",
+      "sub": "medium",
+      "sortOrder": 13,
+      "comingSoon": true,
+      "guide": "Multiple voices and reading at tempo.",
+      "lessons": []
+    },
+    {
+      "id": "EG",
+      "title": "Virtuoso technique",
+      "band": "expert",
+      "sub": "good",
+      "sortOrder": 14,
+      "comingSoon": true,
+      "guide": "Speed, accuracy, and endurance drills.",
+      "lessons": []
+    },
+    {
+      "id": "EE",
+      "title": "Concert repertoire",
+      "band": "expert",
+      "sub": "expert",
+      "sortOrder": 15,
+      "comingSoon": true,
+      "guide": "Full concert-level pieces and performance prep.",
+      "lessons": []
+    }
+  ]
+}

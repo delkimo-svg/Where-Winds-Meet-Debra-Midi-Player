@@ -26,9 +26,10 @@ public sealed class LibraryService
         return song;
     }
 
-    public List<Song> ImportFolder(string folderPath, bool smartTranspose, bool strictMode)
+    public List<Song> ImportFolder(string folderPath, bool smartTranspose, bool strictMode,
+        SearchOption searchOption = SearchOption.AllDirectories)
     {
-        var imported = _playlistService.ImportFolder(folderPath, smartTranspose, strictMode);
+        var imported = _playlistService.ImportFolder(folderPath, smartTranspose, strictMode, searchOption);
         foreach (var song in imported)
         {
             if (!Songs.Any(s => s.FilePath.Equals(song.FilePath, StringComparison.OrdinalIgnoreCase)))
