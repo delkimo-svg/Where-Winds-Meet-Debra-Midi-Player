@@ -30,7 +30,7 @@ if (-not $NotesFile) {
 
 $configPath = Join-Path $root 'discord-catalogue.json'
 if (-not (Test-Path $configPath)) {
-    throw "Not found: $configPath — copy discord-catalogue.json.example and configure your bot."
+    throw "Not found: $configPath - copy discord-catalogue.json.example and configure your bot."
 }
 
 if ($ManifestOnly -and [string]::IsNullOrWhiteSpace($DownloadUrl)) {
@@ -57,7 +57,7 @@ if (-not [string]::IsNullOrWhiteSpace($ArchivePath)) {
     Write-Host "Packing portable archive ($Format)..."
     $resolvedArchive = Pack-PortableArchive -Version $Version -Root $root -Format $Format
     $mb = [math]::Round((Get-Item $resolvedArchive).Length / 1MB, 1)
-    Write-Host "  Archive: $resolvedArchive ($mb MB)"
+    Write-Host "  Archive: $resolvedArchive (${mb} MB)"
 
     if ($mb -gt 24) {
         Write-Host ''
