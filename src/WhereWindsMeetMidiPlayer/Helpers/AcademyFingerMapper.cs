@@ -4,56 +4,55 @@ namespace WhereWindsMeetMidiPlayer.Helpers;
 
 public static class AcademyFingerMapper
 {
-    public static int GetFinger(int midiNote, AcademyHand hand)
+  private static readonly Dictionary<int, int> RightFingerByMidi = new()
+  {
+      [60] = 1, [62] = 2, [64] = 3, [65] = 4, [67] = 5,
+      [69] = 5, [71] = 5,
+      [72] = 1, [74] = 2, [76] = 3, [77] = 4, [79] = 5,
+      [81] = 5, [83] = 5
+  };
+
+  private static readonly Dictionary<int, int> LeftFingerByMidi = new()
+  {
+      [45] = 5, [47] = 5,
+      [48] = 5, [50] = 4, [52] = 3, [53] = 2, [55] = 1,
+      [57] = 1, [59] = 2
+  };
+
+  public static int GetFinger(int midiNote, AcademyHand hand)
+  {
+    if (hand is AcademyHand.Right)
+      return RightFingerByMidi.TryGetValue(midiNote, out var right) ? right : 0;
+
+    if (hand is AcademyHand.Left)
+      return LeftFingerByMidi.TryGetValue(midiNote, out var left) ? left : 0;
+
+    if (hand is AcademyHand.Both)
     {
-        if (hand is AcademyHand.Right or AcademyHand.Both)
-        {
-            switch (midiNote)
-            {
-                case 60: return 1;
-                case 62: return 2;
-                case 64: return 3;
-                case 65: return 4;
-                case 67: return 5;
-            }
-        }
-
-        if (hand is AcademyHand.Left or AcademyHand.Both)
-        {
-            switch (midiNote)
-            {
-                case 48: return 5;
-                case 50: return 4;
-                case 52: return 3;
-                case 53: return 2;
-                case 55: return 1;
-            }
-        }
-
-        return InferFingerFromNote(midiNote);
+      if (RightFingerByMidi.TryGetValue(midiNote, out var right))
+        return right;
+      if (LeftFingerByMidi.TryGetValue(midiNote, out var left))
+        return left;
     }
 
-    public static int InferFingerFromNote(int midiNote)
-    {
-        switch (midiNote)
-        {
-            case 60: return 1;
-            case 62: return 2;
-            case 64: return 3;
-            case 65: return 4;
-            case 67: return 5;
-            case 48: return 5;
-            case 50: return 4;
-            case 52: return 3;
-            case 53: return 2;
-            case 55: return 1;
-            default: return 0;
-        }
-    }
+    return InferFingerFromNote(midiNote);
+  }
+
+  public static int InferFingerFromNote(int midiNote)
+  {
+    if (RightFingerByMidi.TryGetValue(midiNote, out var right))
+      return right;
+
+    if (LeftFingerByMidi.TryGetValue(midiNote, out var left))
+      return left;
+
+    return 0;
+  }
 
     public static IReadOnlyList<PracticeVisualNote> StampAcademyNotes(
         IReadOnlyList<PracticeVisualNote> notes,
-        AcademyHand hand)
+        AcademyHand hand,
+        bool assignFingerNumbers = true)
     {
         return notes
             .Select(n => new PracticeVisualNote
@@ -64,11 +63,13 @@ public static class AcademyFingerMapper
                 GameNoteNumber = n.GameNoteNumber,
                 TrackIndex = n.TrackIndex,
                 ColorHex = AcademyHandColors.ForNote(n.NoteNumber, hand),
-                FingerNumber = n.FingerNumber > 0
-                    ? n.FingerNumber
-                    : hand == AcademyHand.Any
-                        ? InferFingerFromNote(n.NoteNumber)
-                        : GetFinger(n.NoteNumber, hand)
+                FingerNumber = assignFingerNumbers
+                    ? n.FingerNumber > 0
+                        ? n.FingerNumber
+                        : hand == AcademyHand.Any
+                            ? InferFingerFromNote(n.NoteNumber)
+                            : GetFinger(n.NoteNumber, hand)
+                    : n.FingerNumber
             })
             .ToList();
     }

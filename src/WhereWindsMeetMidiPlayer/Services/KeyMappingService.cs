@@ -78,9 +78,23 @@ public sealed class KeyMappingService
         if (File.Exists(targetPath))
             return targetPath;
 
+        var preset = GameKeyboardLayoutPresets.FindByFileName(fileName);
+        if (preset is not null)
+        {
+            var json = System.Text.Json.JsonSerializer.Serialize(preset.BuildMap(), JsonFileStore.Options);
+            File.WriteAllText(targetPath, json);
+            return targetPath;
+        }
+
         var map = CreateDefaultMapping();
         File.WriteAllText(targetPath, System.Text.Json.JsonSerializer.Serialize(map, JsonFileStore.Options));
         return targetPath;
+    }
+
+    public void EnsurePresetKeyMaps()
+    {
+        foreach (var preset in GameKeyboardLayoutPresets.All)
+            EnsureDefaultKeyMap(preset.FileName);
     }
 
     public static Dictionary<string, string> CreateDefaultMapping() =>

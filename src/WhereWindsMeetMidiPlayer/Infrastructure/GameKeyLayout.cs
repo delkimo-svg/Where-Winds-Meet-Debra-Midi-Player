@@ -57,13 +57,24 @@ public static class GameKeyLayout
             _ => label
         };
 
-    public static Dictionary<string, string> BuildWhereWindsMeetMap()
+    public static Dictionary<string, string> BuildWhereWindsMeetMap() =>
+        BuildMapFromNaturalRows(NaturalKeys[0], NaturalKeys[1], NaturalKeys[2]);
+
+    /// <summary>Builds a full 36-key map from three rows of seven natural keys (low / mid / high octave).</summary>
+    public static Dictionary<string, string> BuildMapFromNaturalRows(
+        IReadOnlyList<string> lowRow,
+        IReadOnlyList<string> midRow,
+        IReadOnlyList<string> highRow)
     {
+        if (lowRow.Count < 7 || midRow.Count < 7 || highRow.Count < 7)
+            throw new ArgumentException("Each octave row needs seven natural keys.");
+
+        var rows = new[] { lowRow, midRow, highRow };
         var map = new Dictionary<string, string>();
         for (var octave = 0; octave < 3; octave++)
         {
             var baseMidi = NoteNames.MinGameNote + octave * 12;
-            var keys = NaturalKeys[octave];
+            var keys = NormalizeNaturalRow(rows[octave]);
             foreach (Degree degree in Enum.GetValues<Degree>())
             {
                 var midi = baseMidi + (int)degree;
@@ -72,6 +83,20 @@ public static class GameKeyLayout
         }
 
         return map;
+    }
+
+    private static string[] NormalizeNaturalRow(IReadOnlyList<string> row)
+    {
+        var keys = new string[7];
+        for (var i = 0; i < 7; i++)
+        {
+            var token = row[i];
+            keys[i] = token.Length == 1 && char.IsLetter(token[0])
+                ? token.ToUpperInvariant()
+                : token;
+        }
+
+        return keys;
     }
 
     private static string ComboForDegree(Degree degree, string[] keys)

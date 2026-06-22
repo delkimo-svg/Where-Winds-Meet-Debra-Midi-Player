@@ -82,6 +82,13 @@ public sealed class AcademyService
 
                 if (string.IsNullOrWhiteSpace(lesson.Guide) && !string.IsNullOrWhiteSpace(bundledLesson.Guide))
                     lesson.Guide = bundledLesson.Guide;
+
+                if (lesson.Hand == AcademyHand.Any && bundledLesson.Hand != AcademyHand.Any)
+                    lesson.Hand = bundledLesson.Hand;
+
+                if (lesson.EnabledTracks is null or { Length: 0 } &&
+                    bundledLesson.EnabledTracks is { Length: > 0 })
+                    lesson.EnabledTracks = bundledLesson.EnabledTracks;
             }
         }
     }

@@ -3,9 +3,11 @@ using System.Text.RegularExpressions;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using WhereWindsMeetMidiPlayer.Helpers;
 using WhereWindsMeetMidiPlayer.Infrastructure;
 using WhereWindsMeetMidiPlayer.Localization;
 using WhereWindsMeetMidiPlayer.Services;
+using WhereWindsMeetMidiPlayer.ViewModels;
 
 namespace WhereWindsMeetMidiPlayer.ViewModels;
 
@@ -16,10 +18,12 @@ public partial class KeybindEditorViewModel : ObservableObject
     private readonly Dictionary<int, string> _working = new();
 
     public ObservableCollection<KeybindRowViewModel> Rows { get; } = [];
+    public ObservableCollection<KeyboardLayoutPresetViewModel> KeyboardLayoutPresets { get; } = [];
 
     [ObservableProperty] private string _templateName = "my-layout";
     [ObservableProperty] private string _statusText = string.Empty;
     [ObservableProperty] private KeybindCellViewModel? _capturingCell;
+    [ObservableProperty] private string? _activePresetId;
 
     public string TitleText => L.T(UiText.KeybindEditorTitle);
     public string SubtitleText => L.T(UiText.KeybindEditorSubtitle);
@@ -28,10 +32,19 @@ public partial class KeybindEditorViewModel : ObservableObject
     public string ResetLabel => L.T(UiText.KeybindEditorReset);
     public string CloseLabel => L.T(UiText.KeybindEditorClose);
     public string ListenHint => L.T(UiText.KeybindEditorListenHint);
+    public string PresetsHint => L.T(UiText.SettingsNoteKeysHint);
 
-    public void RefreshLocalization() => OnPropertyChanged(string.Empty);
+    public void RefreshLocalization()
+    {
+        RefreshKeyboardLayoutPresets();
+        OnPropertyChanged(string.Empty);
+    }
 
-    public KeybindEditorViewModel(KeyMappingService keyMapping, string? currentFileName, Action<string> onSaved)
+    public KeybindEditorViewModel(
+        KeyMappingService keyMapping,
+        string? currentFileName,
+        string? activePresetId,
+        Action<string> onSaved)
     {
         _keyMapping = keyMapping;
         _onSaved = onSaved;
@@ -42,9 +55,17 @@ public partial class KeybindEditorViewModel : ObservableObject
         if (!string.IsNullOrWhiteSpace(currentFileName))
             TemplateName = Path.GetFileNameWithoutExtension(currentFileName);
 
+        ActivePresetId = activePresetId
+            ?? KeyboardLayoutPresetUiHelper.DetectPresetId(_working)
+            ?? GameKeyboardLayoutPresets.FindByFileName(currentFileName ?? string.Empty)?.Id;
+
         BuildRows();
+        RefreshKeyboardLayoutPresets();
         StatusText = ListenHint;
     }
+
+    private void RefreshKeyboardLayoutPresets() =>
+        KeyboardLayoutPresetUiHelper.RefreshPresets(KeyboardLayoutPresets, ActivePresetId);
 
     private void BuildRows()
     {
@@ -85,6 +106,24 @@ public partial class KeybindEditorViewModel : ObservableObject
         }
     }
 
+    private void ApplyWorkingMapToCells()
+    {
+        foreach (var row in Rows)
+        {
+            foreach (var cell in row.Cells)
+            {
+                if (_working.TryGetValue(cell.MidiNote, out var combo))
+                    cell.SetCombo(combo);
+            }
+        }
+    }
+
+    private void MarkCustomLayout()
+    {
+        ActivePresetId = null;
+        RefreshKeyboardLayoutPresets();
+    }
+
     public void BeginCapture(KeybindCellViewModel cell)
     {
         if (CapturingCell is not null)
@@ -106,6 +145,7 @@ public partial class KeybindEditorViewModel : ObservableObject
         CapturingCell.SetCombo(combo);
         _working[CapturingCell.MidiNote] = combo;
         CapturingCell = null;
+        MarkCustomLayout();
         StatusText = ListenHint;
         return true;
     }
@@ -121,26 +161,35 @@ public partial class KeybindEditorViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void ResetToDefault()
+    private void ApplyKeyboardLayoutPreset(string presetId)
     {
+        var preset = GameKeyboardLayoutPresets.Find(presetId);
+        if (preset is null)
+            return;
+
         _working.Clear();
-        foreach (var (key, value) in GameKeyLayout.BuildWhereWindsMeetMap())
+        foreach (var (key, value) in preset.BuildMap())
         {
             if (int.TryParse(key, out var midi))
                 _working[midi] = value;
         }
 
-        foreach (var row in Rows)
-        {
-            foreach (var cell in row.Cells)
-            {
-                if (_working.TryGetValue(cell.MidiNote, out var combo))
-                    cell.SetCombo(combo);
-            }
-        }
+        ActivePresetId = preset.Id;
+        TemplateName = Path.GetFileNameWithoutExtension(preset.FileName);
+        ApplyWorkingMapToCells();
+        RefreshKeyboardLayoutPresets();
 
-        StatusText = L.T(UiText.KeybindEditorResetDone);
+        _keyMapping.ReplaceMapping(_working);
+        var path = _keyMapping.EnsureDefaultKeyMap(preset.FileName);
+        _keyMapping.SaveToFile(path);
+        _onSaved(preset.FileName);
+
+        StatusText = L.F(UiText.KeybindEditorPresetApplied, L.T(preset.NameKey));
     }
+
+    [RelayCommand]
+    private void ResetToDefault() =>
+        ApplyKeyboardLayoutPreset(GameKeyboardLayoutPresets.QwertyId);
 
     [RelayCommand]
     private void SaveTemplate()
@@ -158,6 +207,11 @@ public partial class KeybindEditorViewModel : ObservableObject
 
         _keyMapping.ReplaceMapping(_working);
         _keyMapping.SaveToFile(path);
+
+        var savedPreset = GameKeyboardLayoutPresets.FindByFileName(fileName);
+        ActivePresetId = savedPreset?.Id;
+        RefreshKeyboardLayoutPresets();
+
         _onSaved(fileName);
         StatusText = L.F(UiText.KeybindEditorSaved, fileName);
     }

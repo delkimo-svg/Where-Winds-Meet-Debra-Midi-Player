@@ -13,6 +13,7 @@
         MinHeight="640" MinWidth="940"
         SizeToContent="Manual"
         WindowStartupLocation="Manual"
+        Topmost="{Binding WindowAlwaysOnTop, Mode=TwoWay}"
         WindowStyle="None"
         ResizeMode="CanResize"
         AllowsTransparency="True"
@@ -135,7 +136,7 @@
                 </Grid.ColumnDefinitions>
 
                 <!-- Title bar spans full width so body column 0 stays sidebar-narrow only -->
-                <Grid Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" ClipToBounds="True"
+                <Grid Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" ClipToBounds="False"
                       Background="Transparent">
                     <Grid.Resources>
                         <Style TargetType="TextBlock">
@@ -178,68 +179,89 @@
                             </LinearGradientBrush>
                         </Border.Background>
                     </Border>
-                    <Grid Panel.ZIndex="2" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+                    <Grid Panel.ZIndex="2" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" ClipToBounds="False">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*" MinWidth="100"/>
+                        <ColumnDefinition Width="*" MinWidth="0"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0"
-                                MouseLeftButtonDown="TitleBar_OnMouseDown">
-                        <Image Source="{asset:LocalAsset debra-wwm-header-logo.png}"
+                    <Grid Grid.Column="0" VerticalAlignment="Center" Margin="12,0,8,0"
+                          MouseLeftButtonDown="TitleBar_OnMouseDown">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*" MinWidth="0"/>
+                        </Grid.ColumnDefinitions>
+                        <Image Grid.Column="0" Source="{asset:LocalAsset debra-wwm-header-logo.png}"
                                Height="32" Stretch="Uniform" VerticalAlignment="Center"
                                Margin="0,0,10,0" RenderOptions.BitmapScalingMode="HighQuality"
                                SnapsToDevicePixels="True" IsHitTestVisible="False"
                                Opacity="{Binding PlayerChromeOpacity}"/>
-                        <TextBlock VerticalAlignment="Center" FontFamily="{DynamicResource Font.HeaderTitle}"
+                        <TextBlock Grid.Column="1" VerticalAlignment="Center" FontFamily="{DynamicResource Font.HeaderTitle}"
+                                   TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"
                                    TextOptions.TextFormattingMode="Display">
                             <Run Text="Debra Midi Player" FontSize="17" FontWeight="SemiBold"
                                  Foreground="{DynamicResource Brush.GoldBright}"/>
-                            <Run Text="  ·  v" FontSize="11" Foreground="{DynamicResource Brush.GoldDim}"
+                            <Run Text="  ·  v" FontSize="11" Foreground="{DynamicResource Brush.HeaderMetaText}"
                                  BaselineAlignment="Center"/>
-                            <Run Text="{Binding AppVersionLabel, Mode=OneWay}" FontSize="11" FontWeight="Normal"
-                                 Foreground="{DynamicResource Brush.GoldDim}" BaselineAlignment="Center"/>
-                            <Run Text="  ·  " FontSize="11" Foreground="{DynamicResource Brush.GoldDim}"
+                            <Run Text="{Binding AppVersionLabel, Mode=OneWay}" FontSize="11" FontWeight="SemiBold"
+                                 Foreground="{DynamicResource Brush.HeaderMetaText}" BaselineAlignment="Center"/>
+                            <Run Text="  ·  " FontSize="11" Foreground="{DynamicResource Brush.HeaderMetaMuted}"
                                  BaselineAlignment="Center"/>
                             <Run Text="Where Winds Meet" FontSize="11" FontWeight="Normal"
-                                 Foreground="{DynamicResource Brush.GoldDim}" BaselineAlignment="Center"/>
+                                 Foreground="{DynamicResource Brush.HeaderMetaMuted}" BaselineAlignment="Center"/>
                         </TextBlock>
-                    </StackPanel>
-                    <StackPanel x:Name="TourTarget_Header" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center"
-                                HorizontalAlignment="Right" Margin="8,0,8,0" Panel.ZIndex="10"
+                    </Grid>
+                    <StackPanel x:Name="TourTarget_Header" Grid.Column="1" Orientation="Horizontal"
+                                VerticalAlignment="Center" HorizontalAlignment="Right"
+                                Margin="0,0,6,0" Panel.ZIndex="10"
                                 shell:WindowChrome.IsHitTestVisibleInChrome="True"
                                 Opacity="{Binding PlayerChromeOpacity}">
                         <Button Content="{Binding Ui.HeaderUpdate}" Style="{StaticResource Button.UpdatePulse}"
                                 Command="{Binding ShowUpdateOverlayCommand}"
                                 ToolTip="{Binding Ui.HeaderUpdateTooltip}"
                                 Visibility="{Binding IsUpdateAvailable, Converter={StaticResource BoolToVis}}"
-                                FontSize="11" Margin="0,0,8,0"/>
-                        <Button Content="{Binding Ui.HeaderPatreon}" Style="{StaticResource Button.Gold}" Padding="12,5"
+                                FontSize="11" Margin="0,0,5,0"/>
+                        <Button Content="{Binding Ui.HeaderPatreon}" Style="{StaticResource Button.Gold}" Padding="10,5"
                                 Command="{Binding ShowPatreonRewardsCommand}" ToolTip="{Binding Ui.HeaderPatreonTooltip}"
-                                FontSize="11" Margin="0,0,8,0"/>
-                        <Button Content="{Binding Ui.HeaderDiscord}" Style="{StaticResource Button.Gold}" Padding="12,5"
+                                FontSize="11" Margin="0,0,5,0"/>
+                        <Button Content="{Binding Ui.HeaderDiscord}" Style="{StaticResource Button.Gold}" Padding="10,5"
                                 Command="{Binding OpenDiscordCommand}" ToolTip="{Binding Ui.HeaderDiscordTooltip}"
-                                FontSize="11" Margin="0,0,8,0"/>
-                        <Button x:Name="TourTarget_HelpButton" Content="?" Style="{StaticResource Button.WindowChrome}" Padding="10,4"
-                                Command="{Binding ShowHelpCommand}" ToolTip="{Binding Ui.HelpTooltip}"
-                                FontWeight="SemiBold" FontSize="14" Margin="0,0,8,0"/>
-                        <Border Background="{DynamicResource Brush.HeaderChipBackground}" CornerRadius="12" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" Padding="10,5" Margin="0,0,8,0" ClipToBounds="True">
+                                FontSize="11" Margin="0,0,5,0"/>
+                        <ToggleButton Style="{StaticResource Toggle.HeaderChip}"
+                                      IsChecked="{Binding WindowAlwaysOnTop, Mode=TwoWay}"
+                                      ToolTip="{Binding Ui.HeaderAlwaysOnTopTooltip}"
+                                      Padding="8,4" Margin="0,0,5,0">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <Border Width="26" Height="26" CornerRadius="13" ClipToBounds="True" Margin="0,0,8,0" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1">
+                                <Viewbox Width="14" Height="14" Margin="0,0,5,0" VerticalAlignment="Center">
+                                    <Path Data="{StaticResource Icon.Pin}"
+                                          Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
+                                </Viewbox>
+                                <TextBlock Text="{Binding Ui.HeaderAlwaysOnTopLabel}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </ToggleButton>
+                        <Button x:Name="TourTarget_HelpButton" Content="?" Style="{StaticResource Button.WindowChrome}" Padding="8,4"
+                                Command="{Binding ShowHelpCommand}" ToolTip="{Binding Ui.HelpTooltip}"
+                                FontWeight="SemiBold" FontSize="14" Margin="0,0,5,0"/>
+                        <Border Background="{DynamicResource Brush.HeaderChipBackground}" CornerRadius="12" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" Padding="8,4" Margin="0,0,0,0" ClipToBounds="True">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Border Width="24" Height="24" CornerRadius="12" ClipToBounds="True" Margin="0,0,6,0" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1">
                                     <Image Source="{asset:LocalAsset debra-thumb-art.png}" Stretch="UniformToFill"/>
                                 </Border>
                                 <TextBlock Text="Debra ▾" Foreground="{DynamicResource Brush.GoldBright}" FontWeight="SemiBold" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Border>
-                        <Border x:Name="TitleBarWindowButtons" Background="{DynamicResource Brush.BgElevated}" CornerRadius="10"
-                                BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" Padding="2,0"
-                                Panel.ZIndex="10" shell:WindowChrome.IsHitTestVisibleInChrome="True">
-                            <StackPanel Orientation="Horizontal">
-                                <Button Content="—" Style="{StaticResource Button.WindowChrome}" Click="Minimize_OnClick"/>
-                                <Button Content="□" Style="{StaticResource Button.WindowChrome}" Click="Maximize_OnClick"/>
-                                <Button Content="✕" Style="{StaticResource Button.WindowChrome}" Click="Close_OnClick"/>
-                            </StackPanel>
-                        </Border>
                     </StackPanel>
+                    <Border Grid.Column="2" x:Name="TitleBarWindowButtons" Background="{DynamicResource Brush.BgElevated}" CornerRadius="10"
+                            BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" Padding="2,0"
+                            Margin="0,0,6,0" VerticalAlignment="Center"
+                            Panel.ZIndex="10" shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                            Opacity="{Binding PlayerChromeOpacity}">
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="—" Style="{StaticResource Button.WindowChrome}" Click="Minimize_OnClick"/>
+                            <Button Content="□" Style="{StaticResource Button.WindowChrome}" Click="Maximize_OnClick"/>
+                            <Button Content="✕" Style="{StaticResource Button.WindowChrome}" Click="Close_OnClick"/>
+                        </StackPanel>
+                    </Border>
                     </Grid>
                 </Grid>
 
@@ -447,7 +469,35 @@
                                     </Grid>
                                     <CheckBox Content="{Binding Ui.PracticeIncludeSubfolders}" IsChecked="{Binding PracticeLibraryIncludeSubfolders, Mode=TwoWay}"
                                               Margin="0,0,0,8" FontSize="11" Foreground="{DynamicResource Brush.TextMuted}"/>
-                                    <TextBlock Text="{Binding Ui.SettingsKeyLayout}" Style="{StaticResource Text.Muted}" Margin="0,12,0,4"/>
+                                    <TextBlock Text="{Binding Ui.SettingsNoteKeys}" Style="{StaticResource Text.Title}" Margin="0,12,0,6"/>
+                                    <Grid Margin="0,0,0,4">
+                                        <TextBlock Text="{Binding Ui.SettingsNoteKeysHint}" Style="{StaticResource Text.Muted}" FontSize="9" TextWrapping="Wrap"/>
+                                        <Button Content="{Binding Ui.SettingsNoteKeysReset}" Style="{StaticResource Button.Ghost}"
+                                                HorizontalAlignment="Right" VerticalAlignment="Top"
+                                                Command="{Binding ResetNoteKeysToDefaultCommand}"/>
+                                    </Grid>
+                                    <ItemsControl ItemsSource="{Binding KeyboardLayoutPresets}" Margin="0,0,0,8">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <UniformGrid Columns="3"/>
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate DataType="{x:Type vm:KeyboardLayoutPresetViewModel}">
+                                                <Button Margin="0,0,6,0" Height="Auto"
+                                                        Style="{StaticResource Button.KeyboardPreset}"
+                                                        Command="{Binding DataContext.ApplyKeyboardLayoutPresetCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                        CommandParameter="{Binding Id}">
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                                                        <TextBlock Text="{Binding Description}" FontSize="9" Opacity="0.85"
+                                                                   HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"/>
+                                                    </StackPanel>
+                                                </Button>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    <TextBlock Text="{Binding Ui.SettingsKeyLayout}" Style="{StaticResource Text.Muted}" Margin="0,4,0,4"/>
                                     <ComboBox ItemsSource="{Binding KeyLayouts}" DisplayMemberPath="DisplayName"
                                               SelectedItem="{Binding SelectedLayout}" Style="{StaticResource ComboBox.Debra}"/>
                                     <TextBlock Text="{Binding Ui.SettingsKeyModeHint}" Style="{StaticResource Text.Muted}" FontSize="9" Margin="0,4,0,0" TextWrapping="Wrap"/>
@@ -483,7 +533,7 @@
                                                                    KeyCombos="{Binding PracticeKeyCombos}"
                                                                    ViewMode="{Binding PracticeKeyboardViewMode}"
                                                                    NoteLabelMode="{Binding PracticeNoteLabelMode}"
-                                                                   ShowAcademyFingerLabels="{Binding IsAcademyPracticeMode}"
+                                                                   ShowAcademyFingerLabels="{Binding ShowAcademyFingerLabelsOnNotes}"
                                                                    KeyboardLabelMode="{Binding PracticeNoteLabelMode}"
                                                                    PressState="{Binding PracticeKeyboardPressState}"
                                                                    HandKeyPreview="{Binding PracticeHandKeyPreview}"

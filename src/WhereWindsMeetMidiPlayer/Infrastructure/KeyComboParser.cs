@@ -70,6 +70,13 @@ public static class KeyComboParser
         if (key >= Key.D0 && key <= Key.D9)
             return ((char)('0' + (key - Key.D0))).ToString();
 
-        return null;
+        return key switch
+        {
+            Key.OemComma => ",",
+            Key.OemPeriod => ".",
+            Key.OemSemicolon => ";",
+            Key.OemQuestion => "/",
+            _ => null
+        };
     }
 }

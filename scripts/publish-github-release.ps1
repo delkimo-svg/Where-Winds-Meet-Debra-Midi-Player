@@ -1,37 +1,53 @@
-# Upload portable ZIP to GitHub Releases (requires gh auth + built archive).
+# Creates a GitHub release with the portable ZIP (version must match csproj).
 param(
-    [Parameter(Mandatory = $true)]
     [string]$Version,
-    [string]$ArchivePath = '',
-    [string]$NotesFile = ''
+    [switch]$SkipBuild,
+    [switch]$SkipPack,
+    [string]$NotesFile
 )
 
 $ErrorActionPreference = 'Stop'
-$root = Split-Path $PSScriptRoot -Parent
-$tag = if ($Version.StartsWith('v')) { $Version } else { "v$Version" }
+. "$PSScriptRoot\ReleaseCommon.ps1"
 
-if (-not $ArchivePath) {
-    $ArchivePath = Join-Path $root "release\DebraMidiPlayer-$Version-portable.zip"
+$root = Get-ProjectRoot
+if ([string]::IsNullOrWhiteSpace($Version)) {
+    $Version = Get-ProjectVersion -Root $root
+} else {
+    Assert-VersionMatchesProject -Version $Version -Root $root
 }
+
 if (-not $NotesFile) {
-    $NotesFile = Join-Path $root "RELEASE_NOTES_$Version.md"
-    if (-not (Test-Path $NotesFile)) {
-        $NotesFile = Join-Path $root 'RELEASE_NOTES_1.0.0.md'
-    }
+    $NotesFile = Get-ReleaseNotesPath -Version $Version -Root $root
+} elseif (-not (Test-Path $NotesFile)) {
+    throw "Notes file not found: $NotesFile"
 }
 
-if (-not (Test-Path $ArchivePath)) {
-    Write-Error "Archive not found: $ArchivePath — build portable and zip release\portable\* first."
+if (-not $SkipBuild) {
+    Write-Host "Building portable for v$Version..."
+    & (Join-Path $root 'scripts\build-release.ps1') -Target portable
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 
-$gh = Get-Command gh -ErrorAction SilentlyContinue
-if (-not $gh) {
-    $ghPath = "${env:ProgramFiles}\GitHub CLI\gh.exe"
-    if (Test-Path $ghPath) { $gh = $ghPath } else { Write-Error "Install GitHub CLI: winget install GitHub.cli" }
+Assert-PortableExeVersion -ExpectedVersion $Version -Root $root
+
+$archive = Join-Path $root "release\DebraMidiPlayer-$Version-portable.zip"
+if (-not $SkipPack) {
+    Write-Host 'Packing portable ZIP...'
+    $archive = Pack-PortableArchive -Version $Version -Root $root -Format zip
+    $mb = [math]::Round((Get-Item $archive).Length / 1MB, 1)
+    Write-Host "  Archive: $archive ($mb MB)"
 }
 
-$notes = if (Test-Path $NotesFile) { Get-Content $NotesFile -Raw } else { "Debra Midi Player $Version" }
+if (-not (Test-Path $archive)) {
+    throw "Archive not found: $archive"
+}
 
-Write-Host "Creating GitHub release $tag ..."
-& $gh release create $tag $ArchivePath --title "Debra Midi Player $Version" --notes $notes
-Write-Host "Done. Copy the asset URL from: gh release view $tag"
+$tag = "v$Version"
+Write-Host "Creating GitHub release $tag..."
+gh release create $tag $archive --title "Debra Midi Player $Version" --notes-file $NotesFile
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host ''
+Write-Host "GitHub release $tag published."
+Write-Host "Copy the asset download URL for Discord publish:"
+Write-Host "  gh release view $tag --json url -q .url"

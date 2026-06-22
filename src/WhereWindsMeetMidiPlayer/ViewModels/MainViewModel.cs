@@ -53,8 +53,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private readonly PracticeSessionService _practiceSession;
     private readonly MidiSoundEngine _midiSoundEngine = new();
     private readonly PracticeSoundService _practiceSound;
-    private readonly ChartSoundScheduler _playbackSoundScheduler;
-    private List<SoundChartNote> _playbackSoundNotes = [];
     private readonly PracticeKeyboardHighlightService _practiceKeyboardPress = new();
     private readonly DiscordAcademyService _discordAcademy = new();
 
@@ -115,6 +113,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] private bool _autoPlayEnabled;
     [ObservableProperty] private bool _shuffle;
     [ObservableProperty] private bool _repeat;
+    [ObservableProperty] private bool _windowAlwaysOnTop;
     [ObservableProperty] private int _volume = 64;
     [ObservableProperty] private double _songTempoBpm = 120;
     [ObservableProperty] private int _playbackTempoPercent = 100;
@@ -190,8 +189,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] private bool _libraryIncludeSubfolders = true;
     [ObservableProperty] private string _practiceLibraryRefreshFolderPath = string.Empty;
     [ObservableProperty] private bool _practiceLibraryIncludeSubfolders = true;
-    [ObservableProperty] private string _practiceRightHandColorHex = "#4A9EFF";
-    [ObservableProperty] private string _practiceLeftHandColorHex = "#F59E0B";
+    [ObservableProperty] private string _practiceRightHandColorHex = "#4ADE80";
+    [ObservableProperty] private string _practiceLeftHandColorHex = "#4A9EFF";
     [ObservableProperty] private bool _isPracticeHandColorPickerOpen;
 
     private DiscordCredentials? _discordCredentials;
@@ -204,6 +203,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public BulkObservableCollection<Song> PlaylistSongs { get; } = [];
     public BulkObservableCollection<HistoryItem> HistoryItems { get; } = [];
     public ObservableCollection<KeyLayoutOption> KeyLayouts { get; } = [];
+    public ObservableCollection<KeyboardLayoutPresetViewModel> KeyboardLayoutPresets { get; } = [];
     public ObservableCollection<NavItemViewModel> NavItems { get; } = [];
     public BulkObservableCollection<SavedPlaylistEntry> SavedPlaylists { get; } = [];
     public ObservableCollection<LanguageOption> AvailableLanguages { get; } = [];
@@ -286,9 +286,13 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     public bool ShowPracticeHandPreview =>
         PracticeHandKeyPreview is not null
-        && !IsPracticePlaying
+        && _practiceSession.Notes.Count > 0
         && !IsPracticeCountdownActive
-        && _practiceSession.Notes.Count > 0;
+        && (!IsPracticePlaying || IsAcademyPracticeMode);
+
+    public PracticeNoteLabelMode PracticeFallingNoteLabelMode => PracticeNoteLabelMode;
+
+    public bool ShowAcademyFingerLabelsOnNotes => IsAcademyPracticeMode;
 
     public IReadOnlyList<string> PracticeHandColorSwatches => PracticePrepareService.DefaultTrackColors;
 
@@ -305,9 +309,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
         IsPracticeKeyboardLabels ? PracticeNoteLabelMode.KeyboardKeys
         : IsPracticeSolfegeLabels ? PracticeNoteLabelMode.Solfege
         : PracticeNoteLabelMode.LetterNames;
-
-    public PracticeNoteLabelMode PracticeFallingNoteLabelMode =>
-        IsAcademyPracticeMode ? PracticeNoteLabelMode.FingerNumbers : PracticeNoteLabelMode;
 
     public IReadOnlyDictionary<int, string> PracticeKeyCombos => _keyMapping.Mapping;
 
@@ -391,7 +392,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _practicePrepare = new PracticePrepareService(_midiParser, _noteRange);
         _practiceSession = new PracticeSessionService();
         _practiceSound = new PracticeSoundService(_midiSoundEngine);
-        _playbackSoundScheduler = new ChartSoundScheduler(_midiSoundEngine);
         _practiceSession.PositionChanged += OnPracticePositionChanged;
         _practiceSession.StateChanged += OnPracticeStateChanged;
         _practiceSession.Completed += OnPracticeCompleted;
@@ -483,7 +483,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
             IsPlaying = state == PlaybackState.Playing;
             RefreshPlayPauseUi();
-            HandleMainPlaybackSoundState(state);
         });
 
         _uiTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
@@ -614,6 +613,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         RefreshPracticeLibraryFoldersCommand.NotifyCanExecuteChanged();
         FocusGameBeforePlay = false;
         _settings.Settings.FocusGameBeforePlay = false;
+        WindowAlwaysOnTop = _settings.Settings.WindowAlwaysOnTop;
         PrePlayCountdownSeconds = 1;
         _settings.Settings.PrePlayCountdownSeconds = 1;
         ApplyPracticeCountdownFromSettings();
@@ -635,8 +635,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         RefreshFavoriteSongs();
 
         EnsureKeyMaps();
+        LoadKeyMapping(ResolveInitialKeyMappingFile());
         RefreshKeyLayouts();
-        LoadKeyMapping(SelectedLayout?.FileName ?? _settings.Settings.KeyMappingFile);
 
         _liveMidi.StartDevicesWatcher();
         RefreshMidiInputDevices();
@@ -676,6 +676,49 @@ public partial class MainViewModel : ObservableObject, IDisposable
         // Seed bundled defaults only when missing — never overwrite user-edited keymaps on startup.
         _keyMapping.EnsureDefaultKeyMap("default-keymap.json");
         _keyMapping.EnsureDefaultKeyMap("debra-36-keys.json");
+        _keyMapping.EnsurePresetKeyMaps();
+    }
+
+    private string ResolveInitialKeyMappingFile()
+    {
+        if (!string.IsNullOrWhiteSpace(_settings.Settings.KeyboardLayoutPresetId))
+        {
+            var preset = GameKeyboardLayoutPresets.Find(_settings.Settings.KeyboardLayoutPresetId);
+            if (preset is not null)
+                return preset.FileName;
+        }
+
+        var byFile = GameKeyboardLayoutPresets.FindByFileName(_settings.Settings.KeyMappingFile);
+        if (byFile is not null)
+            return byFile.FileName;
+
+        return _settings.Settings.KeyMappingFile;
+    }
+
+    private void RefreshKeyboardLayoutPresets()
+    {
+        var selectedId = _settings.Settings.KeyboardLayoutPresetId;
+        if (string.IsNullOrWhiteSpace(selectedId))
+            selectedId = KeyboardLayoutPresetUiHelper.DetectPresetId(_keyMapping.CloneMapping());
+
+        KeyboardLayoutPresetUiHelper.RefreshPresets(KeyboardLayoutPresets, selectedId);
+    }
+
+    [RelayCommand]
+    private void ApplyKeyboardLayoutPreset(string presetId)
+    {
+        var preset = GameKeyboardLayoutPresets.Find(presetId);
+        if (preset is null)
+            return;
+
+        _keyMapping.EnsureDefaultKeyMap(preset.FileName);
+        LoadKeyMapping(preset.FileName, preset.Id);
+    }
+
+    [RelayCommand]
+    private void ResetNoteKeysToDefault()
+    {
+        ApplyKeyboardLayoutPreset(GameKeyboardLayoutPresets.QwertyId);
     }
 
     private void RefreshKeyLayouts()
@@ -688,6 +731,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
             {
                 "debra-36-keys.json" => "Debra 36 Keys",
                 "default-keymap.json" => "Default 36 Keys",
+                "preset-qwerty.json" => L.T(UiText.SettingsNoteKeysPresetQwerty),
+                "preset-qwertz.json" => L.T(UiText.SettingsNoteKeysPresetQwertz),
+                "preset-azerty.json" => L.T(UiText.SettingsNoteKeysPresetAzerty),
                 _ => Path.GetFileNameWithoutExtension(name)
             };
             KeyLayouts.Add(new KeyLayoutOption { FileName = name, DisplayName = display });
@@ -706,15 +752,29 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
-    private void LoadKeyMapping(string fileName)
+    private void LoadKeyMapping(string fileName, string? presetId = null)
     {
         var path = Path.Combine(AppPaths.KeyMapsFolder, fileName);
         if (!File.Exists(path))
             path = _keyMapping.EnsureDefaultKeyMap(fileName);
         _keyMapping.LoadFromFile(path);
         _settings.Settings.KeyMappingFile = fileName;
+        _settings.Settings.KeyboardLayoutPresetId = presetId
+            ?? GameKeyboardLayoutPresets.FindByFileName(fileName)?.Id;
         _settings.Save();
         OnPropertyChanged(nameof(PracticeKeyCombos));
+
+        _suppressLayoutChange = true;
+        try
+        {
+            SelectedLayout = KeyLayouts.FirstOrDefault(k => k.FileName == fileName) ?? SelectedLayout;
+        }
+        finally
+        {
+            _suppressLayoutChange = false;
+        }
+
+        RefreshKeyboardLayoutPresets();
     }
 
     private void OnLiveRawNote(int rawMidi, int velocity) =>
@@ -3301,7 +3361,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
         var targetMs = (long)(Math.Clamp(normalizedPosition, 0, 1) * _playback.TotalDurationMs);
         _playback.SeekToMs(targetMs);
-        ResetMainPlaybackSoundSession();
         StartPlaybackFromCurrentPosition();
         IsPlaying = true;
         UpdateProgress();
@@ -3312,7 +3371,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         CancelAutoAdvanceTimer();
         _playback.Stop();
-        ResetMainPlaybackSoundSession();
         FinalizeHistory(PlaybackStatus.Stopped);
         IsPlaying = false;
         RefreshPlayPauseUi();
@@ -3367,6 +3425,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         var editor = new Windows.KeybindEditorWindow(
             _keyMapping,
             _settings.Settings.KeyMappingFile,
+            _settings.Settings.KeyboardLayoutPresetId,
             fileName =>
             {
                 LoadKeyMapping(fileName);
@@ -3490,8 +3549,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
                     ResetPlaybackTempoForSong(parsed.BeatsPerMinute);
                     ApplySongTempoOnLoad(song.FilePath);
-                    _playbackSoundNotes = prepared.SoundSchedule;
-                    ResetMainPlaybackSoundSession();
                     _playback.LoadSchedule(schedule, parsed.DurationMs);
                     TotalTimeText = TimeFormat.FromMilliseconds(parsed.DurationMs);
                     _input.ResetDiagnostics();
@@ -3579,8 +3636,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
                     song.OutOfRangeNoteCount = ranged.OutOfRangeNoteCount;
                     TotalTimeText = TimeFormat.FromMilliseconds(parsed.DurationMs);
 
-                    _playbackSoundNotes = prepared.SoundSchedule;
-                    ResetMainPlaybackSoundSession();
                     _playback.ReloadSchedule(schedule, parsed.DurationMs, positionMs, resumeState);
 
                     if (resumeState == PlaybackState.Playing)
@@ -3956,7 +4011,13 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private List<PracticeVisualNote> ColorizePracticeVisualNotes(IReadOnlyList<PracticeVisualNote> notes)
     {
         if (IsAcademyPracticeMode)
-            return AcademyFingerMapper.StampAcademyNotes(notes, _activeAcademyHand).ToList();
+        {
+            var hand = _activeAcademyLessonKind == AcademyLessonKind.Exercise
+                ? _activeAcademyHand
+                : AcademyHand.Any;
+            var assignFingers = true;
+            return AcademyFingerMapper.StampAcademyNotes(notes, hand, assignFingers).ToList();
+        }
 
         if (PracticeTrackOptions.Count == 2)
         {
@@ -4452,6 +4513,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         OnPropertyChanged(nameof(PracticeFallingNoteLabelMode));
         OnPropertyChanged(nameof(PracticeNoteLabelMode));
+        OnPropertyChanged(nameof(ShowAcademyFingerLabelsOnNotes));
+        OnPropertyChanged(nameof(ShowPracticeHandPreview));
         RefreshPracticeFallingNoteLayout();
     }
 
@@ -5332,8 +5395,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
         if (!active)
             return;
 
-        SyncMainPlaybackSound(_playback.CurrentPositionMs);
-
         if (DateTime.UtcNow - _lastPlaybackStatusUtc < TimeSpan.FromSeconds(2))
             return;
 
@@ -5696,6 +5757,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         RefreshPlaylistStats();
         RefreshFavoritesStats();
         RefreshCatalogueStats();
+        RefreshKeyLayouts();
+        RefreshKeyboardLayoutPresets();
     }
 
     private void RefreshIdleUiStrings()
@@ -6180,33 +6243,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private void ApplySynthVolume() =>
         _practiceSound.SetMasterVolume(Volume / 100f);
 
-    private void ResetMainPlaybackSoundSession() => _playbackSoundScheduler.Reset();
-
-    private void HandleMainPlaybackSoundState(PlaybackState state)
-    {
-        if (SelectedSection == NavigationSection.Practice)
-            return;
-
-        if (state == PlaybackState.Stopped)
-            ResetMainPlaybackSoundSession();
-        else if (state == PlaybackState.Paused)
-            _midiSoundEngine.AllNotesOff();
-    }
-
-    private void SyncMainPlaybackSound(long positionMs)
-    {
-        if (SelectedSection == NavigationSection.Practice)
-            return;
-
-        if (_playback.State != PlaybackState.Playing)
-            return;
-
-        if (_playbackSoundNotes.Count == 0)
-            return;
-
-        _playbackSoundScheduler.ProcessPosition(_playbackSoundNotes, positionMs);
-    }
-
     partial void OnGameWindowTitleContainsChanged(string value)
     {
         _settings.Settings.GameWindowTitleContains = value;
@@ -6351,8 +6387,15 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
         window.Width = Math.Clamp(width, minWindowWidth, maxWindowWidth);
         window.Height = Math.Clamp(height, minWindowHeight, maxWindowHeight);
+        window.Topmost = WindowAlwaysOnTop;
 
         WindowPlacementHelper.CenterOnLaunchAnchor(window, _gameWindow);
+    }
+
+    partial void OnWindowAlwaysOnTopChanged(bool value)
+    {
+        _settings.Settings.WindowAlwaysOnTop = value;
+        ScheduleSettingsSave();
     }
 
     private static double? SafeCoord(double value) =>

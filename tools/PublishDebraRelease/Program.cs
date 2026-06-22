@@ -55,6 +55,18 @@ if (string.IsNullOrWhiteSpace(version) || string.IsNullOrWhiteSpace(notesArg))
     return 1;
 }
 
+var projectRoot = FindProjectRoot();
+if (projectRoot is not null)
+{
+    var csprojVersion = ReadCsprojVersion(projectRoot);
+    if (!string.Equals(NormalizeVersionLabel(csprojVersion), NormalizeVersionLabel(version), StringComparison.Ordinal))
+    {
+        Console.Error.WriteLine($"Version mismatch: --version {version} but csproj <Version> is {csprojVersion}.");
+        Console.Error.WriteLine("Bump src/WhereWindsMeetMidiPlayer/WhereWindsMeetMidiPlayer.csproj first.");
+        return 1;
+    }
+}
+
 if (string.IsNullOrWhiteSpace(downloadUrl) && string.IsNullOrWhiteSpace(archive))
 {
     Console.Error.WriteLine("Provide --archive <path> or --download-url <https://...> for large portable builds.");
@@ -160,4 +172,41 @@ static string? FindBundledConfigPath()
     }
 
     return null;
+}
+
+static string? FindProjectRoot()
+{
+    var dir = Directory.GetCurrentDirectory();
+    for (var i = 0; i < 10; i++)
+    {
+        var csproj = Path.Combine(dir, "src", "WhereWindsMeetMidiPlayer", "WhereWindsMeetMidiPlayer.csproj");
+        if (File.Exists(csproj))
+            return dir;
+        var parent = Directory.GetParent(dir);
+        if (parent is null)
+            break;
+        dir = parent.FullName;
+    }
+
+    return null;
+}
+
+static string ReadCsprojVersion(string projectRoot)
+{
+    var csproj = Path.Combine(projectRoot, "src", "WhereWindsMeetMidiPlayer", "WhereWindsMeetMidiPlayer.csproj");
+    var content = File.ReadAllText(csproj);
+    var match = System.Text.RegularExpressions.Regex.Match(content, "<Version>\\s*([^<\\s]+)\\s*</Version>");
+    if (!match.Success)
+        throw new InvalidOperationException("Could not read <Version> from csproj.");
+    return match.Groups[1].Value.Trim();
+}
+
+static string NormalizeVersionLabel(string value)
+{
+    var parts = value.Trim().Split('.', StringSplitOptions.RemoveEmptyEntries);
+    if (parts.Length >= 3)
+        return $"{parts[0]}.{parts[1]}.{parts[2]}";
+    if (parts.Length == 2)
+        return $"{parts[0]}.{parts[1]}.0";
+    return parts.Length == 1 ? $"{parts[0]}.0.0" : value.Trim();
 }

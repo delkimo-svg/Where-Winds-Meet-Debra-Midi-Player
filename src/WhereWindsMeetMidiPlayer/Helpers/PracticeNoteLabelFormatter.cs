@@ -42,6 +42,29 @@ public static class PracticeNoteLabelFormatter
         return Solfege[pitch];
     }
 
+    public static (string Primary, string Secondary) SplitNoteName(int midiNote, PracticeNoteLabelMode mode)
+    {
+        switch (mode)
+        {
+            case PracticeNoteLabelMode.Solfege:
+                var solfege = FormatSolfege(midiNote);
+                var sharpIndex = solfege.IndexOf('#');
+                if (sharpIndex > 0)
+                    return (solfege[..sharpIndex], "♯");
+                return (solfege, string.Empty);
+
+            case PracticeNoteLabelMode.LetterNames:
+                var letter = FormatLetter(midiNote);
+                var letterSharp = letter.IndexOf('#');
+                if (letterSharp > 0)
+                    return (letter[..letterSharp], "♯");
+                return (letter, string.Empty);
+
+            default:
+                return (string.Empty, string.Empty);
+        }
+    }
+
     public static string FormatLetter(int midiNote) =>
         NoteNames.PitchClassName(midiNote);
 

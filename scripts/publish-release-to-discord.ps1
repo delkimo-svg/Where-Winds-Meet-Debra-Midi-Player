@@ -1,88 +1,98 @@
-# Builds portable (optional), packs RAR (optional), publishes to Discord via the catalogue bot.
+# Build portable, pack archive, publish to Discord (manifest + optional announcement).
 param(
-    [string]$Version = '1.0.0',
-    [string]$NotesFile = '',
-    [string]$ArchivePath = '',
-    [string]$DownloadUrl = '',
-    [string]$ConfigPath = '',
+    [string]$Version,
+    [string]$NotesFile,
+    [string]$ArchivePath,
+    [string]$DownloadUrl,
     [switch]$SkipBuild,
     [switch]$UpdateConfig,
-    [switch]$ManifestOnly
+    [switch]$ManifestOnly,
+    [ValidateSet('zip', 'rar')]
+    [string]$Format = 'zip'
 )
 
 $ErrorActionPreference = 'Stop'
-$root = Split-Path $PSScriptRoot -Parent
-$proj = Join-Path $root 'src\WhereWindsMeetMidiPlayer\WhereWindsMeetMidiPlayer.csproj'
-$publishTool = Join-Path $root 'tools\PublishDebraRelease\PublishDebraRelease.csproj'
+. "$PSScriptRoot\ReleaseCommon.ps1"
 
-if (-not $SkipBuild) {
-    Write-Host 'Building portable release...'
-    & (Join-Path $PSScriptRoot 'build-release.ps1') -Target portable
-}
-
-if (-not $ConfigPath) {
-    $ConfigPath = Join-Path $root 'discord-catalogue.json'
-}
-
-if (-not $ArchivePath) {
-    $portable = Join-Path $root 'release\portable'
-    $zipName = "DebraMidiPlayer-$Version-portable.zip"
-    $ArchivePath = Join-Path $root "release\$zipName"
-
-    if (-not (Test-Path $ArchivePath)) {
-        $sevenZip = @(
-            "${env:ProgramFiles}\7-Zip\7z.exe",
-            "${env:ProgramFiles(x86)}\7-Zip\7z.exe"
-        ) | Where-Object { Test-Path $_ } | Select-Object -First 1
-
-        if ($sevenZip) {
-            Write-Host "Creating ZIP via 7-Zip: $zipName (use WinRAR for .rar if you prefer)"
-            if (Test-Path $ArchivePath) { Remove-Item $ArchivePath -Force }
-            & $sevenZip a -tzip -mx5 $ArchivePath "$portable\*"
-            if ($LASTEXITCODE -ne 0) { throw "7-Zip failed with exit code $LASTEXITCODE" }
-        }
-        else {
-            Write-Host '7-Zip not found. Create the archive manually, then pass -ArchivePath.'
-            Write-Host "  WinRAR: release\DebraMidiPlayer-$Version-portable.rar from release\portable\*"
-            exit 1
-        }
-    }
+$root = Get-ProjectRoot
+if ([string]::IsNullOrWhiteSpace($Version)) {
+    $Version = Get-ProjectVersion -Root $root
+    Write-Host "Using project version: $Version"
+} else {
+    Assert-VersionMatchesProject -Version $Version -Root $root
 }
 
 if (-not $NotesFile) {
-    $NotesFile = Join-Path $root 'RELEASE_NOTES.md'
-    if (-not (Test-Path $NotesFile)) {
-        $NotesFile = Join-Path $root "RELEASE_NOTES_$Version.md"
-        @(
-            "## Debra Midi Player $Version",
-            '',
-            '- Portable update',
-            '- Extract over your existing folder'
-        ) | Set-Content $NotesFile -Encoding UTF8
-        Write-Host "Created default notes: $NotesFile"
+    $NotesFile = Get-ReleaseNotesPath -Version $Version -Root $root
+} elseif (-not (Test-Path $NotesFile)) {
+    throw "Notes file not found: $NotesFile"
+}
+
+$configPath = Join-Path $root 'discord-catalogue.json'
+if (-not (Test-Path $configPath)) {
+    throw "Not found: $configPath — copy discord-catalogue.json.example and configure your bot."
+}
+
+if ($ManifestOnly -and [string]::IsNullOrWhiteSpace($DownloadUrl)) {
+    throw '-ManifestOnly requires -DownloadUrl (GitHub release asset URL).'
+}
+
+if (-not $SkipBuild -and -not $ManifestOnly) {
+    Write-Host "Building portable for v$Version..."
+    & (Join-Path $root 'scripts\build-release.ps1') -Target portable
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+}
+
+if (-not $ManifestOnly) {
+    Assert-PortableExeVersion -ExpectedVersion $Version -Root $root
+}
+
+$resolvedArchive = $null
+if (-not [string]::IsNullOrWhiteSpace($ArchivePath)) {
+    $resolvedArchive = $ArchivePath
+    if (-not (Test-Path $resolvedArchive)) {
+        throw "Archive not found: $resolvedArchive"
+    }
+} elseif (-not $ManifestOnly -and [string]::IsNullOrWhiteSpace($DownloadUrl)) {
+    Write-Host "Packing portable archive ($Format)..."
+    $resolvedArchive = Pack-PortableArchive -Version $Version -Root $root -Format $Format
+    $mb = [math]::Round((Get-Item $resolvedArchive).Length / 1MB, 1)
+    Write-Host "  Archive: $resolvedArchive ($mb MB)"
+
+    if ($mb -gt 24) {
+        Write-Host ''
+        Write-Host 'Archive exceeds Discord bot upload limit (~25 MB). Upload to GitHub Releases instead:' -ForegroundColor Yellow
+        Write-Host "  .\scripts\publish-github-release.ps1 -Version $Version -SkipBuild" -ForegroundColor Yellow
+        Write-Host "  Then re-run with -SkipBuild -ManifestOnly -DownloadUrl <asset-url> -UpdateConfig" -ForegroundColor Yellow
+        throw 'Archive too large for Discord bot upload.'
     }
 }
 
-$archiveMb = if (Test-Path $ArchivePath) { [math]::Round((Get-Item $ArchivePath).Length / 1MB, 1) } else { 0 }
-if ($archiveMb -gt 25 -and -not $DownloadUrl) {
-    Write-Host ""
-    Write-Host "Archive is $archiveMb MB - too large for Discord bot uploads (limit ~25 MB)." -ForegroundColor Yellow
-    Write-Host "1. Upload release\DebraMidiPlayer-$Version-portable.zip to GitHub Releases, Google Drive, Mega, etc."
-    Write-Host "2. Copy the direct HTTPS download link"
-    Write-Host "3. Re-run with -DownloadUrl and -UpdateConfig"
-    Write-Host ""
-    exit 1
-}
-
-Write-Host 'Publishing to Discord...'
-$toolArgs = @(
+$publishArgs = @(
+    'run', '--project', (Join-Path $root 'tools\PublishDebraRelease'), '-c', 'Release', '--',
     '--version', $Version,
     '--notes', $NotesFile,
-    '--config', $ConfigPath
+    '--config', $configPath
 )
-if ($ArchivePath) { $toolArgs += @('--archive', $ArchivePath) }
-if ($DownloadUrl) { $toolArgs += @('--download-url', $DownloadUrl) }
-if ($UpdateConfig) { $toolArgs += '--update-config' }
-if ($ManifestOnly) { $toolArgs += '--manifest-only' }
 
-dotnet run --project $publishTool -c Release -- @toolArgs
+if ($UpdateConfig) { $publishArgs += '--update-config' }
+if ($ManifestOnly) { $publishArgs += '--manifest-only' }
+if (-not [string]::IsNullOrWhiteSpace($DownloadUrl)) { $publishArgs += @('--download-url', $DownloadUrl) }
+if ($resolvedArchive) { $publishArgs += @('--archive', $resolvedArchive) }
+
+Write-Host 'Publishing to Discord...'
+dotnet @publishArgs
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+if ($UpdateConfig) {
+    Sync-DiscordCatalogueToPortable -Root $root
+    if ($resolvedArchive -and -not $ManifestOnly) {
+        Write-Host 'Re-packing portable archive with updated discord-catalogue.json...'
+        $resolvedArchive = Pack-PortableArchive -Version $Version -Root $root -Format $Format
+    }
+}
+
+Write-Host ''
+Write-Host 'Discord publish complete.'
+Write-Host "  Ship release\portable\ or $resolvedArchive to players."
+Write-Host "  Header version must show v$Version after they replace DebraMidiPlayer.exe."

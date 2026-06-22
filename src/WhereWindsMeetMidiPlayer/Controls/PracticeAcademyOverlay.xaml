@@ -65,10 +65,10 @@
                     </Border>
 
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                        <Border Width="10" Height="10" CornerRadius="5" Background="#4A9EFF" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <Border Width="10" Height="10" CornerRadius="5" Background="#4ADE80" Margin="0,0,6,0" VerticalAlignment="Center"/>
                         <TextBlock Text="{Binding DataContext.Ui.AcademyHandRightShort, RelativeSource={RelativeSource AncestorType=Window}}"
                                    FontSize="10" Foreground="{DynamicResource Brush.TextMuted}" Margin="0,0,14,0"/>
-                        <Border Width="10" Height="10" CornerRadius="5" Background="#F59E0B" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <Border Width="10" Height="10" CornerRadius="5" Background="#4A9EFF" Margin="0,0,6,0" VerticalAlignment="Center"/>
                         <TextBlock Text="{Binding DataContext.Ui.AcademyHandLeftShort, RelativeSource={RelativeSource AncestorType=Window}}"
                                    FontSize="10" Foreground="{DynamicResource Brush.TextMuted}"/>
                     </StackPanel>

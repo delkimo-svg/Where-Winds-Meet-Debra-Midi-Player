@@ -141,6 +141,15 @@ public static class UiText
     public const string SettingsAutoPlayNext = "Settings_AutoPlayNext";
     public const string SettingsAutoPlayNextHint = "Settings_AutoPlayNextHint";
     public const string SettingsKeyLayout = "Settings_KeyLayout";
+    public const string SettingsNoteKeys = "Settings_NoteKeys";
+    public const string SettingsNoteKeysHint = "Settings_NoteKeysHint";
+    public const string SettingsNoteKeysReset = "Settings_NoteKeysReset";
+    public const string SettingsNoteKeysPresetQwerty = "Settings_NoteKeysPresetQwerty";
+    public const string SettingsNoteKeysPresetQwertyDesc = "Settings_NoteKeysPresetQwertyDesc";
+    public const string SettingsNoteKeysPresetQwertz = "Settings_NoteKeysPresetQwertz";
+    public const string SettingsNoteKeysPresetQwertzDesc = "Settings_NoteKeysPresetQwertzDesc";
+    public const string SettingsNoteKeysPresetAzerty = "Settings_NoteKeysPresetAzerty";
+    public const string SettingsNoteKeysPresetAzertyDesc = "Settings_NoteKeysPresetAzertyDesc";
     public const string SettingsKeyModeHint = "Settings_KeyModeHint";
     public const string SettingsNoteDelayHint = "Settings_NoteDelayHint";
     public const string SettingsChordRollHint = "Settings_ChordRollHint";
@@ -182,6 +191,7 @@ public static class UiText
     public const string KeybindEditorResetDone = "KeybindEditor_ResetDone";
     public const string KeybindEditorNameRequired = "KeybindEditor_NameRequired";
     public const string KeybindEditorSaved = "KeybindEditor_Saved";
+    public const string KeybindEditorPresetApplied = "KeybindEditor_PresetApplied";
     public const string ChromeEditKeybinds = "Chrome_EditKeybinds";
     public const string SettingsTheme = "Settings_Theme";
     public const string ThemeSakura = "Theme_Sakura";
@@ -277,6 +287,8 @@ public static class UiText
     public const string HeaderDiscordTooltip = "Header_Discord_Tooltip";
     public const string HeaderPatreon = "Header_Patreon";
     public const string HeaderPatreonTooltip = "Header_Patreon_Tooltip";
+    public const string HeaderAlwaysOnTopLabel = "Header_AlwaysOnTop_Label";
+    public const string HeaderAlwaysOnTopTooltip = "Header_AlwaysOnTop_Tooltip";
     public const string HeaderUpdate = "Header_Update";
     public const string HeaderUpdateTooltip = "Header_Update_Tooltip";
     public const string SettingsReleaseManifest = "Settings_ReleaseManifest";

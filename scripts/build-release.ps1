@@ -7,6 +7,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 $proj = Join-Path $root 'src\WhereWindsMeetMidiPlayer\WhereWindsMeetMidiPlayer.csproj'
+. "$PSScriptRoot\ReleaseCommon.ps1"
 
 $essentialAssets = @(
     'debra-36-keys.json',
@@ -110,6 +111,9 @@ function Sync-PortableFromStaging([string]$stagingDir, [string]$portableDir) {
 
     $assetsSrc = Join-Path $stagingDir 'Assets'
     $assetsDest = Join-Path $portableDir 'Assets'
+    if (Test-Path $assetsDest) {
+        Remove-Item $assetsDest -Recurse -Force
+    }
     if (Test-Path $assetsSrc) {
         New-Item -ItemType Directory -Force -Path $assetsDest | Out-Null
         & robocopy $assetsSrc $assetsDest /E /IS /IT /NFL /NDL /NJH /NJS /nc /ns /np | Out-Null
@@ -141,6 +145,7 @@ if ($Target -in 'portable', 'both', 'all') {
     dotnet publish $proj -c Release /p:PublishProfile=Win64-Portable.pubxml "/p:PublishDir=..\..\release\portable-staging\"
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     Sync-PortableFromStaging $staging $portable
+    Assert-PortableExeVersion -ExpectedVersion (Get-ProjectVersion -Root $root) -Root $root
     Show-Size $portable
 }
 

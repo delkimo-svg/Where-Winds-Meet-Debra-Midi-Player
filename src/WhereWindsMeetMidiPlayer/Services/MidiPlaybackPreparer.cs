@@ -1,5 +1,4 @@
 using WhereWindsMeetMidiPlayer.Models;
-using WhereWindsMeetMidiPlayer.Services.Audio;
 
 namespace WhereWindsMeetMidiPlayer.Services;
 
@@ -43,14 +42,11 @@ public sealed class MidiPlaybackPreparer
             request.ChordRollDelayMs,
             request.NoteDelayMs);
 
-        var soundSchedule = SoundScheduleBuilder.FromNormalizedNotes(mapped);
-
         return new MidiPrepareResult
         {
             Parsed = parsed,
             Ranged = ranged,
             Schedule = schedule,
-            SoundSchedule = soundSchedule,
             AppliedTransposeSemitones = totalTranspose,
             Tracks = _midiParser.GetTracks(filePath)
         };
@@ -94,7 +90,6 @@ public sealed class MidiPrepareResult
     public MidiParseResult Parsed { get; init; } = new();
     public NoteRangeResult Ranged { get; init; } = new();
     public List<ScheduledNote> Schedule { get; init; } = [];
-    public List<SoundChartNote> SoundSchedule { get; init; } = [];
     public int AppliedTransposeSemitones { get; init; }
     public IReadOnlyList<MidiTrackInfo> Tracks { get; init; } = [];
 }

@@ -34,6 +34,8 @@
     <Color x:Key="CardBackground">#E625282E</Color>
     <Color x:Key="SettingsShellBackground">#D81C1E22</Color>
     <Color x:Key="HeaderChipBackground">#E6282A30</Color>
+    <Color x:Key="HeaderMetaText">#E8D5A8</Color>
+    <Color x:Key="HeaderMetaMuted">#B8AA92</Color>
     <Color x:Key="ChromeButtonForeground">#E8D5A8</Color>
     <Color x:Key="ChromeButtonHoverBackground">#3A3835</Color>
     <Color x:Key="GoldGradientTop">#D4B06A</Color>
@@ -97,6 +99,8 @@
     <SolidColorBrush x:Key="Brush.CardBackground" Color="{StaticResource CardBackground}"/>
     <SolidColorBrush x:Key="Brush.SettingsShellBackground" Color="{StaticResource SettingsShellBackground}"/>
     <SolidColorBrush x:Key="Brush.HeaderChipBackground" Color="{StaticResource HeaderChipBackground}"/>
+    <SolidColorBrush x:Key="Brush.HeaderMetaText" Color="{StaticResource HeaderMetaText}"/>
+    <SolidColorBrush x:Key="Brush.HeaderMetaMuted" Color="{StaticResource HeaderMetaMuted}"/>
     <SolidColorBrush x:Key="Brush.InputBackground" Color="{StaticResource BgElevated}"/>
     <SolidColorBrush x:Key="Brush.NavIcon" Color="{StaticResource NavIcon}"/>
     <SolidColorBrush x:Key="Brush.NavText" Color="{StaticResource NavText}"/>

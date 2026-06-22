@@ -4,8 +4,8 @@ namespace WhereWindsMeetMidiPlayer.Helpers;
 
 public static class AcademyHandColors
 {
-    public const string RightHandHex = "#4A9EFF";
-    public const string LeftHandHex = "#F59E0B";
+    public const string LeftHandHex = "#4A9EFF";
+    public const string RightHandHex = "#4ADE80";
 
     public static string ForHand(AcademyHand hand) =>
         PracticeHandColorResolver.ForHand(hand);

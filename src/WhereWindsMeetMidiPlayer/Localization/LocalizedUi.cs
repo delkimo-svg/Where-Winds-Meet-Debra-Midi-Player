@@ -125,6 +125,9 @@ public sealed partial class LocalizedUi : ObservableObject
     public string SettingsAutoPlayNext => L.T(UiText.SettingsAutoPlayNext);
     public string SettingsAutoPlayNextHint => L.T(UiText.SettingsAutoPlayNextHint);
     public string SettingsKeyLayout => L.T(UiText.SettingsKeyLayout);
+    public string SettingsNoteKeys => L.T(UiText.SettingsNoteKeys);
+    public string SettingsNoteKeysHint => L.T(UiText.SettingsNoteKeysHint);
+    public string SettingsNoteKeysReset => L.T(UiText.SettingsNoteKeysReset);
     public string SettingsKeyModeHint => L.T(UiText.SettingsKeyModeHint);
     public string SettingsNoteMappingMode => L.T(UiText.SettingsNoteMappingMode);
     public string SettingsOpenKeymaps => L.T(UiText.SettingsOpenKeymaps);
@@ -196,6 +199,8 @@ public sealed partial class LocalizedUi : ObservableObject
     public string HeaderDiscordTooltip => L.T(UiText.HeaderDiscordTooltip);
     public string HeaderPatreon => L.T(UiText.HeaderPatreon);
     public string HeaderPatreonTooltip => L.T(UiText.HeaderPatreonTooltip);
+    public string HeaderAlwaysOnTopLabel => L.T(UiText.HeaderAlwaysOnTopLabel);
+    public string HeaderAlwaysOnTopTooltip => L.T(UiText.HeaderAlwaysOnTopTooltip);
     public string HeaderUpdate => L.T(UiText.HeaderUpdate);
     public string HeaderUpdateTooltip => L.T(UiText.HeaderUpdateTooltip);
     public string SettingsReleaseManifest => L.T(UiText.SettingsReleaseManifest);

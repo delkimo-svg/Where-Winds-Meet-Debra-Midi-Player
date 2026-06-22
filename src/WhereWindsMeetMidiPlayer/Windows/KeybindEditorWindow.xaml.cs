@@ -9,10 +9,14 @@ namespace WhereWindsMeetMidiPlayer.Windows;
 
 public partial class KeybindEditorWindow : Window
 {
-    public KeybindEditorWindow(KeyMappingService keyMapping, string? currentFileName, Action<string> onSaved)
+    public KeybindEditorWindow(
+        KeyMappingService keyMapping,
+        string? currentFileName,
+        string? activePresetId,
+        Action<string> onSaved)
     {
         InitializeComponent();
-        DataContext = new KeybindEditorViewModel(keyMapping, currentFileName, onSaved);
+        DataContext = new KeybindEditorViewModel(keyMapping, currentFileName, activePresetId, onSaved);
         ThemeService.ThemeChanged += OnThemeChanged;
         Localization.LocalizationService.Instance.LanguageChanged += OnLanguageChanged;
         Closed += (_, _) =>

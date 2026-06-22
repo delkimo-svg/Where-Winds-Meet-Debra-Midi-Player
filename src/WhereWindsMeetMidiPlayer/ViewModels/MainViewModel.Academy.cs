@@ -46,6 +46,7 @@ public partial class MainViewModel
 
     private AcademyLesson? _armedAcademyLesson;
     private AcademyHand _activeAcademyHand = AcademyHand.Any;
+    private AcademyLessonKind _activeAcademyLessonKind = AcademyLessonKind.Guide;
     private string? _lastPreviewedAcademyLessonId;
     private bool _suppressAcademyPracticeSongReload;
     private AcademyLesson? _academyTourLesson;
@@ -93,9 +94,7 @@ public partial class MainViewModel
             _suppressAcademyPracticeSongReload = false;
             PracticeTitle = song.Title;
             await ReloadPracticeChartAsync(song).ConfigureAwait(true);
-            ApplyAcademyHandTrackColors(lesson.Hand);
-            ApplyAcademyTrackSelection(lesson);
-            RefreshPracticeHandKeyPreview();
+            ApplyAcademyLessonToPracticeChart(lesson);
             IsPracticeLessonArmed = false;
             _lastPreviewedAcademyLessonId = lesson.Id;
             OnPropertyChanged(nameof(PracticeFallingNoteLabelMode));
@@ -249,8 +248,50 @@ public partial class MainViewModel
             option.IsEnabled = enabled.Contains(option.TrackIndex);
     }
 
-    private void ApplyAcademyHandTrackColors(AcademyHand hand)
+    private void ApplyAcademyLessonToPracticeChart(AcademyLesson lesson)
     {
+        _activeAcademyHand = lesson.Hand;
+        _activeAcademyLessonKind = lesson.Kind;
+        OnPropertyChanged(nameof(ShowAcademyFingerLabelsOnNotes));
+        OnPropertyChanged(nameof(PracticeFallingNoteLabelMode));
+
+        ApplyAcademyHandTrackColors(lesson.Hand, lesson.Kind);
+        ApplyAcademyTrackSelection(lesson);
+        ApplyPracticeEnabledTracks();
+
+        if (_practiceSession.Notes.Count == 0)
+            return;
+
+        var colored = ColorizePracticeVisualNotes(_practiceSession.Notes.ToList());
+        _practiceSession.Load(colored, _practiceSession.DurationMs);
+        RefreshPracticeHandKeyPreview();
+        OnPropertyChanged(nameof(ShowPracticeHandTrackPicker));
+        RefreshPracticeFallingNoteLayout();
+    }
+
+    private void ApplyAcademyHandTrackColors(AcademyHand hand, AcademyLessonKind kind)
+    {
+        if (kind == AcademyLessonKind.Song)
+        {
+            if (PracticeTrackOptions.Count == 2)
+            {
+                var notes = _practiceSession.Notes;
+                var (right, left) = PracticeHandTrackLayout.Classify(
+                    PracticeTrackOptions[0],
+                    PracticeTrackOptions[1],
+                    notes.Count > 0 ? notes : null);
+                PracticeHandTrackLayout.ApplyHandColors(
+                    right,
+                    left,
+                    PracticeHandColorResolver.RightHandHex,
+                    PracticeHandColorResolver.LeftHandHex);
+                _practiceRightHandTrack = right;
+                _practiceLeftHandTrack = left;
+            }
+
+            return;
+        }
+
         if (hand is AcademyHand.Left or AcademyHand.Right)
         {
             foreach (var option in PracticeTrackOptions)
@@ -266,6 +307,8 @@ public partial class MainViewModel
                 PracticeTrackOptions[1],
                 notes.Count > 0 ? notes : null);
             PracticeHandTrackLayout.ApplyHandColors(right, left);
+            _practiceRightHandTrack = right;
+            _practiceLeftHandTrack = left;
         }
     }
 
@@ -330,6 +373,9 @@ public partial class MainViewModel
         IsPracticeLessonArmed = false;
         _armedAcademyLesson = null;
         _activeAcademyHand = AcademyHand.Any;
+        _activeAcademyLessonKind = AcademyLessonKind.Guide;
+        OnPropertyChanged(nameof(ShowAcademyFingerLabelsOnNotes));
+        OnPropertyChanged(nameof(PracticeFallingNoteLabelMode));
         _lastPreviewedAcademyLessonId = null;
         AcademyGuideText = string.Empty;
         EndAcademyTour();
@@ -338,7 +384,6 @@ public partial class MainViewModel
         PracticeCountdownDisplay = string.Empty;
         OnPropertyChanged(nameof(ShowPracticeCenterPlay));
         OnPropertyChanged(nameof(ShowPracticeHandPreview));
-        OnPropertyChanged(nameof(PracticeFallingNoteLabelMode));
         OnPropertyChanged(nameof(PracticeNoteLabelMode));
         RefreshPracticeFallingNoteLayout();
     }

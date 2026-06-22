@@ -13,8 +13,34 @@ public static class AppReleaseInfo
 
     private static Version ResolveVersion()
     {
-        var asm = Assembly.GetExecutingAssembly().GetName().Version;
-        return asm ?? new Version(1, 0, 0);
+        try
+        {
+            var exePath = Environment.ProcessPath;
+            if (!string.IsNullOrWhiteSpace(exePath))
+            {
+                var fileVersion = System.Diagnostics.FileVersionInfo.GetVersionInfo(exePath).FileVersion;
+                if (!string.IsNullOrWhiteSpace(fileVersion)
+                    && Version.TryParse(NormalizeVersion(fileVersion), out var fromExe))
+                    return fromExe;
+            }
+        }
+        catch
+        {
+            // Fall back to assembly metadata.
+        }
+
+        var asm = Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly();
+
+        var informational = asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+        if (!string.IsNullOrWhiteSpace(informational))
+        {
+            var semver = informational.Split('+', 2)[0];
+            if (Version.TryParse(NormalizeVersion(semver), out var fromInfo))
+                return fromInfo;
+        }
+
+        var asmVersion = asm.GetName().Version;
+        return asmVersion ?? new Version(1, 0, 0);
     }
 
     public static bool IsNewerThanCurrent(string? remoteVersion)

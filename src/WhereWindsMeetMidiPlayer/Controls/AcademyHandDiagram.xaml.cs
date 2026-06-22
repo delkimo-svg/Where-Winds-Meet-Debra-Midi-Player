@@ -14,8 +14,8 @@ public partial class AcademyHandDiagram
             typeof(AcademyHandDiagram),
             new PropertyMetadata(AcademyHand.Both, OnHighlightHandChanged));
 
-    private static readonly Color RightHandColor = Color.FromRgb(74, 158, 255);
-    private static readonly Color LeftHandColor = Color.FromRgb(245, 158, 11);
+    private static readonly Color RightHandColor = Color.FromRgb(74, 222, 128);
+    private static readonly Color LeftHandColor = Color.FromRgb(74, 158, 255);
 
     public AcademyHandDiagram()
     {

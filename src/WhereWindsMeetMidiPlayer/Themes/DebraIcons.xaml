@@ -11,6 +11,7 @@
     <Geometry x:Key="Icon.Note">M8,4 H14 L18,8 V20 H6 V4 Z M8,6 V18 H16 V9 H13 V6 Z</Geometry>
     <Geometry x:Key="Icon.Trash">M6,2 H14 L15,4 H20 V6 H4 V20 H20 V6 H6 V2 Z M7,7 H17 V18 H7 Z M9,9 V16 H10 V9 Z M12,9 V16 H13 V9 Z M15,9 V16 H16 V9 Z</Geometry>
     <Geometry x:Key="Icon.Favorite">M12,19 L5.5,12 C4.6,11.1 4.2,9.9 4.2,8.8 A4.2,4.2 0 0,1 12,6.2 A4.2,4.2 0 0,1 19.8,8.8 C19.8,9.9 19.4,11.1 18.5,12 Z</Geometry>
+    <Geometry x:Key="Icon.Pin">M12,2 C10.9,2 10,2.9 10,4 V6.5 C7.5,7.5 6,9.5 6,12 V14 H18 V12 C18,9.5 16.5,7.5 14,6.5 V4 C14,2.9 13.1,2 12,2 Z M11,16 H13 V22 H11 Z</Geometry>
 
     <Style x:Key="SidebarIcon" TargetType="Path">
         <Setter Property="Width" Value="18"/>

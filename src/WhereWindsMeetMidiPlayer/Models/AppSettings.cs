@@ -5,6 +5,8 @@ namespace WhereWindsMeetMidiPlayer.Models;
 public sealed class AppSettings
 {
     public string KeyMappingFile { get; set; } = "debra-36-keys.json";
+    /// <summary>Last selected keyboard layout preset (qwerty, qwertz, azerty). Empty when using a custom map.</summary>
+    public string? KeyboardLayoutPresetId { get; set; } = "qwerty";
     public bool Shuffle { get; set; }
     public bool Repeat { get; set; }
     public int Volume { get; set; } = 64;
@@ -29,9 +31,9 @@ public sealed class AppSettings
     /// <summary>User dismissed the first-visit Practice guided tour.</summary>
     public bool PracticeTourDismissed { get; set; }
     /// <summary>Falling-note / hand highlight color for the right hand.</summary>
-    public string PracticeRightHandColorHex { get; set; } = "#4A9EFF";
+    public string PracticeRightHandColorHex { get; set; } = "#4ADE80";
     /// <summary>Falling-note / hand highlight color for the left hand.</summary>
-    public string PracticeLeftHandColorHex { get; set; } = "#F59E0B";
+    public string PracticeLeftHandColorHex { get; set; } = "#4A9EFF";
     public NoteMappingMode DefaultNoteMappingMode { get; set; } = NoteMappingMode.Chromatic36;
     public bool SmartTranspose { get; set; } = true;
     public bool StrictNoteRange { get; set; }
@@ -59,6 +61,9 @@ public sealed class AppSettings
 
     /// <summary>Library/catalogue share of the left+playlist pair (0.06–0.94). Playlist gets the remainder.</summary>
     public double MainPanelLeftRatio { get; set; } = 0.5;
+
+    /// <summary>Keep the main window above other applications.</summary>
+    public bool WindowAlwaysOnTop { get; set; }
 
     /// <summary>Game process for attachment (e.g. wwm.exe) — direct keyboard injection target.</summary>
     public string TargetProcessName { get; set; } = "wwm.exe";

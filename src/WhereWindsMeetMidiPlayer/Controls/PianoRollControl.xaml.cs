@@ -34,6 +34,9 @@ public partial class PianoRollControl : UserControl
         public required TextBlock TipLabel { get; init; }
         public TextBlock? KeyboardModifierLabel { get; init; }
         public TextBlock? KeyboardPlusLabel { get; init; }
+        public TextBlock? TipSecondaryLabel { get; init; }
+        public TextBlock? FingerLabel { get; init; }
+        public Border? FingerBadge { get; init; }
         public bool CenteredOnNoteLabel { get; init; }
         public bool TipOverlayLabel { get; init; }
         public bool KeyboardStackLabel { get; init; }
@@ -47,6 +50,7 @@ public partial class PianoRollControl : UserControl
 
     private const double DefaultTipFontSize = 8;
     private const double KeyboardTipFontSize = DefaultTipFontSize + 4;
+    private const double AnchorLabelHeight = 28;
     private const double NoteCornerRadius = 8;
     private static readonly CornerRadius NoteCornerFull = new(NoteCornerRadius);
     private static readonly CornerRadius NoteCornerTop = new(NoteCornerRadius, NoteCornerRadius, 0, 0);
@@ -142,11 +146,11 @@ public partial class PianoRollControl : UserControl
 
     public static readonly DependencyProperty RightHandColorHexProperty =
         DependencyProperty.Register(nameof(RightHandColorHex), typeof(string), typeof(PianoRollControl),
-            new PropertyMetadata("#4A9EFF", OnHandColorHexChanged));
+            new PropertyMetadata("#4ADE80", OnHandColorHexChanged));
 
     public static readonly DependencyProperty LeftHandColorHexProperty =
         DependencyProperty.Register(nameof(LeftHandColorHex), typeof(string), typeof(PianoRollControl),
-            new PropertyMetadata("#F59E0B", OnHandColorHexChanged));
+            new PropertyMetadata("#4A9EFF", OnHandColorHexChanged));
 
     public static readonly DependencyProperty HandColorSplitMidiNoteProperty =
         DependencyProperty.Register(nameof(HandColorSplitMidiNote), typeof(int), typeof(PianoRollControl),
@@ -156,8 +160,12 @@ public partial class PianoRollControl : UserControl
         DependencyProperty.Register(nameof(ShowAcademyFingerLabels), typeof(bool), typeof(PianoRollControl),
             new PropertyMetadata(false, OnFallingLabelLayoutChanged));
 
-    private static void OnFallingLabelLayoutChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) =>
-        ((PianoRollControl)d).RebuildNoteBlocks();
+    private static void OnFallingLabelLayoutChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        var control = (PianoRollControl)d;
+        control.RebuildNoteBlocks();
+        control.UpdateKeyboardLabels();
+    }
 
     private static void OnHandColorHexChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) =>
         ((PianoRollControl)d).RebuildNoteBlocks();
@@ -245,8 +253,7 @@ public partial class PianoRollControl : UserControl
         set => SetValue(ShowAcademyFingerLabelsProperty, value);
     }
 
-    private PracticeNoteLabelMode EffectiveFallingLabelMode =>
-        ShowAcademyFingerLabels ? PracticeNoteLabelMode.FingerNumbers : NoteLabelMode;
+    private PracticeNoteLabelMode FallingNoteLabelMode => NoteLabelMode;
 
     private static void OnNoteLabelModeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
@@ -480,37 +487,27 @@ public partial class PianoRollControl : UserControl
     {
         // Always use styled note bodies (gradients, sheen, depth). Do not auto-switch to flat blocks —
         // that hid labels and removed the practice falling-note design on typical charts (48+ notes).
-        var fallingMode = EffectiveFallingLabelMode;
-        var useFingerCenter = fallingMode == PracticeNoteLabelMode.FingerNumbers;
-        var useKeyboardStack = fallingMode == PracticeNoteLabelMode.KeyboardKeys;
-        var useTipLabel = fallingMode == PracticeNoteLabelMode.LetterNames
-            || fallingMode == PracticeNoteLabelMode.Solfege;
-        var bodyCorner = useFingerCenter ? NoteCornerFull
-            : useKeyboardStack || useTipLabel ? NoteCornerTop : NoteCornerFull;
+        var labelMode = FallingNoteLabelMode;
+        var showFingerOverlay = ShowAcademyFingerLabels && note.FingerNumber > 0;
+        var useKeyboardStack = labelMode == PracticeNoteLabelMode.KeyboardKeys;
+        var useTipLabel = labelMode == PracticeNoteLabelMode.LetterNames
+            || labelMode == PracticeNoteLabelMode.Solfege;
+        var bodyCorner = useKeyboardStack || useTipLabel ? NoteCornerTop : NoteCornerFull;
 
         var (noteShell, colorBody) = CreateStyledNoteBody(note, bodyCorner);
 
         Grid root;
         Border? labelHost = null;
         Border? labelBadge = null;
+        Border? fingerBadge = null;
         TextBlock tipLabel;
+        TextBlock? tipSecondaryLabel = null;
         TextBlock? keyboardModifierLabel = null;
         TextBlock? keyboardPlusLabel = null;
+        TextBlock? fingerLabel = null;
         var noteBaseColor = ResolveNoteBaseColor(note);
 
-        if (useFingerCenter)
-        {
-            tipLabel = CreateTipTextBlock(13);
-            tipLabel.Text = FormatFallingTipLabel(note);
-            labelBadge = CreateEmbeddedLabelBadge(tipLabel, noteBaseColor, VerticalAlignment.Center);
-            labelBadge.VerticalAlignment = VerticalAlignment.Center;
-            Panel.SetZIndex(labelBadge, 4);
-
-            root = new Grid();
-            root.Children.Add(noteShell);
-            root.Children.Add(labelBadge);
-        }
-        else if (useKeyboardStack)
+        if (useKeyboardStack)
         {
             keyboardModifierLabel = CreateTipTextBlock(KeyboardTipFontSize - 1);
             keyboardPlusLabel = CreateTipTextBlock(KeyboardTipFontSize - 2);
@@ -523,34 +520,86 @@ public partial class PianoRollControl : UserControl
             var labelStack = new StackPanel
             {
                 HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
                 Children = { keyboardModifierLabel, keyboardPlusLabel, tipLabel }
             };
 
-            labelHost = CreateNoteLabelHost(labelStack, minHeight: 0, noteBaseColor);
+            labelHost = CreateNoteLabelHost(labelStack, AnchorLabelHeight, noteBaseColor);
             labelHost.VerticalAlignment = VerticalAlignment.Bottom;
             labelHost.HorizontalAlignment = HorizontalAlignment.Stretch;
-            labelHost.MaxHeight = 34;
+            labelHost.MaxHeight = AnchorLabelHeight;
             Panel.SetZIndex(labelHost, 4);
 
             root = new Grid();
             root.Children.Add(noteShell);
+
+            if (showFingerOverlay)
+            {
+                fingerLabel = CreateTipTextBlock(13);
+                fingerLabel.Text = note.FingerNumber.ToString();
+                fingerBadge = CreateEmbeddedLabelBadge(fingerLabel, noteBaseColor, VerticalAlignment.Center);
+                fingerBadge.VerticalAlignment = VerticalAlignment.Center;
+                Panel.SetZIndex(fingerBadge, 3);
+                root.Children.Add(fingerBadge);
+            }
+
             root.Children.Add(labelHost);
+        }
+        else if (useTipLabel)
+        {
+            tipSecondaryLabel = CreateTipTextBlock(DefaultTipFontSize);
+            tipLabel = CreateTipTextBlock(DefaultTipFontSize + 1);
+            ApplyFallingNameLabel(note, tipLabel, tipSecondaryLabel, labelMode);
+            StyleEmbeddedLabelText(tipLabel, noteBaseColor);
+            StyleEmbeddedLabelText(tipSecondaryLabel, noteBaseColor);
+
+            var labelStack = new StackPanel
+            {
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+                Children = { tipLabel, tipSecondaryLabel }
+            };
+
+            labelHost = CreateNoteLabelHost(labelStack, AnchorLabelHeight, noteBaseColor);
+            labelHost.VerticalAlignment = VerticalAlignment.Bottom;
+            labelHost.HorizontalAlignment = HorizontalAlignment.Stretch;
+            labelHost.MaxHeight = AnchorLabelHeight;
+            Panel.SetZIndex(labelHost, 4);
+
+            root = new Grid();
+            root.Children.Add(noteShell);
+
+            if (showFingerOverlay)
+            {
+                fingerLabel = CreateTipTextBlock(13);
+                fingerLabel.Text = note.FingerNumber.ToString();
+                fingerBadge = CreateEmbeddedLabelBadge(fingerLabel, noteBaseColor, VerticalAlignment.Center);
+                fingerBadge.VerticalAlignment = VerticalAlignment.Center;
+                Panel.SetZIndex(fingerBadge, 3);
+                root.Children.Add(fingerBadge);
+            }
+
+            root.Children.Add(labelHost);
+        }
+        else if (showFingerOverlay)
+        {
+            tipLabel = CreateTipTextBlock(13);
+            tipLabel.Text = note.FingerNumber.ToString();
+            labelBadge = CreateEmbeddedLabelBadge(tipLabel, noteBaseColor, VerticalAlignment.Center);
+            labelBadge.VerticalAlignment = VerticalAlignment.Center;
+            Panel.SetZIndex(labelBadge, 4);
+
+            root = new Grid();
+            root.Children.Add(noteShell);
+            root.Children.Add(labelBadge);
         }
         else
         {
             tipLabel = CreateTipTextBlock(DefaultTipFontSize + 1);
-            tipLabel.Text = FormatFallingTipLabel(note);
-            StyleEmbeddedLabelText(tipLabel, noteBaseColor);
-            labelHost = CreateNoteLabelHost(tipLabel, minHeight: 0, noteBaseColor);
-            labelHost.VerticalAlignment = VerticalAlignment.Bottom;
-            labelHost.HorizontalAlignment = HorizontalAlignment.Stretch;
-            labelHost.Padding = new Thickness(2, 1, 2, 2);
-            labelHost.MaxHeight = 18;
-            Panel.SetZIndex(labelHost, 4);
+            tipLabel.Text = string.Empty;
 
             root = new Grid();
             root.Children.Add(noteShell);
-            root.Children.Add(labelHost);
         }
 
         root.UseLayoutRounding = false;
@@ -568,18 +617,35 @@ public partial class PianoRollControl : UserControl
             ColorBody = colorBody,
             LabelHost = labelHost,
             LabelBadge = labelBadge,
+            FingerBadge = fingerBadge,
             TipLabel = tipLabel,
+            TipSecondaryLabel = tipSecondaryLabel,
+            FingerLabel = fingerLabel,
             KeyboardModifierLabel = keyboardModifierLabel,
             KeyboardPlusLabel = keyboardPlusLabel,
-            CenteredOnNoteLabel = useFingerCenter,
-            TipOverlayLabel = !useFingerCenter && labelHost is not null,
+            CenteredOnNoteLabel = labelBadge is not null && fingerBadge is null && labelHost is null,
+            TipOverlayLabel = labelHost is not null,
             KeyboardStackLabel = useKeyboardStack,
             ScrollTransform = scrollTransform
         };
     }
 
+    private void ApplyFallingNameLabel(
+        PracticeVisualNote note,
+        TextBlock primaryLabel,
+        TextBlock secondaryLabel,
+        PracticeNoteLabelMode mode)
+    {
+        var (primary, secondary) = PracticeNoteLabelFormatter.SplitNoteName(note.NoteNumber, mode);
+        primaryLabel.Text = primary;
+        secondaryLabel.Text = secondary;
+        secondaryLabel.Visibility = string.IsNullOrEmpty(secondary)
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+    }
+
     private string FormatFallingTipLabel(PracticeVisualNote note) =>
-        PracticeNoteLabelFormatter.Format(note, EffectiveFallingLabelMode, GetComboLookup());
+        PracticeNoteLabelFormatter.Format(note, FallingNoteLabelMode, GetComboLookup());
 
     private static void StyleEmbeddedLabelText(TextBlock label, Color noteBaseColor)
     {
@@ -608,8 +674,8 @@ public partial class PianoRollControl : UserControl
             Background = new SolidColorBrush(background),
             BorderBrush = new SolidColorBrush(Color.FromArgb(200, accent.R, accent.G, accent.B)),
             BorderThickness = new Thickness(1.2),
-            CornerRadius = anchorAtTip ? new CornerRadius(4, 4, 0, 0) : new CornerRadius(5),
-            Padding = anchorAtTip ? new Thickness(4, 2, 4, 3) : new Thickness(4, 2, 4, 2),
+            CornerRadius = anchorAtTip ? new CornerRadius(4, 4, 0, 0) : new CornerRadius(NoteCornerRadius),
+            Padding = anchorAtTip ? new Thickness(4, 2, 4, 3) : new Thickness(5, 3, 5, 3),
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = verticalAlignment,
             Margin = anchorAtTip ? new Thickness(0, 0, 0, 0) : new Thickness(0),
@@ -683,6 +749,16 @@ public partial class PianoRollControl : UserControl
                 if (visual.LabelHost is not null)
                     ApplyNoteLabelHostColors(visual.LabelHost, noteColor);
             }
+            else if (visual.TipOverlayLabel &&
+                visual.TipSecondaryLabel is not null &&
+                FallingNoteLabelMode is PracticeNoteLabelMode.LetterNames or PracticeNoteLabelMode.Solfege)
+            {
+                ApplyFallingNameLabel(note, visual.TipLabel, visual.TipSecondaryLabel, FallingNoteLabelMode);
+                StyleEmbeddedLabelText(visual.TipLabel, noteColor);
+                StyleEmbeddedLabelText(visual.TipSecondaryLabel, noteColor);
+                if (visual.LabelHost is not null)
+                    ApplyNoteLabelHostColors(visual.LabelHost, noteColor);
+            }
             else
             {
                 visual.TipLabel.Text = FormatFallingTipLabel(note);
@@ -700,6 +776,24 @@ public partial class PianoRollControl : UserControl
 
                 if (visual.LabelHost is not null)
                     ApplyNoteLabelHostColors(visual.LabelHost, noteColor);
+            }
+
+            if (visual.FingerLabel is not null)
+            {
+                visual.FingerLabel.Text = note.FingerNumber > 0
+                    ? note.FingerNumber.ToString()
+                    : string.Empty;
+                StyleEmbeddedLabelText(visual.FingerLabel, noteColor);
+                if (visual.FingerBadge is not null)
+                {
+                    var accent = noteColor;
+                    visual.FingerBadge.Background = new SolidColorBrush(Color.FromArgb(
+                        215,
+                        (byte)Math.Clamp(accent.R * 0.12 + 10, 0, 255),
+                        (byte)Math.Clamp(accent.G * 0.12 + 8, 0, 255),
+                        (byte)Math.Clamp(accent.B * 0.12 + 12, 0, 255)));
+                    visual.FingerBadge.BorderBrush = new SolidColorBrush(Color.FromArgb(200, accent.R, accent.G, accent.B));
+                }
             }
         }
     }
@@ -754,16 +848,36 @@ public partial class PianoRollControl : UserControl
                     : (keyCombo, modifier, string.Empty);
 
             case PracticeNoteLabelMode.Solfege:
-                return (PracticeNoteLabelFormatter.FormatSolfege(midi), string.Empty, string.Empty);
+                var (solfegePrimary, solfegeSecondary) =
+                    PracticeNoteLabelFormatter.SplitNoteName(midi, PracticeNoteLabelMode.Solfege);
+                return string.IsNullOrEmpty(solfegeSecondary)
+                    ? (solfegePrimary, string.Empty, string.Empty)
+                    : (solfegePrimary, string.Empty, solfegeSecondary);
 
             case PracticeNoteLabelMode.FingerNumbers:
                 return (string.Empty, string.Empty, string.Empty);
 
             default:
                 if (ViewMode == PracticeKeyboardViewMode.FullPiano88)
-                    return (isBlack ? string.Empty : NoteNames.FromMidiNumber(midi), string.Empty, string.Empty);
+                {
+                    if (isBlack)
+                    {
+                        var (pitchPrimary, pitchSecondary) =
+                            PracticeNoteLabelFormatter.SplitNoteName(midi, PracticeNoteLabelMode.LetterNames);
+                        var octave = midi / 12 - 1;
+                        return string.IsNullOrEmpty(pitchSecondary)
+                            ? (NoteNames.FromMidiNumber(midi), string.Empty, string.Empty)
+                            : ($"{pitchPrimary}{octave}", string.Empty, pitchSecondary);
+                    }
 
-                return (NoteNames.PitchClassName(midi), string.Empty, string.Empty);
+                    return (NoteNames.FromMidiNumber(midi), string.Empty, string.Empty);
+                }
+
+                var (letterPrimary, letterSecondary) =
+                    PracticeNoteLabelFormatter.SplitNoteName(midi, PracticeNoteLabelMode.LetterNames);
+                return string.IsNullOrEmpty(letterSecondary)
+                    ? (letterPrimary, string.Empty, string.Empty)
+                    : (letterPrimary, string.Empty, letterSecondary);
         }
     }
 
@@ -827,11 +941,11 @@ public partial class PianoRollControl : UserControl
         var keyText = new TextBlock
         {
             Text = keyLabel,
-            FontSize = isBlack ? 8 : ViewMode == PracticeKeyboardViewMode.FullPiano88 ? 7 : 10,
+            FontSize = isBlack ? 7.5 : ViewMode == PracticeKeyboardViewMode.FullPiano88 ? 7 : 10,
             FontWeight = FontWeights.SemiBold,
             HorizontalAlignment = HorizontalAlignment.Center,
             TextAlignment = TextAlignment.Center,
-            TextTrimming = TextTrimming.CharacterEllipsis
+            TextTrimming = isBlack ? TextTrimming.None : TextTrimming.CharacterEllipsis
         };
 
         var modifierText = new TextBlock
@@ -848,10 +962,12 @@ public partial class PianoRollControl : UserControl
         var degreeText = new TextBlock
         {
             Text = degreeLabel,
-            FontSize = 7,
+            FontSize = isBlack ? 7 : 7,
+            FontWeight = FontWeights.Bold,
             HorizontalAlignment = HorizontalAlignment.Center,
-            Margin = new Thickness(0, 1, 0, 0),
-            Opacity = 0.85,
+            TextAlignment = TextAlignment.Center,
+            Margin = new Thickness(0, 0, 0, 0),
+            Opacity = 0.92,
             Visibility = string.IsNullOrEmpty(degreeLabel) ? Visibility.Collapsed : Visibility.Visible
         };
 
@@ -1133,13 +1249,22 @@ public partial class PianoRollControl : UserControl
                 Canvas.SetTop(visual.Root, top);
             }
 
+            var showFinger = visual.FingerBadge is not null
+                && visual.FingerLabel is not null
+                && !string.IsNullOrWhiteSpace(visual.FingerLabel.Text)
+                && height >= 10
+                && blockWidth >= 8;
+
             var showLabel = visual.CenteredOnNoteLabel
                 ? height >= 10 && blockWidth >= 8 && !string.IsNullOrWhiteSpace(visual.TipLabel.Text)
                 : visual.TipOverlayLabel
-                    ? !string.IsNullOrWhiteSpace(visual.TipLabel.Text) && height >= 6 && blockWidth >= 5
+                    ? HasVisibleTipLabel(visual) && height >= AnchorLabelHeight - 4 && blockWidth >= 5
                     : visual.KeyboardStackLabel
-                        ? height >= 18 && blockWidth >= 8 && !string.IsNullOrWhiteSpace(visual.TipLabel.Text)
+                        ? height >= AnchorLabelHeight && blockWidth >= 8 && HasVisibleTipLabel(visual)
                         : height >= 8 && blockWidth >= 6;
+
+            if (visual.FingerBadge is not null)
+                visual.FingerBadge.Visibility = showFinger ? Visibility.Visible : Visibility.Collapsed;
 
             if (visual.LabelBadge is not null)
                 visual.LabelBadge.Visibility = showLabel ? Visibility.Visible : Visibility.Collapsed;
@@ -1482,15 +1607,32 @@ public partial class PianoRollControl : UserControl
         return (shell, face);
     }
 
+    private bool HasVisibleTipLabel(NoteVisual visual)
+    {
+        if (!string.IsNullOrWhiteSpace(visual.TipLabel.Text))
+            return true;
+
+        return visual.TipSecondaryLabel is not null
+            && visual.TipSecondaryLabel.Visibility == Visibility.Visible
+            && !string.IsNullOrWhiteSpace(visual.TipSecondaryLabel.Text);
+    }
+
     private Border CreateNoteLabelHost(UIElement child, double minHeight, Color noteBaseColor)
     {
+        var centered = new Grid
+        {
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Stretch
+        };
+        centered.Children.Add(child);
+
         var host = new Border
         {
             BorderThickness = new Thickness(1, 0, 1, 1.2),
             CornerRadius = NoteCornerBottom,
-            Padding = new Thickness(2, 1, 2, 2),
+            Padding = new Thickness(2, 0, 2, 2),
             MinHeight = minHeight,
-            Child = child
+            Child = centered
         };
         ApplyNoteLabelHostColors(host, noteBaseColor);
         return host;
