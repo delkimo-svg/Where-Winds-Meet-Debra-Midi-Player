@@ -45,6 +45,7 @@
   "Chrome_AutoPlayNextOff": "تشغيل تلقائي: إيقاف",
   "Chrome_AutoPlayNextImmediate": "تشغيل تلقائي: التالي عند الانتهاء",
   "Chrome_AutoPlayTip": "تشغيل المسار التالي في القائمة النشطة بعد كل أغنية",
+  "Chrome_GlobalHotkeysTip": "اختصارات عامة — تعمل مفاتيح التشغيل في كل مكان حتى لو لم يكن المشغل أو اللعبة في المقدمة",
   "Chrome_ShuffleTip": "عشوائي",
   "Chrome_RepeatTip": "تكرار",
   "Chrome_SeekTip": "انقر للانتقال",

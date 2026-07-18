@@ -208,6 +208,7 @@ public sealed partial class LocalizedUi : ObservableObject
     public string TrashTooltip => L.T(UiText.TrashTooltip);
     public string PlayTooltip => L.T(UiText.PlayTooltip);
     public string ChromeAutoPlayTip => L.T(UiText.ChromeAutoPlayTip);
+    public string ChromeGlobalHotkeysTip => L.T(UiText.ChromeGlobalHotkeysTip);
     public string ChromeShuffleTip => L.T(UiText.ChromeShuffleTip);
     public string ChromeRepeatTip => L.T(UiText.ChromeRepeatTip);
     public string ChromeSeekTip => L.T(UiText.ChromeSeekTip);

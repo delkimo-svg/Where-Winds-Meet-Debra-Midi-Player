@@ -8,11 +8,14 @@ public sealed class PlaylistService
 {
     private readonly MidiParserService _midiParser;
     private readonly NoteRangeService _noteRange;
+    private readonly SongMetadataCacheService? _metadataCache;
 
-    public PlaylistService(MidiParserService midiParser, NoteRangeService noteRange)
+    public PlaylistService(MidiParserService midiParser, NoteRangeService noteRange,
+        SongMetadataCacheService? metadataCache = null)
     {
         _midiParser = midiParser;
         _noteRange = noteRange;
+        _metadataCache = metadataCache;
     }
 
     public Playlist CreatePlaylist(string name) => new()
@@ -159,11 +162,20 @@ public sealed class PlaylistService
             return;
         }
 
+        if (_metadataCache is not null && _metadataCache.TryGetTitle(song.FilePath, out var cachedTitle))
+        {
+            song.Title = cachedTitle;
+            return;
+        }
+
         try
         {
             var parsed = _midiParser.Parse(song.FilePath);
             if (!string.IsNullOrWhiteSpace(parsed.Title))
+            {
                 song.Title = parsed.Title;
+                _metadataCache?.UpdateTitle(song.FilePath, parsed.Title);
+            }
         }
         catch
         {
@@ -200,13 +212,16 @@ public sealed class PlaylistService
 
     public Song BuildSongFromFile(string filePath, bool smartTranspose, bool strictMode)
     {
+        if (_metadataCache is not null && _metadataCache.TryGetSong(filePath, smartTranspose, strictMode, out var cached))
+            return cached;
+
         var parsed = _midiParser.Parse(filePath);
         var notes = smartTranspose
             ? MidiTransposeService.ApplyTranspose(parsed.Notes, MidiTransposeService.DetectBestTranspose(parsed.Notes))
             : parsed.Notes.ToList();
         var ranged = _noteRange.ApplyRange(notes, smartTranspose, strictMode);
 
-        return new Song
+        var song = new Song
         {
             Title = parsed.Title,
             FilePath = filePath,
@@ -215,6 +230,8 @@ public sealed class PlaylistService
             NoteCount = ranged.Notes.Count,
             OutOfRangeNoteCount = ranged.OutOfRangeNoteCount
         };
+        _metadataCache?.StoreSong(filePath, smartTranspose, strictMode, song);
+        return song;
     }
 
     private static void EnsureAddedAt(Song song)

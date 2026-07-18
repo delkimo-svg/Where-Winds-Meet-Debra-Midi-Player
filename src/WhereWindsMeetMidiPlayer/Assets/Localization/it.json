@@ -45,6 +45,7 @@
   "Chrome_AutoPlayNextOff": "Auto-play: disattivato",
   "Chrome_AutoPlayNextImmediate": "Auto-play: brano successivo alla fine",
   "Chrome_AutoPlayTip": "Riproduci il brano successivo nella lista attiva dopo ogni brano",
+  "Chrome_GlobalHotkeysTip": "Scorciatoie globali — i tasti di riproduzione funzionano ovunque, anche se il player o il gioco non sono in primo piano",
   "Chrome_ShuffleTip": "Casuale",
   "Chrome_RepeatTip": "Ripeti",
   "Chrome_SeekTip": "Clic per cercare",

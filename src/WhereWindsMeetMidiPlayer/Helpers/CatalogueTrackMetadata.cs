@@ -5,7 +5,8 @@ namespace WhereWindsMeetMidiPlayer.Helpers;
 
 public static class CatalogueTrackMetadata
 {
-    public static void EnrichDuration(CatalogueTrack track, MidiParserService parser)
+    public static void EnrichDuration(CatalogueTrack track, MidiParserService parser,
+        SongMetadataCacheService? metadataCache = null)
     {
         if (track.DurationMs > 0)
             return;
@@ -14,9 +15,16 @@ public static class CatalogueTrackMetadata
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
             return;
 
+        if (metadataCache is not null && metadataCache.TryGetDuration(path, out var cachedDuration))
+        {
+            track.DurationMs = cachedDuration;
+            return;
+        }
+
         try
         {
             track.DurationMs = parser.Parse(path).DurationMs;
+            metadataCache?.StoreDuration(path, track.DurationMs);
         }
         catch
         {
@@ -24,9 +32,10 @@ public static class CatalogueTrackMetadata
         }
     }
 
-    public static void EnrichDurations(IEnumerable<CatalogueTrack> tracks, MidiParserService parser)
+    public static void EnrichDurations(IEnumerable<CatalogueTrack> tracks, MidiParserService parser,
+        SongMetadataCacheService? metadataCache = null)
     {
         foreach (var track in tracks)
-            EnrichDuration(track, parser);
+            EnrichDuration(track, parser, metadataCache);
     }
 }

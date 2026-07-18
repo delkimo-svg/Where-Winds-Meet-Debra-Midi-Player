@@ -45,6 +45,7 @@
   "Chrome_AutoPlayNextOff": "Lecture auto : désactivée",
   "Chrome_AutoPlayNextImmediate": "Lecture auto : piste suivante à la fin",
   "Chrome_AutoPlayTip": "Lire la piste suivante dans la liste active après chaque morceau",
+  "Chrome_GlobalHotkeysTip": "Raccourcis globaux — les touches de lecture fonctionnent partout, même si le lecteur ou le jeu n'est pas au premier plan",
   "Chrome_ShuffleTip": "Aléatoire",
   "Chrome_RepeatTip": "Répéter",
   "Chrome_SeekTip": "Cliquer pour chercher",

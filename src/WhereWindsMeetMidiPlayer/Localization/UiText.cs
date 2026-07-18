@@ -263,6 +263,7 @@ public static class UiText
     public const string ChromeAutoPlayNextOff = "Chrome_AutoPlayNextOff";
     public const string ChromeAutoPlayNextImmediate = "Chrome_AutoPlayNextImmediate";
     public const string ChromeAutoPlayTip = "Chrome_AutoPlayTip";
+    public const string ChromeGlobalHotkeysTip = "Chrome_GlobalHotkeysTip";
     public const string ChromeShuffleTip = "Chrome_ShuffleTip";
     public const string ChromeRepeatTip = "Chrome_RepeatTip";
     public const string ChromeSeekTip = "Chrome_SeekTip";

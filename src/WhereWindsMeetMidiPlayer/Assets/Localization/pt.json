@@ -45,6 +45,7 @@
   "Chrome_AutoPlayNextOff": "Auto-play: desativado",
   "Chrome_AutoPlayNextImmediate": "Auto-play: próxima faixa ao terminar",
   "Chrome_AutoPlayTip": "Reproduzir a próxima faixa na lista ativa após cada música",
+  "Chrome_GlobalHotkeysTip": "Atalhos globais — as teclas de reprodução funcionam em qualquer lugar, mesmo sem o player ou o jogo em foco",
   "Chrome_ShuffleTip": "Aleatório",
   "Chrome_RepeatTip": "Repetir",
   "Chrome_SeekTip": "Clique para buscar",

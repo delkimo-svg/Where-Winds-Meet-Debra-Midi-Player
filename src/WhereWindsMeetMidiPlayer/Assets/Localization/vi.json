@@ -45,6 +45,7 @@
     "Chrome_AutoPlayNextOff": "Tự phát: tắt",
     "Chrome_AutoPlayNextImmediate": "Tự phát: bài tiếp khi bài kết thúc",
     "Chrome_AutoPlayTip": "Tự phát bài tiếp trong danh sách đang hoạt động sau mỗi bài",
+    "Chrome_GlobalHotkeysTip": "Phím tắt toàn cục — các phím phát nhạc hoạt động ở mọi nơi, ngay cả khi trình phát hoặc trò chơi không được chọn",
     "Chrome_ShuffleTip": "Ngẫu nhiên",
     "Chrome_RepeatTip": "Lặp lại",
     "Chrome_SeekTip": "Nhấp để tìm vị trí",

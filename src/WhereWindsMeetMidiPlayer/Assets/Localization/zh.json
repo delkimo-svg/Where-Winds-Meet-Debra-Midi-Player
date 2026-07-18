@@ -45,6 +45,7 @@
   "Chrome_AutoPlayNextOff": "自动播放：关",
   "Chrome_AutoPlayNextImmediate": "自动播放：结束时播放下一首",
   "Chrome_AutoPlayTip": "每首歌结束后自动播放活动列表中的下一首",
+  "Chrome_GlobalHotkeysTip": "全局热键 — 播放快捷键在任何地方都有效，即使播放器或游戏未获得焦点",
   "Chrome_ShuffleTip": "随机",
   "Chrome_RepeatTip": "重复",
   "Chrome_SeekTip": "点击定位",

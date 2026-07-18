@@ -45,6 +45,7 @@
   "Chrome_AutoPlayNextOff": "Auto-Play: aus",
   "Chrome_AutoPlayNextImmediate": "Auto-Play: nächster Track bei Ende",
   "Chrome_AutoPlayTip": "Nächsten Track in der aktiven Liste nach jedem Song automatisch abspielen",
+  "Chrome_GlobalHotkeysTip": "Globale Hotkeys — Wiedergabetasten funktionieren überall, auch wenn Player oder Spiel nicht fokussiert sind",
   "Chrome_ShuffleTip": "Zufall",
   "Chrome_RepeatTip": "Wiederholen",
   "Chrome_SeekTip": "Klicken zum Springen",

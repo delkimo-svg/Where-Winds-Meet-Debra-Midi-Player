@@ -127,6 +127,9 @@ public sealed class AppSettings
     /// <summary>Win32 virtual-key code for next track (default F6).</summary>
     public int PlaybackHotkeyNext { get; set; } = PlaybackHotkeyDefaults.Next;
 
+    /// <summary>Playback hotkeys work system-wide, even when neither the player nor the game is focused.</summary>
+    public bool PlaybackHotkeysGlobal { get; set; }
+
     /// <summary>Last selected MIDI input device name for live keyboard mode.</summary>
     public string? LastMidiInputDeviceName { get; set; }
 

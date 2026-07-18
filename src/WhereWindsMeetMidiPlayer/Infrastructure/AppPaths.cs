@@ -12,6 +12,7 @@ public static class AppPaths
     public static string CatalogueCacheFolder => Path.Combine(AppDataRoot, "catalogue-cache");
     public static string CatalogueIndexFile => Path.Combine(AppDataRoot, "catalogue-index.json");
     public static string SongTempoFile => Path.Combine(AppDataRoot, "song-tempo.json");
+    public static string SongMetadataCacheFile => Path.Combine(AppDataRoot, "song-metadata-cache.json");
     public static string SongPlaybackFile => Path.Combine(AppDataRoot, "song-playback.json");
     public static string AcademyCacheFolder => Path.Combine(AppDataRoot, "academy-cache");
     public static string AcademyManifestCacheFile => Path.Combine(AppDataRoot, "academy-manifest-cache.json");

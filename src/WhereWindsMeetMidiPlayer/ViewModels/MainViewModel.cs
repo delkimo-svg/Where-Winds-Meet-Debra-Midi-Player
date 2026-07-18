@@ -24,6 +24,7 @@ namespace WhereWindsMeetMidiPlayer.ViewModels;
 public partial class MainViewModel : ObservableObject, IDisposable
 {
     private readonly MidiParserService _midiParser = new();
+    private readonly SongMetadataCacheService _songMetadataCache = new();
     private readonly NoteRangeService _noteRange = new();
     private readonly KeyMappingService _keyMapping = new();
     private readonly GameWindowService _gameWindow = new();
@@ -114,6 +115,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] private bool _shuffle;
     [ObservableProperty] private bool _repeat;
     [ObservableProperty] private bool _windowAlwaysOnTop;
+    [ObservableProperty] private bool _playbackHotkeysGlobal;
     [ObservableProperty] private int _volume = 64;
     [ObservableProperty] private double _songTempoBpm = 120;
     [ObservableProperty] private int _playbackTempoPercent = 100;
@@ -380,7 +382,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         var uiDispatcher = Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
 
-        _playlistService = new PlaylistService(_midiParser, _noteRange);
+        _songMetadataCache.Load();
+        _playlistService = new PlaylistService(_midiParser, _noteRange, _songMetadataCache);
         _library = new LibraryService(_playlistService);
         _midiPlaybackPreparer = new MidiPlaybackPreparer(_midiParser, _noteRange);
         _input = new InputService(_gameWindow);
@@ -614,6 +617,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         FocusGameBeforePlay = false;
         _settings.Settings.FocusGameBeforePlay = false;
         WindowAlwaysOnTop = _settings.Settings.WindowAlwaysOnTop;
+        PlaybackHotkeysGlobal = _settings.Settings.PlaybackHotkeysGlobal;
         PrePlayCountdownSeconds = 1;
         _settings.Settings.PrePlayCountdownSeconds = 1;
         ApplyPracticeCountdownFromSettings();
@@ -1406,9 +1410,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
             {
                 try
                 {
+                    // Favorites keep their own Song instances — no library auto-add.
                     song = _library.AddFile(path, SmartTranspose, StrictNoteRange);
-                    if (!LibrarySongs.Any(s => s.FilePath.Equals(song.FilePath, StringComparison.OrdinalIgnoreCase)))
-                        LibrarySongs.Add(song);
+                    song.IsFavorite = true;
                 }
                 catch
                 {
@@ -1711,7 +1715,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 await Task.Run(() =>
                 {
                     for (var j = i; j < end; j++)
-                        CatalogueTrackMetadata.EnrichDuration(tracks[j], _midiParser);
+                        CatalogueTrackMetadata.EnrichDuration(tracks[j], _midiParser, _songMetadataCache);
                 }).ConfigureAwait(false);
 
                 await Task.Delay(32).ConfigureAwait(false);
@@ -1742,8 +1746,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 _library.AddFile(path, SmartTranspose, StrictNoteRange, track.Title)).ConfigureAwait(true);
             track.DurationMs = song.DurationMs;
             _nowPlayingCatalogueTrack = track;
-            if (!LibrarySongs.Any(s => s.FilePath.Equals(song.FilePath, StringComparison.OrdinalIgnoreCase)))
-                LibrarySongs.Add(song);
             SetPrimaryListSelection(PrimarySelectionSource.Catalogue, null, track);
             SetActivePlaybackContext(ActivePlaybackList.Catalogue, track);
             await StartSongAsync(song);
@@ -1807,9 +1809,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
             if (song is null)
                 return;
 
-            if (!LibrarySongs.Any(s => s.FilePath.Equals(song.FilePath, StringComparison.OrdinalIgnoreCase)))
-                LibrarySongs.Add(song);
-
             AddToPlaylistAt(song, insertIndex);
             CatalogueStatusText = "Added to playlist.";
         }
@@ -1829,10 +1828,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
         var path = await _discordCatalogue.ResolvePlayablePathAsync(
             track, _discordCredentials?.BotToken);
-        var song = _library.AddFile(path, SmartTranspose, StrictNoteRange, track.Title);
-        if (!LibrarySongs.Any(s => s.FilePath.Equals(song.FilePath, StringComparison.OrdinalIgnoreCase)))
-            LibrarySongs.Add(song);
-        return song;
+        return _library.AddFile(path, SmartTranspose, StrictNoteRange, track.Title);
     }
 
     [RelayCommand]
@@ -1869,6 +1865,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         {
             MigrateImportFolderPaths();
             MigrateDefaultRefreshFolders();
+            RemoveCatalogueCachePathsFromLibrary();
             foreach (var path in _settings.Settings.LibrarySongPaths)
             {
                 if (!File.Exists(path) || !IsMidiFile(path))
@@ -1889,11 +1886,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 }
             }
 
-            var folder = _settings.Settings.LastImportFolder;
-            if (!string.IsNullOrWhiteSpace(folder) && Directory.Exists(folder))
-                ImportDroppedPaths(new[] { folder });
-
-            EnsurePlaylistSongsInLibrary();
+            // No automatic folder re-import at startup — the library only reloads its
+            // persisted entries; use the manual Refresh button to pick up new files.
             RestorePersistedPracticeLibrary();
             RestoreLastPracticeSongSelection();
             RefreshLibraryStats();
@@ -1946,27 +1940,13 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
-    private void EnsurePlaylistSongsInLibrary()
+    /// <summary>One-time cleanup: catalogue downloads used to be auto-added to the library.</summary>
+    private void RemoveCatalogueCachePathsFromLibrary()
     {
-        foreach (var song in PlaylistSongs)
-        {
-            if (string.IsNullOrWhiteSpace(song.FilePath) || !File.Exists(song.FilePath))
-                continue;
-
-            if (LibrarySongs.Any(s => s.FilePath.Equals(song.FilePath, StringComparison.OrdinalIgnoreCase)))
-                continue;
-
-            try
-            {
-                var libSong = _library.AddFile(song.FilePath, SmartTranspose, StrictNoteRange, song.Title);
-                SyncSongFavoriteFlag(libSong);
-                LibrarySongs.Add(libSong);
-            }
-            catch
-            {
-                // Skip unreadable playlist entries.
-            }
-        }
+        var cacheRoot = AppPaths.CatalogueCacheFolder;
+        _settings.Settings.LibrarySongPaths.RemoveAll(p =>
+            !string.IsNullOrWhiteSpace(p) &&
+            p.StartsWith(cacheRoot, StringComparison.OrdinalIgnoreCase));
     }
 
     private void RestoreLastPracticeSongSelection()
@@ -4924,6 +4904,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     private bool IsPlaybackHotkeyContextActive()
     {
+        if (PlaybackHotkeysGlobal)
+            return true;
+
         if (_gameWindow.IsGameFocused())
             return true;
 
@@ -6078,6 +6061,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
         L.F(UiText.ChromePlayerOpacity, PlayerChromeOpacityPercent);
 
 
+    partial void OnPlaybackHotkeysGlobalChanged(bool value)
+    {
+        _settings.Settings.PlaybackHotkeysGlobal = value;
+        ScheduleSettingsSave();
+    }
+
     partial void OnAutoPlayEnabledChanged(bool value)
     {
         _settings.Settings.AutoPlayEnabled = value;
@@ -6413,5 +6402,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _systemVolume.Dispose();
         _settings.Save();
         _history.Save();
+        _songMetadataCache.Flush();
     }
 }

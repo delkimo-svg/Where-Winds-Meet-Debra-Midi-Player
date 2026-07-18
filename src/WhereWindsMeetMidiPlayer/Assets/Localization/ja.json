@@ -45,6 +45,7 @@
   "Chrome_AutoPlayNextOff": "自動再生：オフ",
   "Chrome_AutoPlayNextImmediate": "自動再生：終了時に次の曲",
   "Chrome_AutoPlayTip": "各曲の後にアクティブリストの次の曲を自動再生",
+  "Chrome_GlobalHotkeysTip": "グローバルホットキー — プレイヤーやゲームがフォーカスされていなくても再生キーが機能します",
   "Chrome_ShuffleTip": "シャッフル",
   "Chrome_RepeatTip": "リピート",
   "Chrome_SeekTip": "クリックでシーク",
