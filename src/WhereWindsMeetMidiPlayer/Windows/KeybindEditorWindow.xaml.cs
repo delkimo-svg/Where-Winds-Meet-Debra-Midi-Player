@@ -44,8 +44,7 @@ public partial class KeybindEditorWindow : Window
 
     private void ApplyThemeChrome()
     {
-        var isWuxia = ThemeService.CurrentId == ThemeService.Wuxia;
-        RootBorder.Opacity = isWuxia ? 0.97 : 0.98;
+        RootBorder.Opacity = ThemeService.IsDark ? 0.97 : 0.98;
     }
 
     private void KeyButton_OnClick(object sender, RoutedEventArgs e)

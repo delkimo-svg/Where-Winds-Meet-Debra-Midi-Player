@@ -23,7 +23,8 @@
                     IsHitTestVisible="False"/>
 
             <!-- Floral corner borders -->
-            <Border HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="-12,0,0,-6"
+            <Border x:Name="PlayerCornerBlHost"
+                    HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="-12,0,0,-6"
                     Panel.ZIndex="2" IsHitTestVisible="False" Style="{StaticResource ChromeFade}">
                 <Image x:Name="PlayerCornerBl" Width="100"
                        RenderOptions.BitmapScalingMode="HighQuality"/>

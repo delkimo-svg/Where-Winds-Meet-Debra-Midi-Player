@@ -14,8 +14,12 @@ public sealed class GameKeyboardLayoutPreset
     public required string[] Mid { get; init; }
     public required string[] High { get; init; }
 
+    // FFXIV always uses the game's default Performance keybinds (VK-based, layout-independent);
+    // the QWERTY/QWERTZ/AZERTY natural rows only apply to WWM.
     public Dictionary<string, string> BuildMap() =>
-        GameKeyLayout.BuildMapFromNaturalRows(Low, Mid, High);
+        GameProfiles.Current == GameProfiles.FinalFantasyXiv
+            ? GameKeyLayout.BuildFinalFantasyXivMap()
+            : GameKeyLayout.BuildMapFromNaturalRows(Low, Mid, High);
 }
 
 public static class GameKeyboardLayoutPresets

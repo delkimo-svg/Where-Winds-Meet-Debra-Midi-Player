@@ -78,7 +78,8 @@ public sealed class KeyMappingService
         if (File.Exists(targetPath))
             return targetPath;
 
-        var preset = GameKeyboardLayoutPresets.FindByFileName(fileName);
+        var preset = GameKeyboardLayoutPresets.FindByFileName(fileName)
+            ?? GameKeyboardLayoutPresets.FindByFileName(GameProfiles.StripKeyMapPrefix(fileName));
         if (preset is not null)
         {
             var json = System.Text.Json.JsonSerializer.Serialize(preset.BuildMap(), JsonFileStore.Options);
@@ -91,12 +92,45 @@ public sealed class KeyMappingService
         return targetPath;
     }
 
+    /// <summary>Writes a keymap file (overwriting) and returns its full path.</summary>
+    public string WriteKeyMapFile(string fileName, Dictionary<string, string> map)
+    {
+        AppPaths.EnsureCreated();
+        var path = Path.Combine(AppPaths.KeyMapsFolder, fileName);
+        File.WriteAllText(path, System.Text.Json.JsonSerializer.Serialize(map, JsonFileStore.Options), Encoding.UTF8);
+        return path;
+    }
+
     public void EnsurePresetKeyMaps()
     {
         foreach (var preset in GameKeyboardLayoutPresets.All)
-            EnsureDefaultKeyMap(preset.FileName);
+            EnsureDefaultKeyMap(GameProfiles.Current.KeyMapFileName(preset.FileName));
     }
 
+    // Range-aware: builds 36 keys for WWM, 37 (with top C6, FFXIV default keybinds) for FFXIV.
     public static Dictionary<string, string> CreateDefaultMapping() =>
-        GameKeyLayout.BuildWhereWindsMeetMap();
+        GameProfiles.Current == GameProfiles.FinalFantasyXiv
+            ? GameKeyLayout.BuildFinalFantasyXivMap()
+            : GameKeyLayout.BuildWhereWindsMeetMap();
+
+    /// <summary>
+    /// Rewrites the canonical FFXIV keymap files with the game-default map. Earlier builds generated
+    /// them with the WWM Shift=sharp scheme, which FFXIV interprets as octave shifts (notes too high).
+    /// </summary>
+    public void RegenerateFinalFantasyXivDefaultMaps()
+    {
+        AppPaths.EnsureCreated();
+        var fileNames = new List<string> { GameProfiles.FinalFantasyXiv.DefaultKeyMapFile };
+        fileNames.AddRange(GameKeyboardLayoutPresets.All
+            .Select(p => GameProfiles.FinalFantasyXiv.KeyMapFileName(p.FileName)));
+
+        var json = System.Text.Json.JsonSerializer.Serialize(
+            GameKeyLayout.BuildFinalFantasyXivMap(), JsonFileStore.Options);
+        foreach (var fileName in fileNames)
+        {
+            var path = Path.Combine(AppPaths.KeyMapsFolder, fileName);
+            if (File.Exists(path))
+                File.WriteAllText(path, json, Encoding.UTF8);
+        }
+    }
 }

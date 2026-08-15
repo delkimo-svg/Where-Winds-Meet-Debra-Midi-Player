@@ -170,6 +170,8 @@ public static class UiText
     public const string NoteMappingTransposeOnlyHint = "NoteMapping_TransposeOnlyHint";
     public const string NoteMappingClosestNaturalHint = "NoteMapping_ClosestNaturalHint";
     public const string NoteMappingChromatic36 = "NoteMapping_Chromatic36";
+    public const string NoteMappingChromatic37 = "NoteMapping_Chromatic37";
+    public const string NoteMappingChromatic37Hint = "NoteMapping_Chromatic37Hint";
     public const string NoteMappingTransposeOnly = "NoteMapping_TransposeOnly";
     public const string NoteMappingClosestNatural = "NoteMapping_ClosestNatural";
     public const string ChromeOctaveShift = "Chrome_OctaveShift";
@@ -196,6 +198,7 @@ public static class UiText
     public const string SettingsTheme = "Settings_Theme";
     public const string ThemeSakura = "Theme_Sakura";
     public const string ThemeWuxia = "Theme_Wuxia";
+    public const string ThemeFfxiv = "Theme_Ffxiv";
     public const string LibrarySearch = "Library_Search";
     public const string LibraryImport = "Library_Import";
     public const string LibraryImportTooltip = "Library_ImportTooltip";
@@ -324,4 +327,19 @@ public static class UiText
     public const string StatsTracks = "Stats_Tracks";
     public const string StatsTrack = "Stats_Track";
     public const string StatsZeroSongs = "Stats_ZeroSongs";
+    public const string FfxivChatHeader = "FfxivChat_Header";
+    public const string FfxivChatSendTooltip = "FfxivChat_SendTooltip";
+    public const string FfxivChatMessageTooltip = "FfxivChat_MessageTooltip";
+    public const string FfxivChatReplyTooltip = "FfxivChat_ReplyTooltip";
+    public const string FfxivChatChannelTooltip = "FfxivChat_ChannelTooltip";
+    public const string FfxivChatAnnounceTooltip = "FfxivChat_AnnounceTooltip";
+    public const string FfxivChatTemplateTooltip = "FfxivChat_TemplateTooltip";
+    public const string FfxivChatAutoAnnounce = "FfxivChat_AutoAnnounce";
+    public const string FfxivChatAutoAnnounceTooltip = "FfxivChat_AutoAnnounceTooltip";
+    public const string FfxivChatStatusWaiting = "FfxivChat_StatusWaiting";
+    public const string FfxivChatStatusConnected = "FfxivChat_StatusConnected";
+    public const string FfxivChatStatusPipeBusy = "FfxivChat_StatusPipeBusy";
+    public const string FfxivChatNoSong = "FfxivChat_NoSong";
+    public const string FfxivChatNeedPlugin = "FfxivChat_NeedPlugin";
+    public const string FfxivChatDownload = "FfxivChat_Download";
 }

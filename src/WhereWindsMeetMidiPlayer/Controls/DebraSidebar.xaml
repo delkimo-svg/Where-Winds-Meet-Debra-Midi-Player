@@ -112,8 +112,8 @@
             </Grid>
         </DataTemplate>
 
-        <!-- Wuxia: centered gold fill only (no pink left accent strip). -->
-        <DataTemplate x:Key="NavItemTemplateWuxia" DataType="{x:Type vm:NavItemViewModel}">
+        <!-- Slim banner themes (Wuxia, FFXIV): centered gold fill only, no pink left accent strip. -->
+        <DataTemplate x:Key="NavItemTemplateSlimBanner" DataType="{x:Type vm:NavItemViewModel}">
             <Grid Margin="1,0,1,0"
                   HorizontalAlignment="Stretch"
                   VerticalAlignment="Stretch">

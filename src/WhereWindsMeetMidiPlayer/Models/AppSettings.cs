@@ -4,6 +4,30 @@ namespace WhereWindsMeetMidiPlayer.Models;
 
 public sealed class AppSettings
 {
+    /// <summary>Target game profile id: wwm or ffxiv.</summary>
+    public string SelectedGameId { get; set; } = "wwm";
+    /// <summary>Migration marker: 1 = FFXIV keymaps regenerated with the game-default keybind scheme.</summary>
+    public int FfxivKeyMapVersion { get; set; }
+    /// <summary>FFXIV: window (ms) merging near-simultaneous chord notes onto one onset. 0 = off.</summary>
+    public int FfxivChordAlignWindowMs { get; set; } = 60;
+    /// <summary>FFXIV: outer-voices chord reduction (3–4 notes → 2, 5+ → 3).</summary>
+    public bool FfxivChordReduction { get; set; } = true;
+    /// <summary>FFXIV: honor BMP-style "Track+1"/"Track-2" octave suffixes in track names.</summary>
+    public bool FfxivTrackOctaveSuffix { get; set; } = true;
+    /// <summary>FFXIV: minimum ms between consecutive note-ons (30 = musical floor, ~125 = midi2ffxiv-safe).</summary>
+    public int FfxivMinNoteSpacingMs { get; set; } = 30;
+    /// <summary>FFXIV: shed chord voices in fast passages (melody always kept) to respect the game's input rate.</summary>
+    public bool FfxivAdaptiveVoicing { get; set; } = true;
+    /// <summary>FFXIV Chat panel below the player is expanded.</summary>
+    public bool FfxivChatPanelExpanded { get; set; }
+    /// <summary>FFXIV Chat: channel code for the free-text box (Hypnotoad wire value, default Say).</summary>
+    public int FfxivChatChannelCode { get; set; } = 0x000A;
+    /// <summary>FFXIV Chat: channel code for the now-playing announcement (default Yell).</summary>
+    public int FfxivChatAnnounceChannelCode { get; set; } = 0x001E;
+    /// <summary>FFXIV Chat: now-playing template; {title} and {duration} are replaced.</summary>
+    public string FfxivChatAnnounceTemplate { get; set; } = "♪ Now playing: {title} ♪";
+    /// <summary>FFXIV Chat: announce the song automatically when playback starts.</summary>
+    public bool FfxivChatAutoAnnounce { get; set; }
     public string KeyMappingFile { get; set; } = "debra-36-keys.json";
     /// <summary>Last selected keyboard layout preset (qwerty, qwertz, azerty). Empty when using a custom map.</summary>
     public string? KeyboardLayoutPresetId { get; set; } = "qwerty";
@@ -103,8 +127,12 @@ public sealed class AppSettings
     /// <summary>UI language code: en, es, fr, pt, zh, ja, de, it, ar.</summary>
     public string UiLanguage { get; set; } = "en";
 
-    /// <summary>UI theme: sakura (pink) or wuxia (dark gold).</summary>
+    /// <summary>UI theme: sakura (pink), wuxia (dark gold) or ffxiv (Eorzea night).</summary>
     public string UiTheme { get; set; } = "sakura";
+
+    /// <summary>Theme picked by the player for each game profile id. Missing entry = the game's
+    /// signature theme, so switching to FFXIV dresses the app in Eorzea colours on its own.</summary>
+    public Dictionary<string, string> UiThemeByGame { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Library list sort: Manual, Name, TimeAddedNewest, TimeAddedOldest.</summary>
     public string LibrarySortMode { get; set; } = nameof(SongListSortMode.Manual);

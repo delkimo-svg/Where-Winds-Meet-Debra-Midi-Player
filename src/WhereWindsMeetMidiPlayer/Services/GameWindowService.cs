@@ -17,7 +17,8 @@ public sealed class GameWindowService
     private static readonly string[] BuiltInKeywords =
     [
         "where winds meet", "where winds", "winds meet", "wwm", "燕云", "燕云十六声",
-        "연운", "guqin", "古琴", "geforce now", "geforcenow", "nvidia geforce", "netease"
+        "연운", "guqin", "古琴", "geforce now", "geforcenow", "nvidia geforce", "netease",
+        "final fantasy xiv", "ffxiv"
     ];
 
     private static readonly string[] ExcludedTitleFragments =
@@ -259,12 +260,11 @@ public sealed class GameWindowService
             if (pid != processId || !IsWindowVisible(hWnd))
                 return true;
 
-            var title = GetTitle(hWnd);
-            if (IsExcludedTitle(title))
-                return true;
-
+            // No title-based exclusion here: the process id match is authoritative.
+            // (FFXIV titles its window with the character name — a character called
+            // "Debra" must not knock the game window out of discovery.)
             GetWindowRect(hWnd, out var rect);
-            results.Add(new WindowTarget(hWnd, pid, title, GetClass(hWnd), rect.Area));
+            results.Add(new WindowTarget(hWnd, pid, GetTitle(hWnd), GetClass(hWnd), rect.Area));
             return true;
         }, IntPtr.Zero);
     }
@@ -277,6 +277,9 @@ public sealed class GameWindowService
                 return true;
 
             GetWindowThreadProcessId(hWnd, out var pid);
+            if (pid == (uint)Environment.ProcessId)
+                return true;
+
             GetWindowRect(hWnd, out var rect);
             results.Add(new WindowTarget(hWnd, pid, GetTitle(hWnd), GetClass(hWnd), rect.Area));
             return true;

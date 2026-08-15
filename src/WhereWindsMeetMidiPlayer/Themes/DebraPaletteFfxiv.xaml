@@ -1,0 +1,183 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <sys:String x:Key="Theme.BackgroundImage">debra-bg-ffxiv.png</sys:String>
+    <sys:String x:Key="Theme.SidebarBannerImage">debra-sidebar-menu-bg-ffxiv.png</sys:String>
+    <sys:String x:Key="Theme.NowPlayingHero">debra-ffxiv-hero.png</sys:String>
+    <sys:String x:Key="Theme.NowPlayingBranchLeft">debra-ffxiv-branch-left.png</sys:String>
+    <sys:String x:Key="Theme.NowPlayingBranchRight">debra-ffxiv-branch-right.png</sys:String>
+    <sys:String x:Key="Theme.PlayerCornerBr">debra-player-ffxiv-corner-br.png</sys:String>
+    <sys:String x:Key="Theme.PlayerCornerBl">debra-player-ffxiv-corner-bl.png</sys:String>
+    <sys:String x:Key="Theme.PlayerThumbImage">debra-thumb-ffxiv.png</sys:String>
+    <sys:String x:Key="Theme.HeaderDecorImage">debra-header-ffxiv-mist.png</sys:String>
+    <sys:String x:Key="Theme.HeaderLogo">debra-ffxiv-header-logo.png</sys:String>
+    <sys:String x:Key="Theme.PracticeRollDecor">debra-ffxiv-hero.png</sys:String>
+    <sys:String x:Key="Theme.PanelDecorWash">debra-bg-ffxiv.png</sys:String>
+
+    <Color x:Key="BgDeep">#0A0E1B</Color>
+    <Color x:Key="BgPanel">#121A2E</Color>
+    <Color x:Key="BgElevated">#1B2540</Color>
+    <Color x:Key="BgHover">#283454</Color>
+    <Color x:Key="Gold">#D8B978</Color>
+    <Color x:Key="GoldDim">#8C7A52</Color>
+    <Color x:Key="GoldBright">#F4E4BC</Color>
+    <Color x:Key="NewBadge">#3DAA6D</Color>
+    <Color x:Key="NewBadgeText">#FFFFFF</Color>
+    <Color x:Key="TextPrimary">#E4ECFA</Color>
+    <Color x:Key="TextMuted">#94A3C0</Color>
+    <Color x:Key="BorderSubtle">#3C4A6C</Color>
+    <Color x:Key="AccentRed">#7CD0F2</Color>
+    <Color x:Key="AccentPink">#7CD0F2</Color>
+    <Color x:Key="AccentGlow">#7CD0F2</Color>
+    <Color x:Key="SidebarDeep">#080C18</Color>
+    <Color x:Key="BackgroundScrim">#8A020412</Color>
+    <Color x:Key="CardBackground">#E61B2540</Color>
+    <Color x:Key="SettingsShellBackground">#D8121A2E</Color>
+    <Color x:Key="HeaderChipBackground">#E61E2946</Color>
+    <Color x:Key="HeaderMetaText">#F4E4BC</Color>
+    <Color x:Key="HeaderMetaMuted">#A9BBDC</Color>
+    <Color x:Key="ChromeButtonForeground">#F4E4BC</Color>
+    <Color x:Key="ChromeButtonHoverBackground">#2C3A5E</Color>
+    <Color x:Key="GoldGradientTop">#E2C689</Color>
+    <Color x:Key="GoldGradientBottom">#9C8148</Color>
+    <Color x:Key="PlayGradientTop">#BDEEFF</Color>
+    <Color x:Key="PlayGradientMid">#5FB6E8</Color>
+    <Color x:Key="PlayGradientBottom">#2A6AAE</Color>
+    <Color x:Key="PlayGlow">#7CD0F2</Color>
+    <Color x:Key="ListHoverBackground">#337CD0F2</Color>
+    <Color x:Key="ListSelectedBackground">#4C5FB6E8</Color>
+    <Color x:Key="ListNowPlayingBackground">#5FBDEEFF</Color>
+    <Color x:Key="ToggleTrackOff">#2C3A5E</Color>
+    <Color x:Key="ToggleTrackOn">#3A6E9C</Color>
+    <Color x:Key="ToggleCheckedBackground">#447CD0F2</Color>
+    <Color x:Key="ProgressTrackBackground">#283454</Color>
+    <Color x:Key="NavIcon">#F4E4BC</Color>
+    <Color x:Key="NavText">#F4E4BC</Color>
+    <Color x:Key="NavHighlightFill">#557CD0F2</Color>
+    <Color x:Key="NavDivider">#44BDEEFF</Color>
+    <Color x:Key="PanelShadow">#99020610</Color>
+    <Color x:Key="PlayerBarTop">#1F2A48</Color>
+    <Color x:Key="PlayerBarMid">#17203A</Color>
+    <Color x:Key="PlayerBarBottom">#0F1628</Color>
+    <Color x:Key="NowPlayingCardTop">#1D2843</Color>
+    <Color x:Key="NowPlayingCardMid">#161F38</Color>
+    <Color x:Key="NowPlayingCardBottom">#101829</Color>
+    <Color x:Key="RingGradientStart">#BDEEFF</Color>
+    <Color x:Key="RingGradientMid">#D8B978</Color>
+    <Color x:Key="RingGradientEnd">#2A6AAE</Color>
+    <Color x:Key="SpectrumActiveTop">#BDEEFF</Color>
+    <Color x:Key="SpectrumActiveBottom">#2A6AAE</Color>
+    <Color x:Key="SpectrumIdle">#42537A</Color>
+    <Color x:Key="ComboBoxForeground">#E4ECFA</Color>
+    <Color x:Key="ComboBoxPopupBackground">#141D33</Color>
+    <Color x:Key="ComboBoxPopupBorder">#4A5C82</Color>
+    <Color x:Key="ComboBoxPopupHover">#447CD0F2</Color>
+    <Color x:Key="DropTargetActiveBorder">#7CD0F2</Color>
+    <Color x:Key="DropTargetActiveBackground">#D9243458</Color>
+    <Color x:Key="ScrollBarThumb">#4E5F86</Color>
+    <Color x:Key="ScrollBarThumbHover">#7CD0F2</Color>
+    <Color x:Key="TourScrim">#CC060A16</Color>
+    <Color x:Key="TourCalloutBackground">#F0141D33</Color>
+    <Color x:Key="TourCalloutBorder">#4A5C82</Color>
+    <Color x:Key="TourShadow">#99020610</Color>
+
+    <SolidColorBrush x:Key="Brush.BgDeep" Color="{StaticResource BgDeep}"/>
+    <SolidColorBrush x:Key="Brush.BgPanel" Color="#E6121A2E"/>
+    <SolidColorBrush x:Key="Brush.BgElevated" Color="{StaticResource BgElevated}"/>
+    <SolidColorBrush x:Key="Brush.BgHover" Color="{StaticResource BgHover}"/>
+    <SolidColorBrush x:Key="Brush.Gold" Color="{StaticResource Gold}"/>
+    <SolidColorBrush x:Key="Brush.GoldDim" Color="{StaticResource GoldDim}"/>
+    <SolidColorBrush x:Key="Brush.GoldBright" Color="{StaticResource GoldBright}"/>
+    <SolidColorBrush x:Key="Brush.NewBadge" Color="{StaticResource NewBadge}"/>
+    <SolidColorBrush x:Key="Brush.NewBadgeText" Color="{StaticResource NewBadgeText}"/>
+    <SolidColorBrush x:Key="Brush.TextPrimary" Color="{StaticResource TextPrimary}"/>
+    <SolidColorBrush x:Key="Brush.TextMuted" Color="{StaticResource TextMuted}"/>
+    <SolidColorBrush x:Key="Brush.Border" Color="{StaticResource BorderSubtle}"/>
+    <SolidColorBrush x:Key="Brush.AccentPink" Color="{StaticResource AccentPink}"/>
+    <SolidColorBrush x:Key="Brush.WindowBackground" Color="{StaticResource BgDeep}"/>
+    <SolidColorBrush x:Key="Brush.BackgroundScrim" Color="{StaticResource BackgroundScrim}"/>
+    <SolidColorBrush x:Key="Brush.CardBackground" Color="{StaticResource CardBackground}"/>
+    <SolidColorBrush x:Key="Brush.SettingsShellBackground" Color="{StaticResource SettingsShellBackground}"/>
+    <SolidColorBrush x:Key="Brush.HeaderChipBackground" Color="{StaticResource HeaderChipBackground}"/>
+    <SolidColorBrush x:Key="Brush.HeaderMetaText" Color="{StaticResource HeaderMetaText}"/>
+    <SolidColorBrush x:Key="Brush.HeaderMetaMuted" Color="{StaticResource HeaderMetaMuted}"/>
+    <SolidColorBrush x:Key="Brush.InputBackground" Color="{StaticResource BgElevated}"/>
+    <SolidColorBrush x:Key="Brush.NavIcon" Color="{StaticResource NavIcon}"/>
+    <SolidColorBrush x:Key="Brush.NavText" Color="{StaticResource NavText}"/>
+    <SolidColorBrush x:Key="Brush.NavHighlightFill" Color="{StaticResource NavHighlightFill}"/>
+    <SolidColorBrush x:Key="Brush.NavDivider" Color="{StaticResource NavDivider}"/>
+    <SolidColorBrush x:Key="Brush.ListHover" Color="{StaticResource ListHoverBackground}"/>
+    <SolidColorBrush x:Key="Brush.ListSelected" Color="{StaticResource ListSelectedBackground}"/>
+    <SolidColorBrush x:Key="Brush.ListNowPlaying" Color="{StaticResource ListNowPlayingBackground}"/>
+    <SolidColorBrush x:Key="Brush.ProgressTrack" Color="{StaticResource ProgressTrackBackground}"/>
+    <SolidColorBrush x:Key="Brush.OnGold" Color="#0A0E1B"/>
+    <SolidColorBrush x:Key="Brush.SidebarNavText" Color="#E4ECFA"/>
+    <SolidColorBrush x:Key="Brush.ChromeButtonForeground" Color="{StaticResource ChromeButtonForeground}"/>
+    <SolidColorBrush x:Key="Brush.ChromeButtonHoverBackground" Color="{StaticResource ChromeButtonHoverBackground}"/>
+    <SolidColorBrush x:Key="Brush.ToggleTrackOff" Color="{StaticResource ToggleTrackOff}"/>
+    <SolidColorBrush x:Key="Brush.ToggleTrackOn" Color="{StaticResource ToggleTrackOn}"/>
+    <SolidColorBrush x:Key="Brush.ToggleCheckedBackground" Color="{StaticResource ToggleCheckedBackground}"/>
+    <SolidColorBrush x:Key="Brush.ComboBoxForeground" Color="{StaticResource ComboBoxForeground}"/>
+    <SolidColorBrush x:Key="Brush.ComboBoxPopupBackground" Color="{StaticResource ComboBoxPopupBackground}"/>
+    <SolidColorBrush x:Key="Brush.ComboBoxPopupBorder" Color="{StaticResource ComboBoxPopupBorder}"/>
+    <SolidColorBrush x:Key="Brush.ComboBoxPopupForeground" Color="{StaticResource TextPrimary}"/>
+    <SolidColorBrush x:Key="Brush.ComboBoxPopupHover" Color="{StaticResource ComboBoxPopupHover}"/>
+    <SolidColorBrush x:Key="Brush.DropTargetActiveBorder" Color="{StaticResource DropTargetActiveBorder}"/>
+    <SolidColorBrush x:Key="Brush.DropTargetActiveBackground" Color="{StaticResource DropTargetActiveBackground}"/>
+    <SolidColorBrush x:Key="Brush.ScrollBarThumb" Color="{StaticResource ScrollBarThumb}"/>
+    <SolidColorBrush x:Key="Brush.ScrollBarThumbHover" Color="{StaticResource ScrollBarThumbHover}"/>
+    <SolidColorBrush x:Key="Brush.TourScrim" Color="{StaticResource TourScrim}"/>
+    <SolidColorBrush x:Key="Brush.TourCalloutBackground" Color="{StaticResource TourCalloutBackground}"/>
+    <SolidColorBrush x:Key="Brush.TourCalloutBorder" Color="{StaticResource TourCalloutBorder}"/>
+    <SolidColorBrush x:Key="Brush.TourTitle" Color="{StaticResource GoldBright}"/>
+    <SolidColorBrush x:Key="Brush.TourBody" Color="{StaticResource TextPrimary}"/>
+    <SolidColorBrush x:Key="Brush.TourStep" Color="{StaticResource TextMuted}"/>
+
+    <LinearGradientBrush x:Key="Brush.Sidebar" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#243357" Offset="0"/>
+        <GradientStop Color="#141C31" Offset="0.55"/>
+        <GradientStop Color="#080C18" Offset="1"/>
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="Brush.PlayerBar" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#1F2A48" Offset="0"/>
+        <GradientStop Color="#0F1628" Offset="1"/>
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="Brush.PlayerChrome" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="{StaticResource PlayerBarTop}" Offset="0"/>
+        <GradientStop Color="{StaticResource PlayerBarMid}" Offset="0.55"/>
+        <GradientStop Color="{StaticResource PlayerBarBottom}" Offset="1"/>
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="Brush.NowPlayingCard" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="{StaticResource NowPlayingCardTop}" Offset="0"/>
+        <GradientStop Color="{StaticResource NowPlayingCardMid}" Offset="0.55"/>
+        <GradientStop Color="{StaticResource NowPlayingCardBottom}" Offset="1"/>
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="Brush.Ring" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="{StaticResource RingGradientStart}" Offset="0"/>
+        <GradientStop Color="{StaticResource RingGradientMid}" Offset="0.5"/>
+        <GradientStop Color="{StaticResource RingGradientEnd}" Offset="1"/>
+    </LinearGradientBrush>
+
+    <Color x:Key="KeybindOverlayShadowColor">#020610</Color>
+    <LinearGradientBrush x:Key="Brush.KeybindOverlayBackground" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#F0182238" Offset="0"/>
+        <GradientStop Color="#E8121A2E" Offset="0.5"/>
+        <GradientStop Color="#D00C1222" Offset="1"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="Brush.KeybindOverlayHeader" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Color="#553A6E9C" Offset="0"/>
+        <GradientStop Color="#18121A2E" Offset="1"/>
+    </LinearGradientBrush>
+    <SolidColorBrush x:Key="Brush.KeybindOverlayFooter" Color="#F00E1526"/>
+    <SolidColorBrush x:Key="Brush.KeybindOverlayBorder" Color="{StaticResource GoldBright}"/>
+    <SolidColorBrush x:Key="Brush.KeybindCellBackground" Color="#331F2A48"/>
+    <SolidColorBrush x:Key="Brush.KeybindCellBorder" Color="#444A5C82"/>
+    <SolidColorBrush x:Key="Brush.KeybindNoteCircle" Color="#441D2843"/>
+    <SolidColorBrush x:Key="Brush.KeybindKeySlot" Color="#55141D33"/>
+
+</ResourceDictionary>

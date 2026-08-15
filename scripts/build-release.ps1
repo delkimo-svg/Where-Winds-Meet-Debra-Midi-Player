@@ -36,6 +36,16 @@ $essentialAssets = @(
     'debra-sidebar-bottom-banner.png',
     'debra-sidebar-castle-scene.png',
     'debra-wwm-header-logo.png',
+    'debra-bg-ffxiv.png',
+    'debra-sidebar-menu-bg-ffxiv.png',
+    'debra-header-ffxiv-mist.png',
+    'debra-ffxiv-header-logo.png',
+    'debra-ffxiv-hero.png',
+    'debra-ffxiv-branch-left.png',
+    'debra-ffxiv-branch-right.png',
+    'debra-player-ffxiv-corner-bl.png',
+    'debra-player-ffxiv-corner-br.png',
+    'debra-thumb-ffxiv.png',
     'academy-manifest.json'
 )
 

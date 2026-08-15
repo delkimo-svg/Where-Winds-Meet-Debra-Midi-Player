@@ -36,8 +36,9 @@ public partial class DebraPlayerChrome : UserControl
     private void ApplyPlayerCornerBl()
     {
         PlayerCornerBl.Source = AssetImage.LoadOrPlaceholder(ThemeService.GetPlayerCornerBlFile());
-        var isWuxia = ThemeService.CurrentId == ThemeService.Wuxia;
-        PlayerCornerBl.Opacity = isWuxia ? 0.52 : 0.42;
+        PlayerCornerBl.Opacity = ThemeService.PlayerCornerBlOpacity;
+        PlayerCornerBl.Width = ThemeService.PlayerCornerBlWidth;
+        PlayerCornerBlHost.Margin = ThemeService.PlayerCornerBlMargin;
     }
 
     private void SeekBar_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)

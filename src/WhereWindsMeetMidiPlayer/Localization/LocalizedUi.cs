@@ -135,6 +135,7 @@ public sealed partial class LocalizedUi : ObservableObject
     public string SettingsTheme => L.T(UiText.SettingsTheme);
     public string ThemeSakura => L.T(UiText.ThemeSakura);
     public string ThemeWuxia => L.T(UiText.ThemeWuxia);
+    public string ThemeFfxiv => L.T(UiText.ThemeFfxiv);
     public string LibrarySearch => L.T(UiText.LibrarySearch);
     public string LibraryImport => L.T(UiText.LibraryImport);
     public string LibraryImportTooltip => L.T(UiText.LibraryImportTooltip);
@@ -214,6 +215,17 @@ public sealed partial class LocalizedUi : ObservableObject
     public string ChromeSeekTip => L.T(UiText.ChromeSeekTip);
     public string ChromeVolumePcTip => L.T(UiText.ChromeVolumePcTip);
     public string ChromeVolumeMasterTip => L.T(UiText.ChromeVolumeMasterTip);
+    public string FfxivChatHeader => L.T(UiText.FfxivChatHeader);
+    public string FfxivChatSendTooltip => L.T(UiText.FfxivChatSendTooltip);
+    public string FfxivChatMessageTooltip => L.T(UiText.FfxivChatMessageTooltip);
+    public string FfxivChatReplyTooltip => L.T(UiText.FfxivChatReplyTooltip);
+    public string FfxivChatChannelTooltip => L.T(UiText.FfxivChatChannelTooltip);
+    public string FfxivChatAnnounceTooltip => L.T(UiText.FfxivChatAnnounceTooltip);
+    public string FfxivChatTemplateTooltip => L.T(UiText.FfxivChatTemplateTooltip);
+    public string FfxivChatAutoAnnounce => L.T(UiText.FfxivChatAutoAnnounce);
+    public string FfxivChatAutoAnnounceTooltip => L.T(UiText.FfxivChatAutoAnnounceTooltip);
+    public string FfxivChatNeedPlugin => L.T(UiText.FfxivChatNeedPlugin);
+    public string FfxivChatDownload => L.T(UiText.FfxivChatDownload);
 
     public void Refresh() => OnPropertyChanged(string.Empty);
 }

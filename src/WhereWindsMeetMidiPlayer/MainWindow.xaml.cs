@@ -70,6 +70,7 @@ public partial class MainWindow : Window
         {
             MainBackgroundImage.Source = AssetImage.LoadBackground();
             Background = Brushes.Transparent;
+            HeaderLogoImage.Source = AssetImage.LoadOrPlaceholder(ThemeService.GetHeaderLogoFile());
             ApplyTitleBarDecor();
             ApplyPanelDecorBackdrops();
         }
@@ -101,7 +102,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        var opacity = ThemeService.CurrentId == ThemeService.Wuxia ? 1.0 : 0.22;
+        var opacity = ThemeService.IsDark ? 1.0 : 0.22;
         TitleBarDecorHost.Background = HeaderDecorBrush.CreateFill(decor, opacity)
             ?? TryFindResource("Brush.BgDeep") as Brush;
         TitleBarDecorHost.Visibility = Visibility.Visible;
@@ -110,17 +111,16 @@ public partial class MainWindow : Window
         TitleBarEdgeFadeBottom.Visibility = Visibility.Visible;
     }
 
-    /// <summary>Wuxia: sidebar nudged 7px left; 7px gap before first content card.</summary>
+    /// <summary>Slim banner themes: sidebar nudged 7px left; 7px gap before first content card.</summary>
     private void ApplySidebarAlignmentForTheme()
     {
         const double playerMarginLeft = 5;
-        const double wuxiaExtraMargin = 5;
-        const double wuxiaMenuShiftLeft = 7;
+        const double slimBannerExtraMargin = 5;
+        const double slimBannerMenuShiftLeft = 7;
         const double gapBeforeFirstCard = 7;
-        var isWuxia = ThemeService.CurrentId == ThemeService.Wuxia;
-        if (isWuxia)
+        if (ThemeService.UsesSlimSidebarBanner)
         {
-            var left = playerMarginLeft + wuxiaExtraMargin - wuxiaMenuShiftLeft;
+            var left = playerMarginLeft + slimBannerExtraMargin - slimBannerMenuShiftLeft;
             TourTarget_Sidebar.Margin = new Thickness(left, 6, gapBeforeFirstCard, 0);
         }
         else

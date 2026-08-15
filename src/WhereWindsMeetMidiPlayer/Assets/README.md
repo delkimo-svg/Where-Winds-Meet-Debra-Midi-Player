@@ -28,6 +28,17 @@ Only these files are required for the UI. Other mockup PNGs are optional and pru
 | `debra-sidebar-menu-bg-wuxia.png` | Wuxia bookmark menu banner 149×682 (`scripts/process-wuxia-menu-banner.ps1`) |
 | `debra-sidebar-menu-bg-wuxia-source.png` | Source art for Wuxia banner processing |
 | `debra-nav-splatter.png` | White splatter glow for selected nav item |
+| `debra-bg-ffxiv.png` | Main background (Eorzea night — FFXIV theme, `scripts/generate-ffxiv-theme-assets.ps1`) |
+| `debra-header-ffxiv-mist.png` | Title bar aether strip 1024×48 (FFXIV theme) |
+| `debra-ffxiv-header-logo.png` | Top-left title bar emblem (FFXIV theme) |
+| `debra-ffxiv-hero.png` | Now playing portrait (FFXIV theme) |
+| `debra-ffxiv-branch-left.png` | FFXIV now playing — left crystal branch |
+| `debra-ffxiv-branch-right.png` | FFXIV now playing — right crystal branch |
+| `debra-player-ffxiv-corner-bl.png` | Player bar — bottom-left crystal corner (FFXIV theme) |
+| `debra-player-ffxiv-corner-br.png` | Player bar — bottom-right crystal corner (FFXIV theme) |
+| `debra-thumb-ffxiv.png` | Track thumbnail (FFXIV theme) |
+| `debra-sidebar-menu-bg-ffxiv.png` | FFXIV side banner 149×682 (`scripts/generate-ffxiv-theme-assets.ps1`) |
+| `debra-*-ffxiv-source.png` / `debra-ffxiv-*-source.png` | Source plates for FFXIV asset generation |
 | `debra-sidebar-scroll.png` | Legacy scroll fallback |
 | `debra-sidebar-castle-scene.png` | Left column castle background (behind scroll) |
 | `debra-sidebar-footer.png` | Castle background fallback |

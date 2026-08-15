@@ -127,6 +127,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] private bool _playlistFavoritesOnly;
     [ObservableProperty] private string _targetProcessName = "wwm.exe";
     [ObservableProperty] private string _gameWindowTitleContains = "Where Winds Meet";
+    [ObservableProperty] private GameProfile _selectedGameProfile = GameProfiles.WhereWindsMeet;
     [ObservableProperty] private bool _focusGameBeforePlay;
     [ObservableProperty] private int _prePlayCountdownSeconds = 1;
     [ObservableProperty] private string _gameConnectionStatus = string.Empty;
@@ -501,6 +502,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
             () => StopCommand.Execute(null),
             () => PreviousCommand.Execute(null),
             () => NextCommand.Execute(null),
+            () => SeekRelativeSeconds(-5),
+            () => SeekRelativeSeconds(5),
             uiDispatcher);
 
         NavItems.Add(new NavItemViewModel { Section = NavigationSection.Library, Icon = "📚" });
@@ -523,6 +526,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
         AvailableThemes.Add(new ThemeOption { Id = ThemeService.Sakura, DisplayName = "Sakura" });
         AvailableThemes.Add(new ThemeOption { Id = ThemeService.Wuxia, DisplayName = "Wuxia Dark" });
+        AvailableThemes.Add(new ThemeOption { Id = ThemeService.Ffxiv, DisplayName = "Eorzea Night" });
 
         LocalizationService.Instance.LanguageChanged += (_, _) => ScheduleApplyLocalization();
 
@@ -554,6 +558,17 @@ public partial class MainViewModel : ObservableObject, IDisposable
         {
             AppPaths.WriteDiagnosticLog("settings-load", ex);
         }
+
+        // One-time fix: earlier builds wrote FFXIV keymaps that didn't match the game's
+        // "Assign all notes to keyboard" keybinds (v1 = WWM Shift=sharp scheme, v2 = piano-row scheme).
+        if (_settings.Settings.FfxivKeyMapVersion < 2)
+        {
+            _keyMapping.RegenerateFinalFantasyXivDefaultMaps();
+            _settings.Settings.FfxivKeyMapVersion = 2;
+        }
+
+        ApplyGameProfileFromSettings();
+        InitializeFfxivChat();
 
         try
         {
@@ -601,8 +616,10 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _settings.Settings.Volume = Volume;
         ApplyVolumeToSystem();
         ApplySynthVolume();
-        TargetProcessName = _settings.Settings.TargetProcessName;
-        GameWindowTitleContains = _settings.Settings.GameWindowTitleContains;
+        TargetProcessName = ReconcileGameScopedSetting(
+            _settings.Settings.TargetProcessName, p => p.DefaultProcessName);
+        GameWindowTitleContains = ReconcileGameScopedSetting(
+            _settings.Settings.GameWindowTitleContains, p => p.DefaultWindowTitleContains);
         ReleaseManifestUrl = _settings.Settings.ReleaseManifestUrl ?? string.Empty;
         MigrateDefaultRefreshFolders();
         LibraryRefreshFolderPath = _settings.Settings.LibraryRefreshFolder ?? string.Empty;
@@ -639,6 +656,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         RefreshFavoriteSongs();
 
         EnsureKeyMaps();
+        SyncFfxivKeybindsFromGame();
         LoadKeyMapping(ResolveInitialKeyMappingFile());
         RefreshKeyLayouts();
 
@@ -674,29 +692,153 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private bool _suppressLibraryPersist;
     private bool _suppressPracticeLibraryPersist;
     private bool _suppressPracticeSongPersist;
+    private bool _suppressGameProfileChange;
+
+    public IReadOnlyList<GameProfile> GameOptions => GameProfiles.All;
+
+    public string SelectedGameDisplayName => SelectedGameProfile?.DisplayName ?? GameProfiles.WhereWindsMeet.DisplayName;
+
+    public string WindowTitleText => $"Debra MIDI Player — {SelectedGameDisplayName}";
+
+    private void ApplyGameProfileFromSettings()
+    {
+        var profile = GameProfiles.Find(_settings.Settings.SelectedGameId);
+        GameProfiles.Apply(profile);
+        _suppressGameProfileChange = true;
+        try
+        {
+            SelectedGameProfile = profile;
+        }
+        finally
+        {
+            _suppressGameProfileChange = false;
+        }
+
+        NotifyGameProfileLabels();
+    }
+
+    /// <summary>Heals settings saved while another game was selected: a value equal to a
+    /// different profile's default snaps back to the current profile's default.</summary>
+    private static string ReconcileGameScopedSetting(string? saved, Func<GameProfile, string> defaultOf)
+    {
+        var currentDefault = defaultOf(GameProfiles.Current);
+        if (string.IsNullOrWhiteSpace(saved))
+            return currentDefault;
+
+        var belongsToOtherGame = GameProfiles.All.Any(p =>
+            !ReferenceEquals(p, GameProfiles.Current)
+            && string.Equals(saved, defaultOf(p), StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(saved, currentDefault, StringComparison.OrdinalIgnoreCase));
+
+        return belongsToOtherGame ? currentDefault : saved;
+    }
+
+    partial void OnSelectedGameProfileChanged(GameProfile value)
+    {
+        if (_suppressGameProfileChange || value is null)
+            return;
+
+        if (_playback.State is PlaybackState.Playing or PlaybackState.Paused)
+            StopCommand.Execute(null);
+
+        GameProfiles.Apply(value);
+        _settings.Settings.SelectedGameId = value.Id;
+        TargetProcessName = value.DefaultProcessName;
+        GameWindowTitleContains = value.DefaultWindowTitleContains;
+        _gameWindow.ClearCache();
+
+        EnsureKeyMaps();
+        SyncFfxivKeybindsFromGame();
+        RefreshKeyLayouts();
+        LoadKeyMapping(ResolveGameKeyMappingFile(value, _settings.Settings.KeyboardLayoutPresetId));
+        RebuildNoteMappingModes();
+        ApplyThemeForGame(value);
+        NotifyGameProfileLabels();
+        UpdateFfxivChatForGame();
+        ScheduleSettingsSave();
+        _ = RefreshGameConnectionStatusAsync();
+    }
+
+    /// <summary>Probes the newly targeted game right away so the status reflects the switch.</summary>
+    private async Task RefreshGameConnectionStatusAsync()
+    {
+        var name = TargetProcessName;
+        var (running, found) = await Task.Run(() =>
+        {
+            _gameWindow.ClearCache();
+            var isRunning = _gameWindow.IsProcessRunning();
+            return (isRunning, isRunning && _gameWindow.IsGameWindowFound());
+        }).ConfigureAwait(false);
+
+        await UiDispatcher.RunAsync(() => GameConnectionStatus = found
+            ? $"{name}: window found — ready to play."
+            : running
+                ? $"{name}: running, window not detected yet."
+                : $"{name}: not running.").ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// FFXIV adapts to each player's own layout: reads the game's KEYBIND.DAT (like LightAmp)
+    /// and rewrites the default FFXIV keymap with the player's actual Performance keybinds.
+    /// Falls back to the bundled "assign all notes" default map when the DAT can't be read.
+    /// </summary>
+    private void SyncFfxivKeybindsFromGame()
+    {
+        if (GameProfiles.Current != GameProfiles.FinalFantasyXiv)
+            return;
+
+        try
+        {
+            if (!FfxivKeybindReader.TryReadPerformanceKeybinds(out var map, out var source))
+                return;
+
+            _keyMapping.WriteKeyMapFile(GameProfiles.FinalFantasyXiv.DefaultKeyMapFile, map);
+            // The synced game layout becomes the active map (not a QWERTY/AZERTY preset).
+            _settings.Settings.KeyboardLayoutPresetId = null;
+            _settings.Settings.KeyMappingFile = GameProfiles.FinalFantasyXiv.DefaultKeyMapFile;
+            _ = source; // e.g. "FFXIV_CHR0123… (37/37)" — surfaced later if we add a status line
+        }
+        catch (Exception ex)
+        {
+            AppPaths.WriteDiagnosticLog("ffxiv-keybind-sync", ex);
+        }
+    }
+
+    private void NotifyGameProfileLabels()
+    {
+        OnPropertyChanged(nameof(SelectedGameDisplayName));
+        OnPropertyChanged(nameof(WindowTitleText));
+    }
+
+    private static string ResolveGameKeyMappingFile(GameProfile game, string? presetId)
+    {
+        var preset = string.IsNullOrWhiteSpace(presetId) ? null : GameKeyboardLayoutPresets.Find(presetId);
+        return preset is null ? game.DefaultKeyMapFile : game.KeyMapFileName(preset.FileName);
+    }
 
     private void EnsureKeyMaps()
     {
         // Seed bundled defaults only when missing — never overwrite user-edited keymaps on startup.
         _keyMapping.EnsureDefaultKeyMap("default-keymap.json");
-        _keyMapping.EnsureDefaultKeyMap("debra-36-keys.json");
+        _keyMapping.EnsureDefaultKeyMap(GameProfiles.Current.DefaultKeyMapFile);
         _keyMapping.EnsurePresetKeyMaps();
     }
 
     private string ResolveInitialKeyMappingFile()
     {
+        var game = GameProfiles.Current;
         if (!string.IsNullOrWhiteSpace(_settings.Settings.KeyboardLayoutPresetId))
         {
             var preset = GameKeyboardLayoutPresets.Find(_settings.Settings.KeyboardLayoutPresetId);
             if (preset is not null)
-                return preset.FileName;
+                return game.KeyMapFileName(preset.FileName);
         }
 
-        var byFile = GameKeyboardLayoutPresets.FindByFileName(_settings.Settings.KeyMappingFile);
-        if (byFile is not null)
-            return byFile.FileName;
+        var saved = _settings.Settings.KeyMappingFile;
+        if (GameProfiles.FileBelongsTo(game, saved))
+            return saved;
 
-        return _settings.Settings.KeyMappingFile;
+        return game.DefaultKeyMapFile;
     }
 
     private void RefreshKeyboardLayoutPresets()
@@ -715,8 +857,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
         if (preset is null)
             return;
 
-        _keyMapping.EnsureDefaultKeyMap(preset.FileName);
-        LoadKeyMapping(preset.FileName, preset.Id);
+        var fileName = GameProfiles.Current.KeyMapFileName(preset.FileName);
+        _keyMapping.EnsureDefaultKeyMap(fileName);
+        LoadKeyMapping(fileName, preset.Id);
     }
 
     [RelayCommand]
@@ -728,17 +871,25 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private void RefreshKeyLayouts()
     {
         KeyLayouts.Clear();
+        var game = GameProfiles.Current;
         foreach (var file in Directory.GetFiles(AppPaths.KeyMapsFolder, "*.json").OrderBy(f => f))
         {
             var name = Path.GetFileName(file);
+            if (!GameProfiles.FileBelongsTo(game, name))
+                continue;
+
             var display = name switch
             {
                 "debra-36-keys.json" => "Debra 36 Keys",
                 "default-keymap.json" => "Default 36 Keys",
-                "preset-qwerty.json" => L.T(UiText.SettingsNoteKeysPresetQwerty),
-                "preset-qwertz.json" => L.T(UiText.SettingsNoteKeysPresetQwertz),
-                "preset-azerty.json" => L.T(UiText.SettingsNoteKeysPresetAzerty),
-                _ => Path.GetFileNameWithoutExtension(name)
+                "ffxiv-37-keys.json" => "FFXIV 37 Keys",
+                _ => GameProfiles.StripKeyMapPrefix(name) switch
+                {
+                    "preset-qwerty.json" => L.T(UiText.SettingsNoteKeysPresetQwerty),
+                    "preset-qwertz.json" => L.T(UiText.SettingsNoteKeysPresetQwertz),
+                    "preset-azerty.json" => L.T(UiText.SettingsNoteKeysPresetAzerty),
+                    _ => Path.GetFileNameWithoutExtension(name)
+                }
             };
             KeyLayouts.Add(new KeyLayoutOption { FileName = name, DisplayName = display });
         }
@@ -764,7 +915,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _keyMapping.LoadFromFile(path);
         _settings.Settings.KeyMappingFile = fileName;
         _settings.Settings.KeyboardLayoutPresetId = presetId
-            ?? GameKeyboardLayoutPresets.FindByFileName(fileName)?.Id;
+            ?? GameKeyboardLayoutPresets.FindByFileName(GameProfiles.StripKeyMapPrefix(fileName))?.Id;
         _settings.Save();
         OnPropertyChanged(nameof(PracticeKeyCombos));
 
@@ -3297,7 +3448,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void ResetProcessName()
     {
-        TargetProcessName = "wwm.exe";
+        TargetProcessName = GameProfiles.Current.DefaultProcessName;
         _gameWindow.ClearCache();
     }
 
@@ -3326,12 +3477,17 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     private void ResumePlayback() => StartPlaybackFromCurrentPosition();
 
-    private void StartPlaybackFromCurrentPosition() =>
+    private void StartPlaybackFromCurrentPosition()
+    {
+        // The engine resets its tempo multiplier on stop/load; the UI keeps the
+        // saved per-song percent, so re-sync the engine with what is displayed.
+        _playback.SetTempoMultiplier(PlaybackTempoPercent / 100.0);
         _playback.PlayFromCurrentPosition(
             NoteDelayMs,
             ChordRollDelayMs,
             _settings.Settings.MinKeyPressDurationMs,
             _settings.Settings.IdenticalKeyGapMs);
+    }
 
     [RelayCommand]
     private void SeekToPosition(double normalizedPosition)
@@ -3343,6 +3499,28 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _playback.SeekToMs(targetMs);
         StartPlaybackFromCurrentPosition();
         IsPlaying = true;
+        UpdateProgress();
+    }
+
+    /// <summary>Jump backward/forward in the current song; keeps the paused state.</summary>
+    private void SeekRelativeSeconds(double deltaSeconds)
+    {
+        if (_nowPlaying is null || _playback.TotalDurationMs <= 0)
+            return;
+
+        var wasPlaying = _playback.State == PlaybackState.Playing;
+        var targetMs = Math.Clamp(
+            _playback.CurrentPositionMs + (long)(deltaSeconds * 1000),
+            0,
+            _playback.TotalDurationMs);
+        _playback.SeekToMs(targetMs);
+
+        if (wasPlaying)
+        {
+            StartPlaybackFromCurrentPosition();
+            IsPlaying = true;
+        }
+
         UpdateProgress();
     }
 
@@ -3454,18 +3632,20 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     private async Task StartSongAsync(Song song)
     {
-        if (IsLiveMidiEnabled)
-            DisableLiveMidiForFilePlayback();
-
         try
         {
-            _suppressPlaybackUi = true;
-            _playback.Stop();
-            FinalizeHistory(PlaybackStatus.Stopped);
+            await UiDispatcher.RunAsync(() =>
+            {
+                if (IsLiveMidiEnabled)
+                    DisableLiveMidiForFilePlayback();
 
-            NowPlayingTitle = CatalogueTitleHelper.GetDisplayTitle(song.Title, song.FilePath);
+                _suppressPlaybackUi = true;
+                _playback.Stop();
+                FinalizeHistory(PlaybackStatus.Stopped);
 
-            ApplyPlaybackCalibrationOnLoad(song.FilePath);
+                NowPlayingTitle = CatalogueTitleHelper.GetDisplayTitle(song.Title, song.FilePath);
+                ApplyPlaybackCalibrationOnLoad(song.FilePath);
+            }).ConfigureAwait(false);
 
             var prepared = await PrepareSongOnBackgroundAsync(song).ConfigureAwait(false);
 
@@ -3475,18 +3655,22 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
             if (schedule.Count == 0)
             {
-                _suppressPlaybackUi = false;
-                await UiDispatcher.RunAsync(() => DebraDialogs.Warning(
-                    "Cannot play",
-                    $"No playable notes ({_keyMapping.MappedNoteCount} keys in layout).\n\n" +
-                    "• Settings → pick layout \"Debra 36 Keys\"\n" +
-                    "• Enable Smart Transpose if the MIDI is outside C3–B5")).ConfigureAwait(true);
+                await UiDispatcher.RunAsync(() =>
+                {
+                    _suppressPlaybackUi = false;
+                    DebraDialogs.Warning(
+                        "Cannot play",
+                        $"No playable notes ({_keyMapping.MappedNoteCount} keys in layout).\n\n" +
+                        $"• Settings → pick layout \"{GameProfiles.Current.DefaultKeyMapDisplayName}\"\n" +
+                        $"• Enable Smart Transpose if the MIDI is outside " +
+                        $"{NoteNames.FromMidiNumber(NoteNames.MinGameNote)}–{NoteNames.FromMidiNumber(NoteNames.MaxGameNote)}");
+                }).ConfigureAwait(false);
                 return;
             }
 
             if (!await PrepareGameConnectionAsync().ConfigureAwait(false))
             {
-                _suppressPlaybackUi = false;
+                await UiDispatcher.RunAsync(() => _suppressPlaybackUi = false).ConfigureAwait(false);
                 return;
             }
 
@@ -3528,13 +3712,16 @@ public partial class MainViewModel : ObservableObject, IDisposable
                     song.OutOfRangeNoteCount = ranged.OutOfRangeNoteCount;
 
                     ResetPlaybackTempoForSong(parsed.BeatsPerMinute);
-                    ApplySongTempoOnLoad(song.FilePath);
+                    // LoadSchedule stops the engine, which resets its tempo multiplier —
+                    // apply the saved per-song tempo only after the schedule is in place.
                     _playback.LoadSchedule(schedule, parsed.DurationMs);
+                    ApplySongTempoOnLoad(song.FilePath);
                     TotalTimeText = TimeFormat.FromMilliseconds(parsed.DurationMs);
                     _input.ResetDiagnostics();
 
                     CancelAutoAdvanceTimer();
                     StartPlaybackFromCurrentPosition();
+                    AutoAnnounceNowPlayingIfEnabled();
 
                     _activeHistoryItem = new HistoryItem
                     {
@@ -3553,11 +3740,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 {
                     _suppressPlaybackUi = false;
                 }
-            }).ConfigureAwait(true);
+            }).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
             _suppressPlaybackUi = false;
+            AppPaths.WriteDiagnosticLog("playback-start", ex);
             var failedItem = new HistoryItem
             {
                 SongTitle = CatalogueTitleHelper.GetDisplayTitle(song.Title, song.FilePath),
@@ -3565,8 +3753,11 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 PlayedAt = DateTime.UtcNow,
                 Status = PlaybackStatus.Error
             };
-            UiDispatcher.Run(() => CommitHistoryEntry(failedItem));
-            DebraDialogs.Error("Playback error", $"Failed to play: {ex.Message}");
+            UiDispatcher.Run(() =>
+            {
+                CommitHistoryEntry(failedItem);
+                DebraDialogs.Error("Playback error", $"Failed to play: {ExceptionMessageHelper.FormatUserMessage(ex)}");
+            });
         }
     }
 
@@ -3581,7 +3772,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 TrackIndex = SelectedMidiTrack?.TrackIndex ?? -1,
                 MappingMode = SelectedNoteMappingMode?.Mode ?? NoteMappingMode.Chromatic36,
                 ChordRollDelayMs = ChordRollDelayMs,
-                NoteDelayMs = NoteDelayMs
+                NoteDelayMs = NoteDelayMs,
+                FfxivChordAlignWindowMs = Math.Clamp(_settings.Settings.FfxivChordAlignWindowMs, 0, 200),
+                FfxivChordReduction = _settings.Settings.FfxivChordReduction,
+                FfxivTrackOctaveSuffix = _settings.Settings.FfxivTrackOctaveSuffix,
+                FfxivMinNoteSpacingMs = Math.Clamp(_settings.Settings.FfxivMinNoteSpacingMs, 0, 200),
+                FfxivAdaptiveVoicing = _settings.Settings.FfxivAdaptiveVoicing
             },
             _keyMapping));
 
@@ -4678,7 +4874,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             await UiDispatcher.RunAsync(() => continueAnyway = DebraDialogs.Confirm(
                 "Game not found",
                 $"Process \"{TargetProcessName}\" is not running.\n\n" +
-                "Start Where Winds Meet, open the instrument, then play.\n\nContinue anyway?",
+                $"Start {GameProfiles.Current.DisplayName}, open the instrument, then play.\n\nContinue anyway?",
                 confirmLabel: "Continue",
                 cancelLabel: "Cancel")).ConfigureAwait(true);
             if (!continueAnyway)
@@ -5618,6 +5814,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         AvailableThemes.Clear();
         AvailableThemes.Add(new ThemeOption { Id = ThemeService.Sakura, DisplayName = Ui.ThemeSakura });
         AvailableThemes.Add(new ThemeOption { Id = ThemeService.Wuxia, DisplayName = Ui.ThemeWuxia });
+        AvailableThemes.Add(new ThemeOption { Id = ThemeService.Ffxiv, DisplayName = Ui.ThemeFfxiv });
         _suppressThemeChange = true;
         SelectedTheme = AvailableThemes.FirstOrDefault(t =>
                             t.Id.Equals(selectedId, StringComparison.OrdinalIgnoreCase))
@@ -5627,7 +5824,26 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     private void ApplyUiThemeFromSettings()
     {
-        ThemeService.Apply(_settings.Settings.UiTheme, persist: false);
+        var settings = _settings.Settings;
+        // Settings written before per-game themes only offered the two WWM themes: keep that choice
+        // for WWM, and let FFXIV pick up its own theme on the first launch after the update.
+        if (settings.UiThemeByGame.Count == 0 && !string.IsNullOrWhiteSpace(settings.UiTheme))
+            settings.UiThemeByGame[GameProfiles.WhereWindsMeet.Id] = ThemeService.Normalize(settings.UiTheme);
+
+        ApplyThemeForGame(GameProfiles.Current);
+    }
+
+    /// <summary>Dresses the app in the theme tied to the selected game (Eorzea night for FFXIV),
+    /// unless the player already picked another one for that game.</summary>
+    private void ApplyThemeForGame(GameProfile game)
+    {
+        var themeId = _settings.Settings.UiThemeByGame.TryGetValue(game.Id, out var saved)
+                      && !string.IsNullOrWhiteSpace(saved)
+            ? saved
+            : game.SignatureThemeId;
+
+        ThemeService.Apply(themeId, persist: false);
+        _settings.Settings.UiTheme = ThemeService.CurrentId;
         _suppressThemeChange = true;
         SelectedTheme = AvailableThemes.FirstOrDefault(t =>
                               t.Id.Equals(ThemeService.CurrentId, StringComparison.OrdinalIgnoreCase))
@@ -5642,6 +5858,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
         ThemeService.Apply(value.Id);
         _settings.Settings.UiTheme = ThemeService.CurrentId;
+        _settings.Settings.UiThemeByGame[GameProfiles.Current.Id] = ThemeService.CurrentId;
         _settings.Save();
     }
 
@@ -5940,13 +6157,29 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private void RebuildNoteMappingModes()
     {
         var selected = SelectedNoteMappingMode?.Mode ?? _settings.Settings.DefaultNoteMappingMode;
+        var ffxiv = GameProfiles.Current == GameProfiles.FinalFantasyXiv;
+
+        // Per-game chromatic default: WWM keeps its Chromatic 36, FFXIV gets Chromatic FFXIV (37).
+        // Switching games swaps the entry and remaps the selection to the current game's chromatic.
+        if (ffxiv && selected == NoteMappingMode.Chromatic36)
+            selected = NoteMappingMode.ChromaticFfxiv37;
+        else if (!ffxiv && selected == NoteMappingMode.ChromaticFfxiv37)
+            selected = NoteMappingMode.Chromatic36;
+
         NoteMappingModes.Clear();
-        NoteMappingModes.Add(new NoteMappingModeOption
-        {
-            Mode = NoteMappingMode.Chromatic36,
-            DisplayName = L.T(UiText.NoteMappingChromatic36),
-            Description = L.T(UiText.NoteMappingChromatic36Hint)
-        });
+        NoteMappingModes.Add(ffxiv
+            ? new NoteMappingModeOption
+            {
+                Mode = NoteMappingMode.ChromaticFfxiv37,
+                DisplayName = L.T(UiText.NoteMappingChromatic37),
+                Description = L.T(UiText.NoteMappingChromatic37Hint)
+            }
+            : new NoteMappingModeOption
+            {
+                Mode = NoteMappingMode.Chromatic36,
+                DisplayName = L.T(UiText.NoteMappingChromatic36),
+                Description = L.T(UiText.NoteMappingChromatic36Hint)
+            });
         NoteMappingModes.Add(new NoteMappingModeOption
         {
             Mode = NoteMappingMode.TransposeOnly,
@@ -5973,21 +6206,29 @@ public partial class MainViewModel : ObservableObject, IDisposable
         if (calibration.IsDefault)
             calibration.MappingMode = _settings.Settings.DefaultNoteMappingMode;
 
-        var tracks = _midiParser.GetTracks(filePath);
-        RebuildMidiTrackOptions(tracks);
-
+        // Suppress before RebuildMidiTrackOptions — it assigns SelectedMidiTrack and would
+        // otherwise schedule a reprepare / save against the previous now-playing song.
         _suppressPlaybackCalibrationChange = true;
-        PlaybackOctaveShift = Math.Clamp(
-            calibration.OctaveShift,
-            SongPlaybackCalibration.MinOctaveShift,
-            SongPlaybackCalibration.MaxOctaveShift);
-        SelectedNoteMappingMode = NoteMappingModes.FirstOrDefault(m => m.Mode == calibration.MappingMode)
-            ?? NoteMappingModes.FirstOrDefault();
-        SelectedMidiTrack = MidiTrackOptions.FirstOrDefault(t => t.TrackIndex == calibration.TrackIndex)
-            ?? MidiTrackOptions.FirstOrDefault();
-        _suppressPlaybackCalibrationChange = false;
-        ShowMidiTrackSelector = MidiTrackOptions.Count > 1;
-        OnPropertyChanged(nameof(PlaybackOctaveShiftLabel));
+        try
+        {
+            var tracks = _midiParser.GetTracks(filePath);
+            RebuildMidiTrackOptions(tracks);
+
+            PlaybackOctaveShift = Math.Clamp(
+                calibration.OctaveShift,
+                SongPlaybackCalibration.MinOctaveShift,
+                SongPlaybackCalibration.MaxOctaveShift);
+            SelectedNoteMappingMode = NoteMappingModes.FirstOrDefault(m => m.Mode == calibration.MappingMode)
+                ?? NoteMappingModes.FirstOrDefault();
+            SelectedMidiTrack = MidiTrackOptions.FirstOrDefault(t => t.TrackIndex == calibration.TrackIndex)
+                ?? MidiTrackOptions.FirstOrDefault();
+            ShowMidiTrackSelector = MidiTrackOptions.Count > 1;
+            OnPropertyChanged(nameof(PlaybackOctaveShiftLabel));
+        }
+        finally
+        {
+            _suppressPlaybackCalibrationChange = false;
+        }
     }
 
     private void RebuildMidiTrackOptions(IReadOnlyList<MidiTrackInfo> tracks)
@@ -6320,6 +6561,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(ShowFavoritesPanel));
         OnPropertyChanged(nameof(ShowPlaylistPanel));
         OnPropertyChanged(nameof(ShowDebraPlayerChrome));
+        OnPropertyChanged(nameof(IsFfxivChatVisible));
     }
 
     public void RequestPracticeTour(bool force = false)
@@ -6399,6 +6641,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _playback.Dispose();
         _practiceSound.Dispose();
         _midiSoundEngine.Dispose();
+        _hypnotoadRetryTimer?.Stop();
+        _hypnotoad.Dispose();
         _systemVolume.Dispose();
         _settings.Save();
         _history.Save();

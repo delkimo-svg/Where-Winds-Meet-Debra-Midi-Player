@@ -13,6 +13,10 @@ public sealed class GlobalPlaybackHotkeyService : IDisposable
 {
     private const int WhKeyboardLl = 13;
     private const int WmKeyDown = 0x0100;
+    private const int WmSysKeyDown = 0x0104;
+    private const uint LlkhfAltDown = 0x20;
+    private const uint VkLeft = 0x25;
+    private const uint VkRight = 0x27;
 
     private uint _vkPlayPause = PlaybackHotkeyDefaults.PlayPause;
     private uint _vkStop = PlaybackHotkeyDefaults.Stop;
@@ -26,6 +30,8 @@ public sealed class GlobalPlaybackHotkeyService : IDisposable
     private readonly Action _onStop;
     private readonly Action _onPrevious;
     private readonly Action _onNext;
+    private readonly Action _onSeekBackward;
+    private readonly Action _onSeekForward;
     private readonly Dispatcher _dispatcher;
 
     private IntPtr _hookId = IntPtr.Zero;
@@ -39,6 +45,8 @@ public sealed class GlobalPlaybackHotkeyService : IDisposable
         Action onStop,
         Action onPrevious,
         Action onNext,
+        Action onSeekBackward,
+        Action onSeekForward,
         Dispatcher dispatcher)
     {
         _gameWindow = gameWindow;
@@ -48,6 +56,8 @@ public sealed class GlobalPlaybackHotkeyService : IDisposable
         _onStop = onStop;
         _onPrevious = onPrevious;
         _onNext = onNext;
+        _onSeekBackward = onSeekBackward;
+        _onSeekForward = onSeekForward;
         _dispatcher = dispatcher;
     }
 
@@ -120,11 +130,34 @@ public sealed class GlobalPlaybackHotkeyService : IDisposable
 
     private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
     {
-        if (nCode < 0 || wParam != (IntPtr)WmKeyDown || !_isHotkeyContextActive())
+        // Alt+key arrives as WM_SYSKEYDOWN — needed for the Alt+arrow seek keys.
+        var isKeyDown = wParam == (IntPtr)WmKeyDown || wParam == (IntPtr)WmSysKeyDown;
+        if (nCode < 0 || !isKeyDown || !_isHotkeyContextActive())
             return CallNextHookEx(_hookId, nCode, wParam, lParam);
 
         var hook = Marshal.PtrToStructure<KbdLlHookStruct>(lParam);
         var vk = hook.vkCode;
+        var altHeld = (hook.flags & LlkhfAltDown) != 0;
+
+        if (altHeld)
+        {
+            // Alt+Left / Alt+Right seek only while a song is playing or paused,
+            // so plain arrows (and Alt combos elsewhere) keep their normal behavior.
+            if (vk == VkLeft && _hasActivePlayback())
+            {
+                _dispatcher.BeginInvoke(_onSeekBackward);
+                return (IntPtr)1;
+            }
+
+            if (vk == VkRight && _hasActivePlayback())
+            {
+                _dispatcher.BeginInvoke(_onSeekForward);
+                return (IntPtr)1;
+            }
+
+            return CallNextHookEx(_hookId, nCode, wParam, lParam);
+        }
+
         if (vk == _vkPlayPause)
         {
             _dispatcher.BeginInvoke(_onTogglePlayPause);

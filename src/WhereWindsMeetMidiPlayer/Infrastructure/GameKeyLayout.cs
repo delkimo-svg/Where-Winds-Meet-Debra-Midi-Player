@@ -1,11 +1,15 @@
 namespace WhereWindsMeetMidiPlayer.Infrastructure;
 
 /// <summary>
-/// Where Winds Meet in-game instrument layout (36 keys, C3–B5).
+/// In-game instrument layout, driven by the active game range (WWM: 36 keys C3–B5, FFXIV: 37 keys C3–C6).
 /// Three QWERTY rows = three octaves. Sharps: Shift+key. Flats: Ctrl+key (flat uses the natural note's key).
+/// FFXIV adds a 37th key (top C) mapped to the key right of the high row.
 /// </summary>
 public static class GameKeyLayout
 {
+    /// <summary>Key for the extra top C (C6) when the game range extends past three octaves (FFXIV).</summary>
+    public const string TopCKey = "I";
+
     // Bottom = C3–B3, Middle = C4–B4, Top = C5–B5
     private static readonly string[][] NaturalKeys =
     [
@@ -46,19 +50,86 @@ public static class GameKeyLayout
             }
         }
 
+        // Extra keys past three octaves (FFXIV top C6).
+        for (var midi = NoteNames.MinGameNote + 36; midi <= NoteNames.MaxGameNote; midi++)
+        {
+            var col = (midi - NoteNames.MinGameNote) % 12;
+            var degree = DegreeOrder[col];
+            cells.Add(new KeyLayoutCellInfo
+            {
+                MidiNote = midi,
+                OctaveRow = 3,
+                ColumnIndex = col,
+                DisplayLabel = FormatDegreeLabel(DegreeLabels[col], 3),
+                IsNatural = degree is Degree.C or Degree.D or Degree.E or Degree.F
+                    or Degree.G or Degree.A or Degree.B
+            });
+        }
+
         return cells;
     }
 
     private static string FormatDegreeLabel(string label, int octaveRow) =>
         octaveRow switch
         {
-            2 => $"{label}\u0307", // combining dot above (high pitch row)
+            >= 2 => $"{label}\u0307", // combining dot above (high pitch rows)
             0 => $"{label}\u0323", // combining dot below (low pitch row)
             _ => label
         };
 
     public static Dictionary<string, string> BuildWhereWindsMeetMap() =>
         BuildMapFromNaturalRows(NaturalKeys[0], NaturalKeys[1], NaturalKeys[2]);
+
+    // FFXIV "Assign all notes to keyboard" default layout: 37 individual keys, no modifiers.
+    // Naturals low→high rows: Z X C V B N M / A S D F G H J / Q W E R T Y U (+ I = C6).
+    // Sharps (C# Eb F# G# Bb) low→high rows: O P K L ; / 6 7 8 9 0 / 1 2 3 4 5.
+    private static readonly string[][] FfxivNaturalRows =
+    [
+        ["Z", "X", "C", "V", "B", "N", "M"],
+        ["A", "S", "D", "F", "G", "H", "J"],
+        ["Q", "W", "E", "R", "T", "Y", "U"]
+    ];
+
+    private static readonly string[][] FfxivSharpRows =
+    [
+        ["O", "P", "K", "L", ";"],
+        ["6", "7", "8", "9", "0"],
+        ["1", "2", "3", "4", "5"]
+    ];
+
+    /// <summary>
+    /// Map matching FFXIV's "Assign all notes to keyboard" default keybinds (Keybind → Performance,
+    /// checkbox enabled): every one of the 37 notes has its own modifier-free key, which avoids the
+    /// game's Shift/Ctrl octave-shift modifiers entirely. Playback works without rebinding in game.
+    /// </summary>
+    public static Dictionary<string, string> BuildFinalFantasyXivMap()
+    {
+        // Uses the FFXIV profile's own range (48–84) so the map is correct even if built
+        // while another game profile is active (e.g. startup migration under WWM).
+        var map = new Dictionary<string, string>();
+        var baseMidi = GameProfiles.FinalFantasyXiv.MinNote; // C3
+        for (var octave = 0; octave < 3; octave++)
+        {
+            var naturals = FfxivNaturalRows[octave];
+            var sharps = FfxivSharpRows[octave];
+            var b = baseMidi + octave * 12;
+            map[(b + 0).ToString()] = naturals[0];  // C
+            map[(b + 1).ToString()] = sharps[0];    // C#
+            map[(b + 2).ToString()] = naturals[1];  // D
+            map[(b + 3).ToString()] = sharps[1];    // Eb
+            map[(b + 4).ToString()] = naturals[2];  // E
+            map[(b + 5).ToString()] = naturals[3];  // F
+            map[(b + 6).ToString()] = sharps[2];    // F#
+            map[(b + 7).ToString()] = naturals[4];  // G
+            map[(b + 8).ToString()] = sharps[3];    // G#
+            map[(b + 9).ToString()] = naturals[5];  // A
+            map[(b + 10).ToString()] = sharps[4];   // Bb
+            map[(b + 11).ToString()] = naturals[6]; // B
+        }
+
+        map[(baseMidi + 36).ToString()] = TopCKey; // C6 = I
+        return map;
+    }
 
     /// <summary>Builds a full 36-key map from three rows of seven natural keys (low / mid / high octave).</summary>
     public static Dictionary<string, string> BuildMapFromNaturalRows(
@@ -80,6 +151,18 @@ public static class GameKeyLayout
                 var midi = baseMidi + (int)degree;
                 map[midi.ToString()] = ComboForDegree(degree, keys);
             }
+        }
+
+        // FFXIV extends the range with a 37th key: top C (C6), one key right of the high row.
+        for (var midi = NoteNames.MinGameNote + 36; midi <= NoteNames.MaxGameNote; midi++)
+        {
+            var degree = DegreeOrder[(midi - NoteNames.MinGameNote) % 12];
+            map[midi.ToString()] = degree switch
+            {
+                Degree.C => TopCKey,
+                Degree.Cs => $"Shift+{TopCKey}",
+                _ => TopCKey
+            };
         }
 
         return map;

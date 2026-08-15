@@ -11,4 +11,7 @@ public enum NoteMappingMode
 
     /// <summary>Snap each note to the nearest natural (21-key feel on the 36-key layout).</summary>
     ClosestNatural = 2,
+
+    /// <summary>FFXIV variant of the chromatic map: full 37-key range (C3–C6, top C included).</summary>
+    ChromaticFfxiv37 = 3,
 }

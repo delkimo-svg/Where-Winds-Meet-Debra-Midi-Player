@@ -54,24 +54,19 @@ public partial class DebraNowPlayingArt : UserControl
 
     private void ApplyBranchLayout()
     {
-        const double sakuraLeftW = 520;
-        const double sakuraLeftH = 547;
-        const double sakuraLeftX = -53;
-        const double sakuraLeftY = -85;
+        var metrics = ThemeService.NowPlayingBranches;
+        var branchZ = metrics.BehindPortrait ? 1 : 4;
 
-        if (ThemeService.CurrentId == ThemeService.Wuxia)
+        Place(BranchLeft, metrics.Left, branchZ);
+        Place(BranchRight, metrics.Right, branchZ);
+
+        static void Place(Image branch, BranchPlacement placement, int zIndex)
         {
-            BranchLeft.Width = sakuraLeftW * 0.9;
-            BranchLeft.Height = sakuraLeftH * 0.9;
-            Canvas.SetLeft(BranchLeft, sakuraLeftX + 29);
-            Canvas.SetTop(BranchLeft, sakuraLeftY + 100);
-        }
-        else
-        {
-            BranchLeft.Width = sakuraLeftW;
-            BranchLeft.Height = sakuraLeftH;
-            Canvas.SetLeft(BranchLeft, sakuraLeftX);
-            Canvas.SetTop(BranchLeft, sakuraLeftY);
+            branch.Width = placement.Width;
+            branch.Height = placement.Height;
+            Canvas.SetLeft(branch, placement.Left);
+            Canvas.SetTop(branch, placement.Top);
+            Panel.SetZIndex(branch, zIndex);
         }
     }
 

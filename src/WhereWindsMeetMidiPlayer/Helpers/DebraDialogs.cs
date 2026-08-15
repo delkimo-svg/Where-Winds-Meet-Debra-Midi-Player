@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace WhereWindsMeetMidiPlayer.Helpers;
 
@@ -12,14 +13,15 @@ public static class DebraDialogs
     public const string CatalogueTrackDragFormat = "Debra.CatalogueTrack";
 
     /// <summary>0 = first option, 1 = second, null = cancelled.</summary>
-    public static int? Choose(string title, string message, string firstLabel, string secondLabel)
-    {
-        var body = BuildBody(title, message, null);
-        return ShowDualChoice(title, body, firstLabel, secondLabel);
-    }
+    public static int? Choose(string title, string message, string firstLabel, string secondLabel) =>
+        OnUi(() =>
+        {
+            var body = BuildBody(title, message, null);
+            return ShowDualChoice(title, body, firstLabel, secondLabel);
+        });
 
     public static bool Confirm(string title, string message, string confirmLabel = "Yes", string cancelLabel = "Cancel", bool danger = false) =>
-        ShowChoice(title, message, confirmLabel, cancelLabel) == true;
+        OnUi(() => ShowChoice(title, message, confirmLabel, cancelLabel) == true);
 
     public static bool ConfirmWithDontRemind(
         string title,
@@ -29,28 +31,35 @@ public static class DebraDialogs
         string dontRemindLabel,
         out bool dontRemind)
     {
-        var checkbox = new CheckBox
+        var reminded = false;
+        var accepted = OnUi(() =>
         {
-            Content = dontRemindLabel,
-            Margin = new Thickness(0, 8, 0, 0),
-            Foreground = ToBrush("#4A3038"),
-            FontSize = 12
-        };
-        var body = BuildBody(title, message, checkbox);
-        var result = ShowWindow(title, body, confirmLabel, cancelLabel) == true;
-        dontRemind = checkbox.IsChecked == true;
-        return result;
+            var checkbox = new CheckBox
+            {
+                Content = dontRemindLabel,
+                Margin = new Thickness(0, 8, 0, 0),
+                Foreground = ToBrush("#4A3038"),
+                FontSize = 12
+            };
+            var body = BuildBody(title, message, checkbox);
+            var result = ShowWindow(title, body, confirmLabel, cancelLabel) == true;
+            reminded = checkbox.IsChecked == true;
+            return result;
+        });
+        dontRemind = reminded;
+        return accepted;
     }
 
     public static void Info(string title, string message) => ShowAlert(title, message);
     public static void Warning(string title, string message) => ShowAlert(title, message);
     public static void Error(string title, string message) => ShowAlert(title, message);
 
-    private static void ShowAlert(string title, string message)
-    {
-        var body = BuildBody(title, message, null);
-        ShowWindow(title, body, "OK", null);
-    }
+    private static void ShowAlert(string title, string message) =>
+        OnUi(() =>
+        {
+            var body = BuildBody(title, message, null);
+            ShowWindow(title, body, "OK", null);
+        });
 
     private static bool? ShowChoice(string title, string message, string confirmLabel, string cancelLabel)
     {
@@ -122,7 +131,6 @@ public static class DebraDialogs
         return dialogResult;
     }
 
-
     private static int? ShowDualChoice(string title, StackPanel content, string firstLabel, string secondLabel)
     {
         var window = new Window
@@ -181,7 +189,9 @@ public static class DebraDialogs
 
         window.ShowDialog();
         return choice;
-    }    private static Button CreateButton(string label, bool ghost) =>
+    }
+
+    private static Button CreateButton(string label, bool ghost) =>
         new() { Content = label, MinWidth = 78, Padding = new Thickness(14, 6, 14, 6), Style = TryFindStyle(ghost ? "Button.Ghost" : "Button.Gold") };
 
     private static Style? TryFindStyle(string key) => Application.Current?.TryFindResource(key) as Style;
@@ -190,4 +200,22 @@ public static class DebraDialogs
 
     private static Window? GetOwner() =>
         Application.Current?.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive) ?? Application.Current?.MainWindow;
+
+    /// <summary>WPF dialogs must be created on the UI (STA) thread.</summary>
+    private static void OnUi(Action action)
+    {
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher is null || dispatcher.CheckAccess())
+            action();
+        else
+            dispatcher.Invoke(action, DispatcherPriority.Normal);
+    }
+
+    private static T OnUi<T>(Func<T> func)
+    {
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher is null || dispatcher.CheckAccess())
+            return func();
+        return dispatcher.Invoke(func, DispatcherPriority.Normal);
+    }
 }

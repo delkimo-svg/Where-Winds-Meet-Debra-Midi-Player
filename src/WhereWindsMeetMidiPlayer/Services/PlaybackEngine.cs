@@ -1,5 +1,7 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 
+using WhereWindsMeetMidiPlayer.Infrastructure;
 using WhereWindsMeetMidiPlayer.Models;
 
 
@@ -47,6 +49,17 @@ public sealed class PlaybackEngine : IDisposable
     public const double MinTempoMultiplier = 0.5;
 
     public const double MaxTempoMultiplier = 2.0;
+
+    // FFXIV (monophonic) shaping — constants taken from BardMusicPlayer/LightAmp preprocessing:
+    // chords become a 30 ms-spaced low→high roll of 25 ms taps (last note on the beat),
+    // every key-up precedes the next key-down by 25 ms (60 ms after notes ≥ 100 ms),
+    // and holds stay under the game's 4 s auto-release.
+    private const int MonophonicChordSpacingMs = 30;
+    private const int MonophonicChordTapMs = 25;
+    private const int MonophonicShortGapMs = 25;
+    private const int MonophonicLongGapMs = 60;
+    private const int MonophonicLongNoteMs = 100;
+    private const int MonophonicMaxHoldMs = 3925;
 
     public double TempoMultiplier
     {
@@ -466,7 +479,16 @@ public sealed class PlaybackEngine : IDisposable
 
         var sessionClock = Stopwatch.StartNew();
 
+        // FFXIV: real key-down at note-on, key-up at note-off (BMP/LightAmp HoldNotes).
+        var holdNotes = GameProfiles.Current.HoldNotes;
+        var pendingUps = new List<(long UpAtMs, string Combo)>();
 
+        // 1 ms system timer while playing (BMP-style): without it Task.Delay quantizes to
+        // ~15.6 ms and fast passages jitter enough to bunch key events together.
+        _ = TimeBeginPeriod(1);
+
+        try
+        {
 
         while (index < events.Count)
 
@@ -487,6 +509,8 @@ public sealed class PlaybackEngine : IDisposable
             if (state == PlaybackState.Paused)
 
             {
+
+                ReleasePendingUps(pendingUps);
 
                 await Task.Delay(20, cancellationToken);
 
@@ -542,6 +566,8 @@ public sealed class PlaybackEngine : IDisposable
 
             var targetMs = events[index].StartMs;
 
+            await FlushPendingUpsAsync(pendingUps, targetMs, cancellationToken);
+
             await WaitUntilSongTimeAsync(targetMs, cancellationToken);
 
 
@@ -576,7 +602,15 @@ public sealed class PlaybackEngine : IDisposable
 
 
 
-                    _inputService.PressKeyCombo(evt.KeyCombo);
+                    if (holdNotes && evt.DurationMs > 0)
+                    {
+                        _inputService.SendKeyDown(evt.KeyCombo);
+                        pendingUps.Add((evt.StartMs + evt.DurationMs, evt.KeyCombo));
+                    }
+                    else
+                    {
+                        _inputService.PressKeyCombo(evt.KeyCombo);
+                    }
 
                     lastKeyTime[evt.KeyCombo] = sessionClock.ElapsedMilliseconds;
 
@@ -594,7 +628,16 @@ public sealed class PlaybackEngine : IDisposable
 
         }
 
+        // Let the last held note ring for its full duration before releasing.
+        await FlushPendingUpsAsync(pendingUps, long.MaxValue, cancellationToken);
 
+        }
+        finally
+        {
+            _ = TimeEndPeriod(1);
+            if (holdNotes)
+                _inputService.ReleaseAllHeldKeys();
+        }
 
         var completed = false;
         lock (_gate)
@@ -609,6 +652,45 @@ public sealed class PlaybackEngine : IDisposable
         if (completed)
             PlaybackCompleted?.Invoke(this, EventArgs.Empty);
     }
+
+
+
+    private void ReleasePendingUps(List<(long UpAtMs, string Combo)> pendingUps)
+    {
+        foreach (var (_, combo) in pendingUps)
+            _inputService.SendKeyUp(combo);
+        pendingUps.Clear();
+    }
+
+    /// <summary>Sends every pending key-up scheduled before <paramref name="untilMs"/>, waiting for each in song time.</summary>
+    private async Task FlushPendingUpsAsync(
+        List<(long UpAtMs, string Combo)> pendingUps,
+        long untilMs,
+        CancellationToken cancellationToken)
+    {
+        while (pendingUps.Count > 0)
+        {
+            var next = 0;
+            for (var i = 1; i < pendingUps.Count; i++)
+                if (pendingUps[i].UpAtMs < pendingUps[next].UpAtMs)
+                    next = i;
+
+            if (pendingUps[next].UpAtMs >= untilMs)
+                return;
+
+            await WaitUntilSongTimeAsync(pendingUps[next].UpAtMs, cancellationToken);
+            _inputService.SendKeyUp(pendingUps[next].Combo);
+            pendingUps.RemoveAt(next);
+        }
+    }
+
+
+
+    [DllImport("winmm.dll", EntryPoint = "timeBeginPeriod")]
+    private static extern uint TimeBeginPeriod(uint uPeriod);
+
+    [DllImport("winmm.dll", EntryPoint = "timeEndPeriod")]
+    private static extern uint TimeEndPeriod(uint uPeriod);
 
 
 
@@ -702,9 +784,13 @@ public sealed class PlaybackEngine : IDisposable
 
         int chordRollDelayMs,
 
-        int noteDelayMs)
+        int noteDelayMs,
+
+        int monophonicMinSpacingMs = 0)
 
     {
+
+        var monophonic = GameProfiles.Current.Monophonic;
 
         var grouped = notes
 
@@ -722,7 +808,7 @@ public sealed class PlaybackEngine : IDisposable
 
         {
 
-            var rollIndex = 0;
+            var members = new List<ScheduledNote>();
 
             foreach (var note in chord
                 .GroupBy(n => n.NoteNumber)
@@ -739,32 +825,89 @@ public sealed class PlaybackEngine : IDisposable
 
 
 
-                schedule.Add(new ScheduledNote
+                members.Add(new ScheduledNote
 
                 {
 
                     NoteNumber = note.NoteNumber,
 
-                    StartMs = chord.Key + rollIndex * chordRollDelayMs,
+                    StartMs = chord.Key,
 
-                    DurationMs = 0,
+                    DurationMs = monophonic ? note.DurationMs : 0,
 
                     KeyCombo = combo
 
                 });
 
-                rollIndex++;
-
             }
+
+            if (monophonic)
+            {
+                // BMP/LightAmp chord roll: low→high pre-roll, last (melody) note lands on the beat.
+                var spacing = Math.Max(chordRollDelayMs, MonophonicChordSpacingMs);
+                for (var i = 0; i < members.Count; i++)
+                {
+                    members[i].StartMs = chord.Key - (long)(members.Count - 1 - i) * spacing;
+                    if (i < members.Count - 1)
+                        members[i].DurationMs = MonophonicChordTapMs;
+                }
+            }
+            else
+            {
+                for (var i = 0; i < members.Count; i++)
+                    members[i].StartMs = chord.Key + (long)i * chordRollDelayMs;
+            }
+
+            schedule.AddRange(members);
 
         }
 
 
 
         var ordered = schedule.OrderBy(n => n.StartMs).ThenBy(n => n.NoteNumber).ToList();
-        ApplyMinimumNoteSpacing(ordered, noteDelayMs);
+        if (monophonic)
+            ApplyMonophonicShaping(
+                ordered,
+                Math.Max(Math.Max(noteDelayMs, monophonicMinSpacingMs), MonophonicChordSpacingMs));
+        else
+            ApplyMinimumNoteSpacing(ordered, noteDelayMs);
         return ordered;
 
+    }
+
+    /// <summary>
+    /// FFXIV-style shaping (as BardMusicPlayer/LightAmp preprocess offline): note-ons at least
+    /// <paramref name="minSpacingMs"/> apart, every key released before the next key-down
+    /// (25 ms gap, 60 ms after notes ≥ 100 ms), holds capped below the game's 4 s auto-release.
+    /// </summary>
+    private static void ApplyMonophonicShaping(List<ScheduledNote> schedule, int minSpacingMs)
+    {
+        if (schedule.Count == 0)
+            return;
+
+        schedule[0].StartMs = Math.Max(0, schedule[0].StartMs);
+        for (var i = 1; i < schedule.Count; i++)
+        {
+            var minStart = schedule[i - 1].StartMs + minSpacingMs;
+            if (schedule[i].StartMs < minStart)
+                schedule[i].StartMs = minStart;
+        }
+
+        for (var i = 0; i < schedule.Count; i++)
+        {
+            var note = schedule[i];
+            var gap = note.DurationMs >= MonophonicLongNoteMs ? MonophonicLongGapMs : MonophonicShortGapMs;
+            var dur = Math.Clamp(note.DurationMs, MonophonicChordTapMs, MonophonicMaxHoldMs);
+            if (i + 1 < schedule.Count)
+            {
+                var toNext = schedule[i + 1].StartMs - note.StartMs;
+                if (dur > toNext - gap)
+                    dur = Math.Max(MonophonicChordTapMs, toNext - gap);
+                dur = Math.Min(dur, toNext - 5);
+            }
+
+            note.DurationMs = dur;
+        }
     }
 
 

@@ -8,7 +8,7 @@
         xmlns:behaviors="clr-namespace:WhereWindsMeetMidiPlayer.Behaviors"
         xmlns:asset="clr-namespace:WhereWindsMeetMidiPlayer.Helpers"
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
-        Title="Debra MIDI Player — Where Winds Meet"
+        Title="{Binding WindowTitleText, Mode=OneWay, FallbackValue='Debra MIDI Player'}"
         Height="682" Width="1024"
         MinHeight="640" MinWidth="940"
         SizeToContent="Manual"
@@ -129,6 +129,7 @@
                     <RowDefinition Height="48"/>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -191,7 +192,8 @@
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*" MinWidth="0"/>
                         </Grid.ColumnDefinitions>
-                        <Image Grid.Column="0" Source="{asset:LocalAsset debra-wwm-header-logo.png}"
+                        <Image Grid.Column="0" x:Name="HeaderLogoImage"
+                               Source="{asset:LocalAsset debra-wwm-header-logo.png}"
                                Height="32" Stretch="Uniform" VerticalAlignment="Center"
                                Margin="0,0,10,0" RenderOptions.BitmapScalingMode="HighQuality"
                                SnapsToDevicePixels="True" IsHitTestVisible="False"
@@ -207,7 +209,7 @@
                                  Foreground="{DynamicResource Brush.HeaderMetaText}" BaselineAlignment="Center"/>
                             <Run Text="  ·  " FontSize="11" Foreground="{DynamicResource Brush.HeaderMetaMuted}"
                                  BaselineAlignment="Center"/>
-                            <Run Text="Where Winds Meet" FontSize="11" FontWeight="Normal"
+                            <Run Text="{Binding SelectedGameDisplayName, Mode=OneWay}" FontSize="11" FontWeight="Normal"
                                  Foreground="{DynamicResource Brush.HeaderMetaMuted}" BaselineAlignment="Center"/>
                         </TextBlock>
                     </Grid>
@@ -242,12 +244,16 @@
                         <Button x:Name="TourTarget_HelpButton" Content="?" Style="{StaticResource Button.WindowChrome}" Padding="8,4"
                                 Command="{Binding ShowHelpCommand}" ToolTip="{Binding Ui.HelpTooltip}"
                                 FontWeight="SemiBold" FontSize="14" Margin="0,0,5,0"/>
-                        <Border Background="{DynamicResource Brush.HeaderChipBackground}" CornerRadius="12" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" Padding="8,4" Margin="0,0,0,0" ClipToBounds="True">
+                        <Border Background="{DynamicResource Brush.HeaderChipBackground}" CornerRadius="12" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" Padding="6,2" Margin="0,0,0,0" ClipToBounds="False"
+                                ToolTip="{Binding SelectedGameDisplayName}">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                 <Border Width="24" Height="24" CornerRadius="12" ClipToBounds="True" Margin="0,0,6,0" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1">
                                     <Image Source="{asset:LocalAsset debra-thumb-art.png}" Stretch="UniformToFill"/>
                                 </Border>
-                                <TextBlock Text="Debra ▾" Foreground="{DynamicResource Brush.GoldBright}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                <controls:DebraFastDropdown Width="88" MinHeight="24" VerticalAlignment="Center"
+                                                            ItemsSource="{Binding GameOptions}"
+                                                            SelectedItem="{Binding SelectedGameProfile, Mode=TwoWay}"
+                                                            DisplayMemberPath="ShortName"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>
@@ -1346,6 +1352,110 @@
                                             Margin="5,7,5,6"
                                             HorizontalAlignment="Stretch"
                                             Visibility="{Binding ShowDebraPlayerChrome, Converter={StaticResource BoolToVis}}"/>
+
+                <!-- FFXIV Chat: sends in-game chat via the Hypnotoad plugin (FFXIV mode only) -->
+                <Border x:Name="FfxivChatPanel"
+                        Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2"
+                        Margin="5,0,5,6" Padding="10,5"
+                        CornerRadius="12"
+                        Background="{DynamicResource Brush.CardBackground}"
+                        BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1"
+                        Visibility="{Binding IsFfxivChatVisible, Converter={StaticResource BoolToVis}}">
+                    <StackPanel>
+                        <DockPanel LastChildFill="False">
+                            <ToggleButton DockPanel.Dock="Left" Style="{StaticResource Toggle.DebraPill}"
+                                          Padding="10,2"
+                                          Content="{Binding Ui.FfxivChatHeader}"
+                                          IsChecked="{Binding IsFfxivChatExpanded}"/>
+                            <TextBlock DockPanel.Dock="Right" Style="{StaticResource Text.Muted}"
+                                       VerticalAlignment="Center"
+                                       Text="{Binding FfxivChatStatusText}"/>
+                            <Ellipse DockPanel.Dock="Right" Width="8" Height="8" Margin="0,0,8,0"
+                                     VerticalAlignment="Center">
+                                <Ellipse.Style>
+                                    <Style TargetType="Ellipse">
+                                        <Setter Property="Fill" Value="#66808080"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsHypnotoadConnected}" Value="True">
+                                                <Setter Property="Fill" Value="#4ADE80"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Ellipse.Style>
+                            </Ellipse>
+                        </DockPanel>
+                        <StackPanel Visibility="{Binding IsFfxivChatExpanded, Converter={StaticResource BoolToVis}}">
+                        <!-- No plugin connected: explain + download link; inputs below stay greyed out -->
+                        <DockPanel Margin="0,8,0,0" LastChildFill="False"
+                                   Visibility="{Binding IsHypnotoadMissing, Converter={StaticResource BoolToVis}}">
+                            <TextBlock DockPanel.Dock="Left" Style="{StaticResource Text.Muted}"
+                                       VerticalAlignment="Center" TextWrapping="Wrap"
+                                       Text="{Binding Ui.FfxivChatNeedPlugin}"/>
+                            <Button DockPanel.Dock="Right" Padding="10,2" Margin="8,0,0,0"
+                                    VerticalAlignment="Center"
+                                    Content="{Binding Ui.FfxivChatDownload}"
+                                    Command="{Binding OpenHypnotoadPageCommand}"
+                                    ToolTip="https://github.com/GiR-Zippo/Hypnotoad-Plugin"/>
+                        </DockPanel>
+                        <Grid Margin="0,8,0,2"
+                              IsEnabled="{Binding IsHypnotoadConnected}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- Free chat: channel + message + send + reply-to-tell -->
+                            <ComboBox Grid.Row="0" Grid.Column="0" Width="86" Margin="0,0,6,0"
+                                      VerticalAlignment="Center"
+                                      ItemsSource="{Binding FfxivChatChannels}" DisplayMemberPath="Label"
+                                      SelectedItem="{Binding SelectedFfxivChatChannel}"
+                                      ToolTip="{Binding Ui.FfxivChatChannelTooltip}"/>
+                            <TextBox Grid.Row="0" Grid.Column="1" Margin="0,0,6,0" MaxLength="450"
+                                     VerticalAlignment="Center" VerticalContentAlignment="Center"
+                                     Text="{Binding FfxivChatMessageText, UpdateSourceTrigger=PropertyChanged}"
+                                     ToolTip="{Binding Ui.FfxivChatMessageTooltip}">
+                                <TextBox.InputBindings>
+                                    <KeyBinding Key="Return" Command="{Binding SendFfxivChatCommand}"/>
+                                </TextBox.InputBindings>
+                            </TextBox>
+                            <Button Grid.Row="0" Grid.Column="2" Content="➤" Padding="10,2" Margin="0,0,6,0"
+                                    VerticalAlignment="Center"
+                                    Command="{Binding SendFfxivChatCommand}"
+                                    ToolTip="{Binding Ui.FfxivChatSendTooltip}"/>
+                            <Button Grid.Row="0" Grid.Column="3" Content="↩ /r" Padding="8,2"
+                                    VerticalAlignment="Center"
+                                    Command="{Binding SendFfxivReplyCommand}"
+                                    ToolTip="{Binding Ui.FfxivChatReplyTooltip}"/>
+
+                            <!-- Now-playing announcement: channel + template + announce + auto -->
+                            <ComboBox Grid.Row="1" Grid.Column="0" Width="86" Margin="0,6,6,0"
+                                      VerticalAlignment="Center"
+                                      ItemsSource="{Binding FfxivAnnounceChannels}" DisplayMemberPath="Label"
+                                      SelectedItem="{Binding SelectedFfxivAnnounceChannel}"
+                                      ToolTip="{Binding Ui.FfxivChatChannelTooltip}"/>
+                            <TextBox Grid.Row="1" Grid.Column="1" Margin="0,6,6,0" MaxLength="300"
+                                     VerticalAlignment="Center" VerticalContentAlignment="Center"
+                                     Text="{Binding FfxivChatAnnounceTemplate, UpdateSourceTrigger=PropertyChanged}"
+                                     ToolTip="{Binding Ui.FfxivChatTemplateTooltip}"/>
+                            <Button Grid.Row="1" Grid.Column="2" Content="📣" Padding="10,2" Margin="0,6,6,0"
+                                    VerticalAlignment="Center"
+                                    Command="{Binding AnnounceNowPlayingCommand}"
+                                    ToolTip="{Binding Ui.FfxivChatAnnounceTooltip}"/>
+                            <ToggleButton Grid.Row="1" Grid.Column="3" Style="{StaticResource Toggle.DebraPill}"
+                                          Margin="0,6,0,0" Padding="8,2" VerticalAlignment="Center"
+                                          Content="{Binding Ui.FfxivChatAutoAnnounce}"
+                                          IsChecked="{Binding FfxivChatAutoAnnounce}"
+                                          ToolTip="{Binding Ui.FfxivChatAutoAnnounceTooltip}"/>
+                        </Grid>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
         </Grid>
 
         <controls:TourGuideOverlay x:Name="TourGuide" Panel.ZIndex="100" Visibility="Collapsed"

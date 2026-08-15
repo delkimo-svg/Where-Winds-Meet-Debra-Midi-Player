@@ -9,6 +9,7 @@ public partial class PlayerSakuraCornerDecor
 {
     public const double DesignWidth = 132;
     public const double DesignHeight = 96;
+    private const double RasterWidth = 128;
 
     public static readonly DependencyProperty DecorScaleProperty =
         DependencyProperty.Register(
@@ -42,14 +43,14 @@ public partial class PlayerSakuraCornerDecor
     private void ApplyThemeCorner()
     {
         CornerRaster.Source = AssetImage.LoadOrPlaceholder(ThemeService.GetPlayerCornerBrFile());
-        VectorPetals.Visibility = ThemeService.CurrentId == ThemeService.Wuxia
+        VectorPetals.Visibility = ThemeService.IsDark
             ? Visibility.Collapsed
             : Visibility.Visible;
 
-        // Bottom margin: negative pulls decor below the bar edge (Wuxia +7px down vs Sakura)
-        Margin = ThemeService.CurrentId == ThemeService.Wuxia
-            ? new Thickness(0, 0, -6, -11)
-            : new Thickness(0, 0, -6, -4);
+        // Negative margins pull the decor past the bar edge, by an amount that depends on how much
+        // padding the theme's art leaves around the ornament.
+        Margin = ThemeService.PlayerCornerBrMargin;
+        DecorScale = ThemeService.PlayerCornerBrScale;
     }
 
     private static void OnDecorScaleChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -66,5 +67,7 @@ public partial class PlayerSakuraCornerDecor
 
         Width = DesignWidth * scale;
         Height = DesignHeight * scale;
+        CornerRaster.Width = RasterWidth * scale;
+        CornerRaster.Height = DesignHeight * scale;
     }
 }

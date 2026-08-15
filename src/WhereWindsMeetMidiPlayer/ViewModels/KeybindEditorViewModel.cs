@@ -175,14 +175,15 @@ public partial class KeybindEditorViewModel : ObservableObject
         }
 
         ActivePresetId = preset.Id;
-        TemplateName = Path.GetFileNameWithoutExtension(preset.FileName);
+        var presetFileName = GameProfiles.Current.KeyMapFileName(preset.FileName);
+        TemplateName = Path.GetFileNameWithoutExtension(presetFileName);
         ApplyWorkingMapToCells();
         RefreshKeyboardLayoutPresets();
 
         _keyMapping.ReplaceMapping(_working);
-        var path = _keyMapping.EnsureDefaultKeyMap(preset.FileName);
+        var path = _keyMapping.EnsureDefaultKeyMap(presetFileName);
         _keyMapping.SaveToFile(path);
-        _onSaved(preset.FileName);
+        _onSaved(presetFileName);
 
         StatusText = L.F(UiText.KeybindEditorPresetApplied, L.T(preset.NameKey));
     }
@@ -203,6 +204,8 @@ public partial class KeybindEditorViewModel : ObservableObject
 
         AppPaths.EnsureCreated();
         var fileName = name.EndsWith(".json", StringComparison.OrdinalIgnoreCase) ? name : $"{name}.json";
+        if (!GameProfiles.FileBelongsTo(GameProfiles.Current, fileName))
+            fileName = GameProfiles.Current.KeyMapFileName(fileName);
         var path = Path.Combine(AppPaths.KeyMapsFolder, fileName);
 
         _keyMapping.ReplaceMapping(_working);

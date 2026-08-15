@@ -11,8 +11,6 @@ namespace WhereWindsMeetMidiPlayer.Controls;
 
 public partial class DebraSidebar : UserControl
 {
-    private const double WuxiaMenuScale = 0.85;
-
     private double _bannerAspect = 682.0 / 1024.0;
     private double _bannerCenterBiasX;
 
@@ -54,7 +52,7 @@ public partial class DebraSidebar : UserControl
         if (banner is BitmapSource bmp && bmp.PixelWidth > 0 && bmp.PixelHeight > 0)
         {
             _bannerAspect = bmp.PixelWidth / (double)bmp.PixelHeight;
-            _bannerCenterBiasX = ThemeService.CurrentId == ThemeService.Wuxia
+            _bannerCenterBiasX = ThemeService.UsesSlimSidebarBanner
                 ? MeasureBannerHorizontalBias(bmp)
                 : 0;
         }
@@ -65,8 +63,8 @@ public partial class DebraSidebar : UserControl
 
     private void ApplyNavItemTemplate()
     {
-        var isWuxia = ThemeService.CurrentId == ThemeService.Wuxia;
-        NavHost.ItemTemplate = (DataTemplate)Resources[isWuxia ? "NavItemTemplateWuxia" : "NavItemTemplate"];
+        NavHost.ItemTemplate = (DataTemplate)Resources[
+            ThemeService.UsesSlimSidebarBanner ? "NavItemTemplateSlimBanner" : "NavItemTemplate"];
     }
 
     private void OnSidebarRootSizeChanged(object sender, SizeChangedEventArgs e) => UpdateSidebarLayout();
@@ -77,7 +75,7 @@ public partial class DebraSidebar : UserControl
         if (h < 80)
             return;
 
-        var isWuxia = ThemeService.CurrentId == ThemeService.Wuxia;
+        var isSlimBanner = ThemeService.UsesSlimSidebarBanner;
         var hostWidth = h * _bannerAspect;
 
         BannerHost.Height = h;
@@ -89,13 +87,11 @@ public partial class DebraSidebar : UserControl
         SidebarRoot.ClipToBounds = true;
         Width = hostWidth;
 
-        var navTopRatio = isWuxia ? 0.132 : 0.09;
-        var navZoneRatio = isWuxia ? 0.765 : 0.80;
-        var navWidthRatio = isWuxia ? 0.72 : 0.94;
-        var navZoneHeight = h * navZoneRatio;
-        var navWidth = hostWidth * navWidthRatio;
+        var nav = ThemeService.SidebarNav;
+        var navZoneHeight = h * nav.ZoneRatio;
+        var navWidth = hostWidth * nav.WidthRatio;
 
-        NavOverlay.Margin = new Thickness(0, h * navTopRatio, 0, 0);
+        NavOverlay.Margin = new Thickness(0, h * nav.TopRatio, 0, 0);
         NavOverlay.Height = navZoneHeight;
         NavOverlay.Width = navWidth;
         NavOverlay.HorizontalAlignment = HorizontalAlignment.Center;
@@ -103,10 +99,10 @@ public partial class DebraSidebar : UserControl
 
         NavOverlay.RenderTransformOrigin = new Point(0.5, 0);
 
-        if (isWuxia)
+        if (isSlimBanner)
         {
             var group = new TransformGroup();
-            group.Children.Add(new ScaleTransform(WuxiaMenuScale, WuxiaMenuScale));
+            group.Children.Add(new ScaleTransform(nav.MenuScale, nav.MenuScale));
             group.Children.Add(new TranslateTransform(_bannerCenterBiasX, 0));
             NavOverlay.LayoutTransform = null;
             NavOverlay.RenderTransform = group;
