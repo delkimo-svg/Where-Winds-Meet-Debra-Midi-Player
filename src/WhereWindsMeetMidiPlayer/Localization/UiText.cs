@@ -4,6 +4,7 @@ public static class UiText
 {
     public const string NavLibrary = "Nav_Library";
     public const string NavCatalogue = "Nav_Catalogue";
+    public const string NavCommunity = "Nav_Community";
     public const string NavPractice = "Nav_Practice";
     public const string NavAcademy = "Nav_Academy";
     public const string NavFavorites = "Nav_Favorites";
@@ -13,6 +14,24 @@ public static class UiText
     public const string SectionLibrary = "Section_Library";
     public const string SectionHistory = "Section_History";
     public const string SectionCatalogue = "Section_Catalogue";
+    public const string SectionCommunity = "Section_Community";
+    public const string CommunitySubtitle = "Community_Subtitle";
+    public const string CommunitySearch = "Community_Search";
+    public const string CommunityRefresh = "Community_Refresh";
+    public const string CommunityAllGenres = "Community_AllGenres";
+    public const string CommunityAllOrigins = "Community_AllOrigins";
+    public const string CommunityOriginDebra = "Community_OriginDebra";
+    public const string CommunityOriginBmp = "Community_OriginBmp";
+    public const string CommunityFetchProgress = "Community_FetchProgress";
+    public const string CommunityLoaded = "Community_Loaded";
+    public const string CommunityEmptyHint = "Community_EmptyHint";
+    public const string CommunityDownloading = "Community_Downloading";
+    public const string CommunityError = "Community_Error";
+    public const string CommunityStats = "Community_Stats";
+    public const string CommunitySortNewest = "Community_SortNewest";
+    public const string CommunitySortTitle = "Community_SortTitle";
+    public const string CommunitySortArtist = "Community_SortArtist";
+    public const string CommunitySortDownloads = "Community_SortDownloads";
     public const string SectionPractice = "Section_Practice";
     public const string SectionAcademy = "Section_Academy";
     public const string SectionPlaylist = "Section_Playlist";
@@ -177,6 +196,10 @@ public static class UiText
     public const string ChromeOctaveShift = "Chrome_OctaveShift";
     public const string ChromeMidiTrack = "Chrome_MidiTrack";
     public const string MidiTrackAll = "MidiTrack_All";
+    public const string TrackMixerTitle = "TrackMixer_Title";
+    public const string TrackMixerAllOn = "TrackMixer_AllOn";
+    public const string TrackMixerSolo = "TrackMixer_Solo";
+    public const string TrackMixerHint = "TrackMixer_Hint";
     public const string SettingsOpenKeymaps = "Settings_OpenKeymaps";
     public const string SettingsEditKeybinds = "Settings_EditKeybinds";
     public const string KeybindEditorTitle = "KeybindEditor_Title";

@@ -179,6 +179,14 @@ public sealed partial class LocalizedUi : ObservableObject
     public string FavoritesHint => L.T(UiText.FavoritesHint);
     public string ChromeLayout => L.T(UiText.ChromeLayout);
     public string ChromeMidiTrack => L.T(UiText.ChromeMidiTrack);
+    public string SectionCommunity => L.T(UiText.SectionCommunity);
+    public string CommunitySubtitle => L.T(UiText.CommunitySubtitle);
+    public string CommunitySearch => L.T(UiText.CommunitySearch);
+    public string CommunityRefresh => L.T(UiText.CommunityRefresh);
+    public string TrackMixerTitle => L.T(UiText.TrackMixerTitle);
+    public string TrackMixerAllOn => L.T(UiText.TrackMixerAllOn);
+    public string TrackMixerSolo => L.T(UiText.TrackMixerSolo);
+    public string TrackMixerHint => L.T(UiText.TrackMixerHint);
     public string ChromeLanguage => L.T(UiText.ChromeLanguage);
     public string ChromeSmartTranspose => L.T(UiText.ChromeSmartTranspose);
     public string ChromeNoteDelay => L.T(UiText.ChromeNoteDelay);

@@ -11,6 +11,8 @@ public static class AppPaths
     public static string KeyMapsFolder => Path.Combine(AppDataRoot, "keymaps");
     public static string CatalogueCacheFolder => Path.Combine(AppDataRoot, "catalogue-cache");
     public static string CatalogueIndexFile => Path.Combine(AppDataRoot, "catalogue-index.json");
+    public static string CommunityCacheFolder => Path.Combine(AppDataRoot, "community-cache");
+    public static string CommunityIndexFile => Path.Combine(AppDataRoot, "community-index.json");
     public static string SongTempoFile => Path.Combine(AppDataRoot, "song-tempo.json");
     public static string SongMetadataCacheFile => Path.Combine(AppDataRoot, "song-metadata-cache.json");
     public static string SongPlaybackFile => Path.Combine(AppDataRoot, "song-playback.json");
@@ -24,6 +26,7 @@ public static class AppPaths
         Directory.CreateDirectory(PlaylistsFolder);
         Directory.CreateDirectory(KeyMapsFolder);
         Directory.CreateDirectory(CatalogueCacheFolder);
+        Directory.CreateDirectory(CommunityCacheFolder);
         Directory.CreateDirectory(AcademyCacheFolder);
     }
 

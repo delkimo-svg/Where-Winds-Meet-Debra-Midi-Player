@@ -373,6 +373,9 @@ public partial class MainWindow : Window
             case CatalogueTrack track:
                 _viewModel.PlayCatalogueTrackCommand.Execute(track);
                 break;
+            case CommunitySong communitySong:
+                _viewModel.PlayCommunitySongCommand.Execute(communitySong);
+                break;
         }
     }
 
@@ -868,6 +871,15 @@ public partial class MainWindow : Window
         if (sender is ListBox { SelectedItem: CatalogueTrack track })
             Vm.PlayCatalogueTrackCommand.Execute(track);
     }
+
+    private void Community_OnDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is ListBox { SelectedItem: CommunitySong song })
+            Vm.PlayCommunitySongCommand.Execute(song);
+    }
+
+    private void CommunityList_OnPreviewMouseWheel(object sender, MouseWheelEventArgs e) =>
+        ScrollListBoxByWheel(CommunityList, e);
 
     private void Favorites_OnDoubleClick(object sender, MouseButtonEventArgs e)
     {

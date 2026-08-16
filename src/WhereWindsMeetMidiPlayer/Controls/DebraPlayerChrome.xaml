@@ -235,11 +235,92 @@
                                    Visibility="{Binding ShowMidiTrackSelector, Converter={StaticResource BoolToVis}}"/>
                         <TextBlock Text="{Binding Ui.ChromeMidiTrack}" Foreground="{DynamicResource Brush.TextMuted}" VerticalAlignment="Center" Margin="0,0,6,0"
                                    Visibility="{Binding ShowMidiTrackSelector, Converter={StaticResource BoolToVis}}"/>
-                        <ComboBox ItemsSource="{Binding MidiTrackOptions}" DisplayMemberPath="DisplayName"
-                                  SelectedItem="{Binding SelectedMidiTrack, Mode=TwoWay}"
-                                  Style="{StaticResource ComboBox.Debra}" MinWidth="100" MaxWidth="160" Height="26"
-                                  VerticalContentAlignment="Center" Margin="0,0,14,0"
-                                  Visibility="{Binding ShowMidiTrackSelector, Converter={StaticResource BoolToVis}}"/>
+                        <Grid Margin="0,0,14,0" VerticalAlignment="Center"
+                              Visibility="{Binding ShowMidiTrackSelector, Converter={StaticResource BoolToVis}}">
+                            <ToggleButton x:Name="TrackMixerButton" Style="{StaticResource Toggle.DebraPill}"
+                                          Height="26" Padding="10,2" VerticalAlignment="Center"
+                                          IsChecked="{Binding IsTrackMixerOpen, Mode=TwoWay}"
+                                          ToolTip="{Binding Ui.TrackMixerHint, Mode=OneWay}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding TrackMixerSummary}" VerticalAlignment="Center"/>
+                                    <TextBlock Text="▾" Margin="6,0,0,0" VerticalAlignment="Center" Opacity="0.7"/>
+                                </StackPanel>
+                            </ToggleButton>
+                            <Popup IsOpen="{Binding IsTrackMixerOpen, Mode=TwoWay}" StaysOpen="False"
+                                   PlacementTarget="{Binding ElementName=TrackMixerButton}" Placement="Bottom"
+                                   VerticalOffset="6" AllowsTransparency="True" PopupAnimation="Fade">
+                                <Border Background="{DynamicResource Brush.BgElevated}"
+                                        BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1"
+                                        CornerRadius="10" Padding="10,8" MinWidth="250" MaxWidth="330">
+                                    <StackPanel>
+                                        <DockPanel Margin="2,0,2,6">
+                                            <Button DockPanel.Dock="Right" Content="{Binding Ui.TrackMixerAllOn}"
+                                                    Style="{StaticResource Button.Ghost}" Height="22" Padding="8,0" FontSize="10"
+                                                    Command="{Binding UnmuteAllTracksCommand}"/>
+                                            <TextBlock Text="{Binding Ui.TrackMixerTitle}" FontWeight="SemiBold" FontSize="11"
+                                                       Foreground="{DynamicResource Brush.Gold}" VerticalAlignment="Center"/>
+                                        </DockPanel>
+                                        <ScrollViewer MaxHeight="248" VerticalScrollBarVisibility="Auto">
+                                            <ItemsControl x:Name="TrackMixList" ItemsSource="{Binding PlaybackTrackMixItems}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border x:Name="TrackRow" CornerRadius="6" Padding="4,2" Background="Transparent">
+                                                            <Grid>
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="Auto"/>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                    <ColumnDefinition Width="Auto"/>
+                                                                    <ColumnDefinition Width="Auto"/>
+                                                                </Grid.ColumnDefinitions>
+                                                                <Button Style="{StaticResource Button.Ghost}" Width="28" Height="24" Padding="0"
+                                                                        Command="{Binding DataContext.ToggleTrackMuteCommand, ElementName=TrackMixList}"
+                                                                        CommandParameter="{Binding}">
+                                                                    <TextBlock FontSize="12">
+                                                                        <TextBlock.Style>
+                                                                            <Style TargetType="TextBlock">
+                                                                                <Setter Property="Text" Value="🔊"/>
+                                                                                <Style.Triggers>
+                                                                                    <DataTrigger Binding="{Binding IsMuted}" Value="True">
+                                                                                        <Setter Property="Text" Value="🔇"/>
+                                                                                        <Setter Property="Opacity" Value="0.55"/>
+                                                                                    </DataTrigger>
+                                                                                </Style.Triggers>
+                                                                            </Style>
+                                                                        </TextBlock.Style>
+                                                                    </TextBlock>
+                                                                </Button>
+                                                                <TextBlock x:Name="TrackName" Grid.Column="1" Text="{Binding DisplayName}"
+                                                                           FontSize="11" VerticalAlignment="Center" Margin="6,0,8,0"
+                                                                           TextTrimming="CharacterEllipsis"
+                                                                           Foreground="{DynamicResource Brush.TextPrimary}"/>
+                                                                <Button x:Name="SoloButton" Grid.Column="2" Content="{Binding DataContext.Ui.TrackMixerSolo, ElementName=TrackMixList}"
+                                                                        Style="{StaticResource Button.Ghost}" Height="20" Padding="6,0" FontSize="9"
+                                                                        Margin="0,0,8,0" Visibility="Hidden"
+                                                                        Command="{Binding DataContext.SoloTrackCommand, ElementName=TrackMixList}"
+                                                                        CommandParameter="{Binding}"/>
+                                                                <TextBlock Grid.Column="3" Text="{Binding NoteCountDisplay}" FontSize="10"
+                                                                           VerticalAlignment="Center"
+                                                                           Foreground="{DynamicResource Brush.TextMuted}"/>
+                                                            </Grid>
+                                                        </Border>
+                                                        <DataTemplate.Triggers>
+                                                            <Trigger SourceName="TrackRow" Property="IsMouseOver" Value="True">
+                                                                <Setter TargetName="TrackRow" Property="Background" Value="{DynamicResource Brush.BgHover}"/>
+                                                                <Setter TargetName="SoloButton" Property="Visibility" Value="Visible"/>
+                                                            </Trigger>
+                                                            <DataTrigger Binding="{Binding IsMuted}" Value="True">
+                                                                <Setter TargetName="TrackName" Property="Foreground" Value="{DynamicResource Brush.TextMuted}"/>
+                                                                <Setter TargetName="TrackName" Property="Opacity" Value="0.7"/>
+                                                            </DataTrigger>
+                                                        </DataTemplate.Triggers>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </ScrollViewer>
+                                    </StackPanel>
+                                </Border>
+                            </Popup>
+                        </Grid>
                         <Rectangle Width="1" Height="18" Fill="{DynamicResource Brush.Border}" Margin="0,0,14,0"/>
                         <TextBlock Text="{Binding Ui.ChromeLayout}" Foreground="{DynamicResource Brush.TextMuted}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                         <ComboBox ItemsSource="{Binding KeyLayouts}" DisplayMemberPath="DisplayName"

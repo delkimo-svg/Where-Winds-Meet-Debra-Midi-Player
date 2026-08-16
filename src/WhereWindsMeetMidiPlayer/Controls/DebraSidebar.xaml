@@ -82,6 +82,9 @@
                                 <DataTrigger Binding="{Binding Section}" Value="{x:Static vm:NavigationSection.Catalogue}">
                                     <Setter TargetName="IconPath" Property="Data" Value="{StaticResource Icon.Catalogue}"/>
                                 </DataTrigger>
+                                <DataTrigger Binding="{Binding Section}" Value="{x:Static vm:NavigationSection.Community}">
+                                    <Setter TargetName="IconPath" Property="Data" Value="{StaticResource Icon.Community}"/>
+                                </DataTrigger>
                                 <DataTrigger Binding="{Binding Section}" Value="{x:Static vm:NavigationSection.Practice}">
                                     <Setter TargetName="IconPath" Property="Data" Value="{StaticResource Icon.Practice}"/>
                                 </DataTrigger>
@@ -171,6 +174,9 @@
                                 <DataTrigger Binding="{Binding Section}" Value="{x:Static vm:NavigationSection.Catalogue}">
                                     <Setter TargetName="IconPath" Property="Data" Value="{StaticResource Icon.Catalogue}"/>
                                 </DataTrigger>
+                                <DataTrigger Binding="{Binding Section}" Value="{x:Static vm:NavigationSection.Community}">
+                                    <Setter TargetName="IconPath" Property="Data" Value="{StaticResource Icon.Community}"/>
+                                </DataTrigger>
                                 <DataTrigger Binding="{Binding Section}" Value="{x:Static vm:NavigationSection.Practice}">
                                     <Setter TargetName="IconPath" Property="Data" Value="{StaticResource Icon.Practice}"/>
                                 </DataTrigger>
@@ -234,7 +240,7 @@
                     </ItemsControl.ItemContainerStyle>
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
-                            <UniformGrid Rows="5" Columns="1" Margin="0,4,0,4"/>
+                            <UniformGrid Rows="6" Columns="1" Margin="0,4,0,4"/>
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                 </ItemsControl>

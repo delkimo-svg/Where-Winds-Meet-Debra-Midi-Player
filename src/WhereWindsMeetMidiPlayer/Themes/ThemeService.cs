@@ -3,8 +3,8 @@ using System.Windows;
 namespace WhereWindsMeetMidiPlayer.Themes;
 
 /// <param name="TopRatio">Distance from the top of the sidebar to the first nav item.</param>
-/// <param name="ZoneRatio">Height handed to the nav grid. It lays out 6 items on 5 rows, so the
-/// painted stack is 6/5 of this value.</param>
+/// <param name="ZoneRatio">Height handed to the nav grid. It lays out 7 items on 6 rows, so the
+/// painted stack is 7/6 of this value.</param>
 /// <param name="WidthRatio">Nav width as a fraction of the banner width.</param>
 /// <param name="MenuScale">Extra render scale applied around the top-center of the nav.</param>
 public readonly record struct SidebarNavMetrics(

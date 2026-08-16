@@ -18,7 +18,7 @@ public sealed class MidiPlaybackPreparer
     {
         var parsed = _midiParser.Parse(filePath);
         var tracks = _midiParser.GetTracks(filePath);
-        var notes = FilterTracks(parsed.Notes, request.TrackIndex);
+        var notes = FilterTracks(parsed.Notes, request.TrackIndex, request.MutedTracks);
 
         // FFXIV-only arrangement pass (WWM untouched): octave suffixes, chord alignment,
         // then reduction — before transpose so detection scores only the notes actually played.
@@ -73,12 +73,18 @@ public sealed class MidiPlaybackPreparer
         };
     }
 
-    private static List<NormalizedNote> FilterTracks(IReadOnlyList<NormalizedNote> notes, int trackIndex)
+    private static List<NormalizedNote> FilterTracks(
+        IReadOnlyList<NormalizedNote> notes,
+        int trackIndex,
+        IReadOnlyCollection<int>? mutedTracks)
     {
-        if (trackIndex < 0)
-            return notes.Select(CloneNote).ToList();
+        IEnumerable<NormalizedNote> filtered = notes;
+        if (trackIndex >= 0)
+            filtered = filtered.Where(n => n.TrackIndex == trackIndex);
+        if (mutedTracks is { Count: > 0 })
+            filtered = filtered.Where(n => !mutedTracks.Contains(n.TrackIndex));
 
-        return notes.Where(n => n.TrackIndex == trackIndex).Select(CloneNote).ToList();
+        return filtered.Select(CloneNote).ToList();
     }
 
     private static NormalizedNote CloneNote(NormalizedNote n) => new()
@@ -101,6 +107,8 @@ public sealed class MidiPrepareRequest
     public bool StrictNoteRange { get; init; }
     public int OctaveShift { get; init; }
     public int TrackIndex { get; init; } = -1;
+    /// <summary>MIDI track indexes silenced by the player's track mixer.</summary>
+    public IReadOnlyCollection<int>? MutedTracks { get; init; }
     public NoteMappingMode MappingMode { get; init; } = NoteMappingMode.Chromatic36;
     /// <summary>Additive on top of MappingMode: shift out-of-range passages as whole phrases.</summary>
     public bool PhraseFold { get; init; }

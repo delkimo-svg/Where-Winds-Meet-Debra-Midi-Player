@@ -5,6 +5,7 @@ public enum ActivePlaybackList
     None,
     Library,
     Catalogue,
+    Community,
     Favorites,
     Playlist
 }

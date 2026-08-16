@@ -10,7 +10,8 @@ public sealed class BoolToVisibilityConverter : IValueConverter
 
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        var visible = value is true;
+        // Strings bind here for search placeholders: non-empty text counts as true.
+        var visible = value is true or string { Length: > 0 };
         if (Invert) visible = !visible;
         return visible ? Visibility.Visible : Visibility.Collapsed;
     }

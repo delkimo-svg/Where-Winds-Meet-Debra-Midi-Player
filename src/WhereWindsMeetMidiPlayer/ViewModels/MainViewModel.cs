@@ -213,7 +213,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public ObservableCollection<LanguageOption> AvailableLanguages { get; } = [];
     public ObservableCollection<ThemeOption> AvailableThemes { get; } = [];
     public ObservableCollection<NoteMappingModeOption> NoteMappingModes { get; } = [];
-    public ObservableCollection<MidiTrackOption> MidiTrackOptions { get; } = [];
+    public ObservableCollection<PlaybackTrackMixItem> PlaybackTrackMixItems { get; } = [];
     public ObservableCollection<MidiInputDeviceOption> MidiInputDevices { get; } = [];
     public ObservableCollection<PracticeTrackOption> PracticeTrackOptions { get; } = [];
     public ObservableCollection<SongSortOption> LibrarySortOptions { get; } = [];
@@ -227,7 +227,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] private CatalogueSortOption? _selectedCatalogueSortOption;
     [ObservableProperty] private LanguageOption? _selectedLanguage;
     [ObservableProperty] private ThemeOption? _selectedTheme;
-    [ObservableProperty] private MidiTrackOption? _selectedMidiTrack;
+    [ObservableProperty] private bool _isTrackMixerOpen;
     [ObservableProperty] private MidiInputDeviceOption? _selectedMidiInputDevice;
 
     private bool _suppressThemeChange;
@@ -262,6 +262,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         None,
         Playlist,
         Catalogue,
+        Community,
         Favorites,
         Library
     }
@@ -284,6 +285,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             and not NavigationSection.Practice;
     public bool ShowHistoryPanel => SelectedSection == NavigationSection.History;
     public bool ShowCataloguePanel => SelectedSection == NavigationSection.Catalogue;
+    public bool ShowCommunityPanel => SelectedSection == NavigationSection.Community;
 
     public bool ShowPracticeCenterPlay =>
         IsPracticeLessonArmed && !IsPracticePlaying && !IsPracticeCountdownActive && _practiceSession.State == PlaybackState.Stopped;
@@ -509,10 +511,13 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
         NavItems.Add(new NavItemViewModel { Section = NavigationSection.Library, Icon = "📚" });
         NavItems.Add(new NavItemViewModel { Section = NavigationSection.Catalogue, Icon = "☁" });
+        NavItems.Add(new NavItemViewModel { Section = NavigationSection.Community, Icon = "🌐" });
         NavItems.Add(new NavItemViewModel { Section = NavigationSection.Practice, Icon = "🎹" });
         NavItems.Add(new NavItemViewModel { Section = NavigationSection.Favorites, Icon = "♥" });
         NavItems.Add(new NavItemViewModel { Section = NavigationSection.History, Icon = "🕐" });
         NavItems.Add(new NavItemViewModel { Section = NavigationSection.Settings, Icon = "⚙" });
+
+        InitializeCommunity();
 
         AvailableLanguages.Add(new LanguageOption { Code = "en", DisplayName = "English" });
         AvailableLanguages.Add(new LanguageOption { Code = "es", DisplayName = "Español" });
@@ -1327,6 +1332,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(ShowLibraryPanel));
         OnPropertyChanged(nameof(ShowHistoryPanel));
         OnPropertyChanged(nameof(ShowCataloguePanel));
+        OnPropertyChanged(nameof(ShowCommunityPanel));
         OnPropertyChanged(nameof(ShowFavoritesPanel));
         OnPropertyChanged(nameof(ShowPlaylistPanel));
     }
@@ -3685,8 +3691,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
                         : ResolvePlaybackListForSong(song);
                     var catalogueTrack = _nowPlayingCatalogueTrack ?? FindCatalogueTrackForSong(song);
                     _nowPlayingCatalogueTrack = catalogueTrack;
+                    if (playbackList != ActivePlaybackList.Community)
+                        _nowPlayingCommunitySong = null;
 
-                    if (playbackList == ActivePlaybackList.Catalogue && catalogueTrack is not null)
+                    if (playbackList == ActivePlaybackList.Community && _nowPlayingCommunitySong is not null)
+                        SetPrimaryListSelection(PrimarySelectionSource.Community, null, communitySong: _nowPlayingCommunitySong);
+                    else if (playbackList == ActivePlaybackList.Catalogue && catalogueTrack is not null)
                         SetPrimaryListSelection(PrimarySelectionSource.Catalogue, null, catalogueTrack);
                     else
                     {
@@ -3770,7 +3780,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 SmartTranspose = SmartTranspose,
                 StrictNoteRange = StrictNoteRange,
                 OctaveShift = PlaybackOctaveShift,
-                TrackIndex = SelectedMidiTrack?.TrackIndex ?? -1,
+                TrackIndex = -1,
+                MutedTracks = GetMutedTrackIndexes(),
                 MappingMode = SelectedNoteMappingMode?.Mode ?? NoteMappingMode.Chromatic36,
                 PhraseFold = PlaybackPhraseFold,
                 ChordRollDelayMs = ChordRollDelayMs,
@@ -4952,6 +4963,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         {
             NavigationSection.Library => ActivePlaybackList.Library,
             NavigationSection.Catalogue => ActivePlaybackList.Catalogue,
+            NavigationSection.Community => ActivePlaybackList.Community,
             NavigationSection.Favorites => ActivePlaybackList.Favorites,
             NavigationSection.History => ActivePlaybackList.Playlist,
             NavigationSection.Settings when _activePlaybackList != ActivePlaybackList.None
@@ -4965,6 +4977,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         {
             PrimarySelectionSource.Playlist => ActivePlaybackList.Playlist,
             PrimarySelectionSource.Catalogue => ActivePlaybackList.Catalogue,
+            PrimarySelectionSource.Community => ActivePlaybackList.Community,
             PrimarySelectionSource.Favorites => ActivePlaybackList.Favorites,
             PrimarySelectionSource.Library => ActivePlaybackList.Library,
             _ => ActivePlaybackList.None
@@ -4983,6 +4996,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
             SelectedFavoriteSong = null;
         if (source != PrimarySelectionSource.Catalogue)
             SelectedCatalogueTrack = null;
+        if (source != PrimarySelectionSource.Community)
+            SelectedCommunitySong = null;
     }
 
     private void OnPrimaryListItemSelected(PrimarySelectionSource source)
@@ -5001,7 +5016,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
-    private void SetPrimaryListSelection(PrimarySelectionSource source, Song? song, CatalogueTrack? catalogueTrack = null)
+    private void SetPrimaryListSelection(PrimarySelectionSource source, Song? song, CatalogueTrack? catalogueTrack = null, CommunitySong? communitySong = null)
     {
         _suppressExclusiveSelection = true;
         try
@@ -5021,6 +5036,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 case PrimarySelectionSource.Catalogue:
                     SelectedCatalogueTrack = catalogueTrack;
                     break;
+                case PrimarySelectionSource.Community:
+                    SelectedCommunitySong = communitySong;
+                    break;
             }
         }
         finally
@@ -5029,7 +5047,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
-    private void SyncListSelectionForActivePlayback(ActivePlaybackList list, Song? song = null, CatalogueTrack? catalogueTrack = null)
+    private void SyncListSelectionForActivePlayback(ActivePlaybackList list, Song? song = null, CatalogueTrack? catalogueTrack = null, CommunitySong? communitySong = null)
     {
         switch (list)
         {
@@ -5044,6 +5062,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 break;
             case ActivePlaybackList.Catalogue when catalogueTrack is not null:
                 SetPrimaryListSelection(PrimarySelectionSource.Catalogue, null, catalogueTrack);
+                break;
+            case ActivePlaybackList.Community when communitySong is not null:
+                SetPrimaryListSelection(PrimarySelectionSource.Community, null, communitySong: communitySong);
                 break;
         }
     }
@@ -5086,6 +5107,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
             return ActivePlaybackList.Playlist;
         if (SelectedCatalogueTrack is not null)
             return ActivePlaybackList.Catalogue;
+        if (SelectedCommunitySong is not null)
+            return ActivePlaybackList.Community;
         if (SelectedFavoriteSong is not null)
             return ActivePlaybackList.Favorites;
         if (SelectedLibrarySong is not null)
@@ -5094,6 +5117,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
             return ActivePlaybackList.Playlist;
         if (_lastSelectedCatalogueTrack is not null)
             return ActivePlaybackList.Catalogue;
+        if (_lastSelectedCommunitySong is not null)
+            return ActivePlaybackList.Community;
         if (_lastSelectedFavoriteSong is not null)
             return ActivePlaybackList.Favorites;
         if (_lastSelectedLibrarySong is not null)
@@ -5238,6 +5263,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
         if (SelectedSection == NavigationSection.Catalogue || _nowPlayingCatalogueTrack is not null)
             return ActivePlaybackList.Catalogue;
 
+        if (SelectedSection == NavigationSection.Community || _nowPlayingCommunitySong is not null)
+            return ActivePlaybackList.Community;
+
         if (SelectedSection == NavigationSection.Library)
             return ActivePlaybackList.Library;
         if (SelectedSection == NavigationSection.Favorites)
@@ -5259,6 +5287,15 @@ public partial class MainViewModel : ObservableObject, IDisposable
             if (track is not null)
             {
                 await PlayCatalogueTrack(track);
+                return;
+            }
+        }
+        else if (list == ActivePlaybackList.Community)
+        {
+            var communitySong = GetNavigationCommunitySong();
+            if (communitySong is not null)
+            {
+                await PlayCommunitySong(communitySong);
                 return;
             }
         }
@@ -5444,6 +5481,25 @@ public partial class MainViewModel : ObservableObject, IDisposable
                     SetActivePlaybackContext(ActivePlaybackList.Catalogue, track);
                     if (autoStart)
                         await PlayCatalogueTrack(track);
+                    return;
+                }
+                case ActivePlaybackList.Community:
+                {
+                    var communitySongs = GetFilteredCommunitySongs();
+                    if (communitySongs.Count == 0)
+                    {
+                        StopPlaybackAtEnd();
+                        return;
+                    }
+
+                    var current = ResolveCommunityListIndex(communitySongs, GetNavigationCommunitySong());
+                    _activeListIndex = ResolveAdjacentIndex(communitySongs.Count, current, forward);
+                    _activePlaybackList = ActivePlaybackList.Community;
+                    var communitySong = communitySongs[_activeListIndex];
+                    SyncListSelectionForActivePlayback(ActivePlaybackList.Community, communitySong: communitySong);
+                    SetActivePlaybackContext(ActivePlaybackList.Community, communitySong);
+                    if (autoStart)
+                        await PlayCommunitySong(communitySong);
                     return;
                 }
                 case ActivePlaybackList.Favorites:
@@ -5963,6 +6019,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(PlaybackOctaveShiftLabel));
         OnPropertyChanged(nameof(PlayerChromeOpacityLabel));
         OnPropertyChanged(nameof(SelectedNoteMappingModeDescription));
+        OnPropertyChanged(nameof(TrackMixerSummary));
         RefreshPlayPauseUi();
         NotifyPlaybackHotkeyLabels();
         RefreshIdleUiStrings();
@@ -5973,6 +6030,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         RefreshPlaylistStats();
         RefreshFavoritesStats();
         RefreshCatalogueStats();
+        RefreshCommunityLocalization();
         RefreshKeyLayouts();
         RefreshKeyboardLayoutPresets();
     }
@@ -6014,15 +6072,16 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     private void RefreshNavLabels()
     {
-        if (NavItems.Count < 6)
+        if (NavItems.Count < 7)
             return;
 
         NavItems[0].Label = L.T(UiText.NavLibrary);
         NavItems[1].Label = L.T(UiText.NavCatalogue);
-        NavItems[2].Label = L.T(UiText.NavPractice);
-        NavItems[3].Label = L.T(UiText.NavFavorites);
-        NavItems[4].Label = L.T(UiText.NavHistory);
-        NavItems[5].Label = L.T(UiText.NavSettings);
+        NavItems[2].Label = L.T(UiText.NavCommunity);
+        NavItems[3].Label = L.T(UiText.NavPractice);
+        NavItems[4].Label = L.T(UiText.NavFavorites);
+        NavItems[5].Label = L.T(UiText.NavHistory);
+        NavItems[6].Label = L.T(UiText.NavSettings);
     }
 
     private void NotifyTrashCommandsCanExecute()
@@ -6130,8 +6189,61 @@ public partial class MainViewModel : ObservableObject, IDisposable
         SchedulePlaybackCalibrationReload();
     }
 
-    partial void OnSelectedMidiTrackChanged(MidiTrackOption? value)
+    private int[] _mutedTrackSnapshot = [];
+
+    private int[] GetMutedTrackIndexes() => _mutedTrackSnapshot;
+
+    public string TrackMixerSummary
     {
+        get
+        {
+            var total = PlaybackTrackMixItems.Count;
+            var muted = _mutedTrackSnapshot.Length;
+            return muted == 0
+                ? L.T(UiText.MidiTrackAll)
+                : $"{total - muted}/{total} 🔇";
+        }
+    }
+
+    [RelayCommand]
+    private void ToggleTrackMute(PlaybackTrackMixItem? item)
+    {
+        if (item is null)
+            return;
+
+        item.IsMuted = !item.IsMuted;
+        OnTrackMixChanged();
+    }
+
+    [RelayCommand]
+    private void SoloTrack(PlaybackTrackMixItem? item)
+    {
+        if (item is null)
+            return;
+
+        // Solo again on an already-solo track brings everything back.
+        var alreadySolo = !item.IsMuted && PlaybackTrackMixItems.All(t => t == item || t.IsMuted);
+        foreach (var track in PlaybackTrackMixItems)
+            track.IsMuted = !alreadySolo && track != item;
+        OnTrackMixChanged();
+    }
+
+    [RelayCommand]
+    private void UnmuteAllTracks()
+    {
+        foreach (var track in PlaybackTrackMixItems)
+            track.IsMuted = false;
+        OnTrackMixChanged();
+    }
+
+    private void OnTrackMixChanged()
+    {
+        _mutedTrackSnapshot = PlaybackTrackMixItems
+            .Where(t => t.IsMuted)
+            .Select(t => t.TrackIndex)
+            .ToArray();
+        OnPropertyChanged(nameof(TrackMixerSummary));
+
         if (_suppressPlaybackCalibrationChange)
             return;
 
@@ -6231,13 +6343,19 @@ public partial class MainViewModel : ObservableObject, IDisposable
         if (calibration.IsDefault)
             calibration.MappingMode = _settings.Settings.DefaultNoteMappingMode;
 
-        // Suppress before RebuildMidiTrackOptions — it assigns SelectedMidiTrack and would
+        // Suppress before RebuildPlaybackTrackMix — it mutates mute state and would
         // otherwise schedule a reprepare / save against the previous now-playing song.
         _suppressPlaybackCalibrationChange = true;
         try
         {
             var tracks = _midiParser.GetTracks(filePath);
-            RebuildMidiTrackOptions(tracks);
+
+            // Migration: single-track selection predates the mixer — becomes a solo.
+            var muted = calibration.MutedTracks.ToHashSet();
+            if (muted.Count == 0 && calibration.TrackIndex >= 0)
+                muted = tracks.Where(t => t.Index != calibration.TrackIndex).Select(t => t.Index).ToHashSet();
+
+            RebuildPlaybackTrackMix(tracks, muted);
 
             PlaybackOctaveShift = Math.Clamp(
                 calibration.OctaveShift,
@@ -6254,9 +6372,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             PlaybackPhraseFold = calibration.PhraseFold;
             SelectedNoteMappingMode = NoteMappingModes.FirstOrDefault(m => m.Mode == calibration.MappingMode)
                 ?? NoteMappingModes.FirstOrDefault();
-            SelectedMidiTrack = MidiTrackOptions.FirstOrDefault(t => t.TrackIndex == calibration.TrackIndex)
-                ?? MidiTrackOptions.FirstOrDefault();
-            ShowMidiTrackSelector = MidiTrackOptions.Count > 1;
+            ShowMidiTrackSelector = PlaybackTrackMixItems.Count > 1;
             OnPropertyChanged(nameof(PlaybackOctaveShiftLabel));
         }
         finally
@@ -6265,27 +6381,26 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
-    private void RebuildMidiTrackOptions(IReadOnlyList<MidiTrackInfo> tracks)
+    private void RebuildPlaybackTrackMix(IReadOnlyList<MidiTrackInfo> tracks, IReadOnlySet<int> mutedTracks)
     {
-        var selectedIndex = SelectedMidiTrack?.TrackIndex ?? -1;
-        MidiTrackOptions.Clear();
-        MidiTrackOptions.Add(new MidiTrackOption
-        {
-            TrackIndex = -1,
-            DisplayName = L.T(UiText.MidiTrackAll)
-        });
-
+        IsTrackMixerOpen = false;
+        PlaybackTrackMixItems.Clear();
         foreach (var track in tracks)
         {
-            MidiTrackOptions.Add(new MidiTrackOption
+            PlaybackTrackMixItems.Add(new PlaybackTrackMixItem
             {
                 TrackIndex = track.Index,
-                DisplayName = $"{track.Name} ({track.NoteCount})"
+                DisplayName = string.IsNullOrWhiteSpace(track.Name) ? $"Track {track.Index + 1}" : track.Name,
+                NoteCountDisplay = $"{track.NoteCount:N0} ♪",
+                IsMuted = mutedTracks.Contains(track.Index)
             });
         }
 
-        SelectedMidiTrack = MidiTrackOptions.FirstOrDefault(t => t.TrackIndex == selectedIndex)
-            ?? MidiTrackOptions.FirstOrDefault();
+        _mutedTrackSnapshot = PlaybackTrackMixItems
+            .Where(t => t.IsMuted)
+            .Select(t => t.TrackIndex)
+            .ToArray();
+        OnPropertyChanged(nameof(TrackMixerSummary));
     }
 
     private void SavePlaybackCalibration()
@@ -6296,7 +6411,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _songPlayback.Set(_nowPlaying.FilePath, new SongPlaybackCalibration
         {
             OctaveShift = PlaybackOctaveShift,
-            TrackIndex = SelectedMidiTrack?.TrackIndex ?? -1,
+            TrackIndex = -1,
+            MutedTracks = [.. _mutedTrackSnapshot],
             MappingMode = SelectedNoteMappingMode?.Mode ?? NoteMappingMode.Chromatic36,
             PhraseFold = PlaybackPhraseFold
         });
@@ -6577,9 +6693,13 @@ public partial class MainViewModel : ObservableObject, IDisposable
             RequestPracticeTour();
         }
 
+        if (value == NavigationSection.Community)
+            EnsureCommunityLoaded();
+
         _activePlaybackList = value switch
         {
             NavigationSection.Catalogue => ActivePlaybackList.Catalogue,
+            NavigationSection.Community => ActivePlaybackList.Community,
             NavigationSection.Library => ActivePlaybackList.Library,
             NavigationSection.Favorites => ActivePlaybackList.Favorites,
             NavigationSection.History => ActivePlaybackList.Playlist,
@@ -6593,6 +6713,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(ShowLibraryPanel));
         OnPropertyChanged(nameof(ShowHistoryPanel));
         OnPropertyChanged(nameof(ShowCataloguePanel));
+        OnPropertyChanged(nameof(ShowCommunityPanel));
         OnPropertyChanged(nameof(ShowFavoritesPanel));
         OnPropertyChanged(nameof(ShowPlaylistPanel));
         OnPropertyChanged(nameof(ShowDebraPlayerChrome));

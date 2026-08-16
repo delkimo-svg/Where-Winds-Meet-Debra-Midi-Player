@@ -25,7 +25,9 @@ public sealed class SongPlaybackCalibrationStore
             {
                 OctaveShift = entry.OctaveShift,
                 TrackIndex = entry.TrackIndex,
-                MappingMode = entry.MappingMode
+                MappingMode = entry.MappingMode,
+                PhraseFold = entry.PhraseFold,
+                MutedTracks = [.. entry.MutedTracks]
             }
             : new SongPlaybackCalibration();
     }
@@ -49,15 +51,18 @@ public sealed class SongPlaybackCalibration
   public const int MaxOctaveShift = 2;
 
   public int OctaveShift { get; set; }
-  /// <summary>-1 = all tracks; otherwise MIDI track index.</summary>
+  /// <summary>Legacy single-track filter (-1 = all tracks); migrated to MutedTracks on load.</summary>
   public int TrackIndex { get; set; } = -1;
   public NoteMappingMode MappingMode { get; set; } = NoteMappingMode.Chromatic36;
   /// <summary>Additive on top of the mapping mode: out-of-range passages shift as whole phrases.</summary>
   public bool PhraseFold { get; set; }
+  /// <summary>MIDI track indexes muted in the player's track mixer.</summary>
+  public List<int> MutedTracks { get; set; } = [];
 
   public bool IsDefault =>
       OctaveShift == 0
       && TrackIndex == -1
       && MappingMode == NoteMappingMode.Chromatic36
-      && !PhraseFold;
+      && !PhraseFold
+      && MutedTracks.Count == 0;
 }

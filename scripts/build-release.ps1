@@ -46,7 +46,8 @@ $essentialAssets = @(
     'debra-player-ffxiv-corner-bl.png',
     'debra-player-ffxiv-corner-br.png',
     'debra-thumb-ffxiv.png',
-    'academy-manifest.json'
+    'academy-manifest.json',
+    'community-genres.json'
 )
 
 function Ensure-GeneralUserSoundFont([string]$projDir) {

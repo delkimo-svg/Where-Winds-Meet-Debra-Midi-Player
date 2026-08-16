@@ -81,6 +81,44 @@
                         Click="SongRowPlay_OnClick"/>
             </Grid>
         </DataTemplate>
+        <DataTemplate x:Key="CommunitySongTemplate" DataType="{x:Type models:CommunitySong}">
+            <Grid VerticalAlignment="Stretch" Background="Transparent">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Border Grid.Column="0" Background="{DynamicResource Brush.NewBadge}" CornerRadius="4"
+                        Padding="5,1" Margin="0,0,6,0" VerticalAlignment="Center"
+                        Visibility="{Binding IsNew, Converter={StaticResource BoolToVis}}">
+                    <TextBlock Text="{Binding DataContext.Ui.CatalogueNewBadge, RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}"
+                               FontSize="9" FontWeight="Bold" Foreground="{DynamicResource Brush.NewBadgeText}"/>
+                </Border>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Style="{StaticResource Text.SongRowTitle}" Text="{Binding DisplayTitle}"
+                               ToolTip="{Binding DisplayTitle}"/>
+                    <TextBlock FontSize="9" Foreground="{DynamicResource Brush.TextMuted}"
+                               TextTrimming="CharacterEllipsis" Margin="0,1,0,0">
+                        <Run Text="{Binding DisplayArtist, Mode=OneWay}"/><Run Text="  "/><Run
+                            Text="{Binding Creator, Mode=OneWay}" Foreground="{DynamicResource Brush.GoldDim}"/>
+                    </TextBlock>
+                </StackPanel>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="6,0,6,0">
+                    <Border Background="Transparent" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1"
+                            CornerRadius="4" Padding="5,1" Margin="0,0,6,0"
+                            Visibility="{Binding HasGenre, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="{Binding Genre}" FontSize="8.5" Foreground="{DynamicResource Brush.TextMuted}"/>
+                    </Border>
+                    <TextBlock Text="{Binding DurationDisplay}" FontSize="9" Foreground="{DynamicResource Brush.TextMuted}"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+                <Button Grid.Column="3" Content="▶" Style="{StaticResource Button.Icon.Row}" VerticalAlignment="Center"
+                        CommandParameter="{Binding}"
+                        ToolTip="{Binding DataContext.Ui.PlayTooltip, RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}"
+                        Click="SongRowPlay_OnClick"/>
+            </Grid>
+        </DataTemplate>
         <DataTemplate x:Key="PlaylistSongTemplate">
             <Grid VerticalAlignment="Stretch" Background="Transparent">
                 <Grid.ColumnDefinitions>
@@ -1099,6 +1137,69 @@
                                              PreviewMouseLeftButtonDown="CatalogueList_OnPreviewMouseLeftButtonDown"
                                              PreviewMouseLeftButtonUp="SongList_OnPreviewMouseLeftButtonUp"
                                              PreviewMouseMove="CatalogueList_OnPreviewMouseMove"/>
+                                </DockPanel>
+                            </controls:ChromeFadeCard>
+
+                            <controls:ChromeFadeCard x:Name="TourTarget_Community" Grid.Column="0"
+                                    SurfaceBackground="{DynamicResource Brush.CardBackground}" CornerRadius="14"
+                                    BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" Margin="0,0,6,0" Padding="14,12"
+                                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                    Visibility="{Binding ShowCommunityPanel, Converter={StaticResource BoolToVis}}">
+                                <DockPanel>
+                                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+                                        <Button DockPanel.Dock="Right" Content="{Binding Ui.CommunityRefresh}" Style="{StaticResource Button.Gold}"
+                                                Command="{Binding RefreshCommunityCommand}"
+                                                IsEnabled="{Binding IsCommunityLoading, Converter={StaticResource BoolToVisInvert}}"
+                                                Padding="10,4" FontSize="11" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding Ui.SectionCommunity}" Style="{StaticResource Text.SectionHeader}" VerticalAlignment="Center"/>
+                                    </DockPanel>
+                                    <TextBlock DockPanel.Dock="Top" Text="{Binding Ui.CommunitySubtitle}" Style="{StaticResource Text.Muted}" FontSize="9" Margin="0,0,0,8"/>
+                                    <TextBlock DockPanel.Dock="Bottom" Text="{Binding CommunityStatsText}" Style="{StaticResource Text.Muted}" Margin="0,6,0,0"/>
+                                    <TextBlock DockPanel.Dock="Bottom" Text="{Binding CommunityStatusText}" FontSize="9" Foreground="{DynamicResource Brush.TextMuted}"
+                                               TextWrapping="Wrap" Margin="0,0,0,4"/>
+                                    <Grid DockPanel.Dock="Top" Margin="0,0,0,8" Height="32">
+                                        <TextBox Style="{StaticResource TextBox.Search.Compact}"
+                                                 Text="{Binding CommunitySearchText, UpdateSourceTrigger=PropertyChanged}"
+                                                 VerticalContentAlignment="Center"/>
+                                        <StackPanel Orientation="Horizontal" IsHitTestVisible="False" VerticalAlignment="Center" Margin="10,0,8,0"
+                                                    Visibility="{Binding CommunitySearchText, Converter={StaticResource BoolToVisInvert}}">
+                                            <TextBlock Text="🔍" Margin="0,0,6,0" Foreground="{DynamicResource Brush.GoldDim}" FontSize="11"/>
+                                            <TextBlock Text="{Binding Ui.CommunitySearch}" Foreground="{DynamicResource Brush.TextMuted}" FontSize="11"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                    </Grid>
+                                    <Grid DockPanel.Dock="Top" Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding Ui.SortLabel}" VerticalAlignment="Center" Margin="0,0,8,0"
+                                                   Foreground="{DynamicResource Brush.TextMuted}" FontSize="11"/>
+                                        <controls:DebraFastDropdown Grid.Column="1"
+                                                                    ItemsSource="{Binding CommunitySortOptions}"
+                                                                    SelectedItem="{Binding SelectedCommunitySortOption, Mode=TwoWay}"
+                                                                    DisplayMemberPath="Label"/>
+                                    </Grid>
+                                    <Grid DockPanel.Dock="Top" Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="8"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <controls:DebraFastDropdown Grid.Column="0"
+                                                                    ItemsSource="{Binding CommunityGenres}"
+                                                                    SelectedItem="{Binding CommunityGenreFilter, Mode=TwoWay}"/>
+                                        <controls:DebraFastDropdown Grid.Column="2"
+                                                                    ItemsSource="{Binding CommunityOriginOptions}"
+                                                                    SelectedItem="{Binding SelectedCommunityOrigin, Mode=TwoWay}"
+                                                                    DisplayMemberPath="Label"/>
+                                    </Grid>
+                                    <ListBox x:Name="CommunityList" ItemsSource="{Binding FilteredCommunitySongs}" ItemTemplate="{StaticResource CommunitySongTemplate}"
+                                             SelectedItem="{Binding SelectedCommunitySong}" Style="{StaticResource ListBox.Debra}"
+                                             behaviors:ListBoxScrollWheelBehavior.IsEnabled="False"
+                                             VerticalAlignment="Stretch"
+                                             ItemContainerStyle="{StaticResource ListBoxItem.Song}" MouseDoubleClick="Community_OnDoubleClick"
+                                             PreviewMouseWheel="CommunityList_OnPreviewMouseWheel"/>
                                 </DockPanel>
                             </controls:ChromeFadeCard>
 
