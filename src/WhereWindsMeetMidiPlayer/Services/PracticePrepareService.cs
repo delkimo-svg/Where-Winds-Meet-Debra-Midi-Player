@@ -137,6 +137,10 @@ public sealed class PracticePrepareService
             ? notes.Select(Clone).ToList()
             : MidiTransposeService.ApplyTranspose(notes, totalTranspose);
 
+        // Keep the practice roll consistent with playback's Phrase Fold arrangement.
+        if (request.PhraseFold || request.MappingMode == NoteMappingMode.PhraseFold)
+            transposed = PhraseFoldService.Apply(transposed);
+
         var ranged = _noteRange.ApplyRange(transposed, smartTranspose: true, strictMode: request.StrictNoteRange);
         var mapped = NoteMappingService.ApplyMappingMode(ranged.Notes, request.MappingMode);
 

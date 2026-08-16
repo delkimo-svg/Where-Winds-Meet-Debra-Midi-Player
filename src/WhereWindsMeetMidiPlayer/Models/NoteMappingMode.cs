@@ -14,4 +14,8 @@ public enum NoteMappingMode
 
     /// <summary>FFXIV variant of the chromatic map: full 37-key range (C3–C6, top C included).</summary>
     ChromaticFfxiv37 = 3,
+
+    /// <summary>Legacy: phrase folding briefly shipped as a mode; it is an additive per-song
+    /// toggle now. Kept so calibrations saved with it still load (migrated on read).</summary>
+    PhraseFold = 4,
 }

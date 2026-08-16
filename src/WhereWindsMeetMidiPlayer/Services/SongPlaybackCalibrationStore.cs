@@ -52,9 +52,12 @@ public sealed class SongPlaybackCalibration
   /// <summary>-1 = all tracks; otherwise MIDI track index.</summary>
   public int TrackIndex { get; set; } = -1;
   public NoteMappingMode MappingMode { get; set; } = NoteMappingMode.Chromatic36;
+  /// <summary>Additive on top of the mapping mode: out-of-range passages shift as whole phrases.</summary>
+  public bool PhraseFold { get; set; }
 
   public bool IsDefault =>
       OctaveShift == 0
       && TrackIndex == -1
-      && MappingMode == NoteMappingMode.Chromatic36;
+      && MappingMode == NoteMappingMode.Chromatic36
+      && !PhraseFold;
 }

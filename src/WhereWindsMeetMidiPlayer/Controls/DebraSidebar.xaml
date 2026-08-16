@@ -8,12 +8,6 @@
              ClipToBounds="True">
 
     <UserControl.Resources>
-        <Style TargetType="TextBlock">
-            <Setter Property="Opacity" Value="{Binding PlayerChromeOpacity, RelativeSource={RelativeSource AncestorType=Window}}"/>
-        </Style>
-        <Style TargetType="Button">
-            <Setter Property="Opacity" Value="{Binding PlayerChromeOpacity, RelativeSource={RelativeSource AncestorType=Window}}"/>
-        </Style>
 
         <DataTemplate x:Key="NavItemTemplate" DataType="{x:Type vm:NavItemViewModel}">
             <Grid Margin="1,0,1,0"
@@ -135,6 +129,7 @@
                                     VerticalAlignment="Stretch"
                                     Padding="{TemplateBinding Padding}">
                             <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                                <!-- Inset so the fill never paints over the banner frame's gold border -->
                                 <Border x:Name="HighlightHost"
                                         Background="Transparent"
                                         CornerRadius="6"
@@ -142,7 +137,7 @@
                                         IsHitTestVisible="False"
                                         HorizontalAlignment="Stretch"
                                         VerticalAlignment="Stretch"
-                                        Margin="0">
+                                        Margin="8,1">
                                     <Border Background="{DynamicResource Brush.NavHighlightFill}" CornerRadius="6"
                                             HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
                                 </Border>
@@ -192,7 +187,7 @@
                         </ControlTemplate>
                     </Button.Template>
                 </Button>
-                <Border Grid.Row="1" Height="1" Margin="8,4,8,0"
+                <Border Grid.Row="1" Height="1" Margin="14,4,14,0"
                         Background="{DynamicResource Brush.NavDivider}"
                         SnapsToDevicePixels="True"
                         IsHitTestVisible="False"/>
@@ -216,8 +211,7 @@
                        VerticalAlignment="Stretch"
                        HorizontalAlignment="Center"
                        IsHitTestVisible="False"
-                       RenderOptions.BitmapScalingMode="HighQuality"
-                       Opacity="{Binding PlayerChromeOpacity, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                       RenderOptions.BitmapScalingMode="HighQuality"/>
             </Border>
 
             <Grid x:Name="NavOverlay"

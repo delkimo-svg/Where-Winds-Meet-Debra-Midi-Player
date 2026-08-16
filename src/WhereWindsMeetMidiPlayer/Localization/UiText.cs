@@ -342,4 +342,7 @@ public static class UiText
     public const string FfxivChatNoSong = "FfxivChat_NoSong";
     public const string FfxivChatNeedPlugin = "FfxivChat_NeedPlugin";
     public const string FfxivChatDownload = "FfxivChat_Download";
+    public const string FfxivChatDirectNotesTooltip = "FfxivChat_DirectNotesTooltip";
+    public const string NoteMappingPhraseFold = "NoteMapping_PhraseFold";
+    public const string NoteMappingPhraseFoldHint = "NoteMapping_PhraseFoldHint";
 }

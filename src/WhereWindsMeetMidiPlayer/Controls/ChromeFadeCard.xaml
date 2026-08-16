@@ -10,13 +10,11 @@
                 <ControlTemplate TargetType="{x:Type local:ChromeFadeCard}">
                     <Grid Margin="{TemplateBinding Margin}">
                         <Border Background="{TemplateBinding SurfaceBackground}"
-                                CornerRadius="{TemplateBinding CornerRadius}"
-                                Opacity="{Binding PlayerChromeOpacity, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                                CornerRadius="{TemplateBinding CornerRadius}"/>
                         <Border CornerRadius="{TemplateBinding CornerRadius}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                Background="Transparent"
-                                Opacity="{Binding PlayerChromeOpacity, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                                Background="Transparent"/>
                         <Border Padding="{TemplateBinding Padding}" Background="Transparent">
                             <ContentPresenter/>
                         </Border>

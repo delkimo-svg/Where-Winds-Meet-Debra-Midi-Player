@@ -39,7 +39,13 @@ public sealed class HypnotoadService : IDisposable
     private const string PipeName = "Hypnotoad";
     private const int MsgTypeHandshake = 1;
     private const int MsgTypeNameAndHomeWorld = 11;
+    private const int MsgTypeNoteOn = 21;
+    private const int MsgTypeNoteOff = 22;
     private const int MsgTypeChat = 40;
+    // Note wire value = MIDI − 48 (C3 = 0 … C6 = 36), same scheme as MidiBard/LightAmp:
+    // the plugin stores it as game note (wire + 39) in AgentPerformance.CurrentPressingNote.
+    private const int NoteWireFloor = 48;
+    private const int NoteWireMax = 36;
 
     private PipeServer<HypnotoadIpcMessage>? _server;
     private int _clientCount;
@@ -124,6 +130,43 @@ public sealed class HypnotoadService : IDisposable
             LastError = ex.Message;
             RaiseStateChanged();
             return false;
+        }
+    }
+
+    /// <summary>
+    /// Plays/releases a note in-game through the plugin (no keyboard involved). Fire-and-forget:
+    /// returns false when not connected or out of the game's C3–C6 range so the caller can fall
+    /// back to keyboard delivery for that note.
+    /// </summary>
+    public bool SendNote(int midiNote, bool on)
+    {
+        var server = _server;
+        if (server is null || !IsClientConnected)
+            return false;
+
+        var wire = midiNote - NoteWireFloor;
+        if (wire is < 0 or > NoteWireMax)
+            return false;
+
+        _ = WriteNoteAsync(server, wire, on);
+        return true;
+    }
+
+    private async Task WriteNoteAsync(PipeServer<HypnotoadIpcMessage> server, int wireNote, bool on)
+    {
+        try
+        {
+            await server.WriteAsync(new HypnotoadIpcMessage
+            {
+                msgType = on ? MsgTypeNoteOn : MsgTypeNoteOff,
+                msgChannel = 0,
+                message = wireNote.ToString()
+            }).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            LastError = ex.Message;
+            RaiseStateChanged();
         }
     }
 

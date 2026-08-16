@@ -66,6 +66,19 @@ public sealed class PlaybackEngine : IDisposable
         get { lock (_gate) return _tempoMultiplier; }
     }
 
+    private volatile Func<int, bool, bool>? _directNoteSink;
+
+    /// <summary>
+    /// Optional direct note delivery (FFXIV via Hypnotoad): called as (midiNote, on) and returns
+    /// true when it handled the note. False falls back to keyboard delivery for that note, so a
+    /// plugin disconnect mid-song degrades gracefully instead of going silent.
+    /// </summary>
+    public Func<int, bool, bool>? DirectNoteSink
+    {
+        get => _directNoteSink;
+        set => _directNoteSink = value;
+    }
+
 
 
     public PlaybackState State
@@ -481,7 +494,7 @@ public sealed class PlaybackEngine : IDisposable
 
         // FFXIV: real key-down at note-on, key-up at note-off (BMP/LightAmp HoldNotes).
         var holdNotes = GameProfiles.Current.HoldNotes;
-        var pendingUps = new List<(long UpAtMs, string Combo)>();
+        var pendingUps = new List<(long UpAtMs, string Combo, int Note, bool Direct)>();
 
         // 1 ms system timer while playing (BMP-style): without it Task.Delay quantizes to
         // ~15.6 ms and fast passages jitter enough to bunch key events together.
@@ -604,8 +617,13 @@ public sealed class PlaybackEngine : IDisposable
 
                     if (holdNotes && evt.DurationMs > 0)
                     {
-                        _inputService.SendKeyDown(evt.KeyCombo);
-                        pendingUps.Add((evt.StartMs + evt.DurationMs, evt.KeyCombo));
+                        var sink = _directNoteSink;
+                        var direct = sink is not null && sink(evt.NoteNumber, true);
+                        if (!direct)
+                            _inputService.SendKeyDown(evt.KeyCombo);
+                        // Direct notes sustain to their legato length; keyboard keeps the gapped hold.
+                        var holdMs = direct && evt.LegatoDurationMs > 0 ? evt.LegatoDurationMs : evt.DurationMs;
+                        pendingUps.Add((evt.StartMs + holdMs, evt.KeyCombo, evt.NoteNumber, direct));
                     }
                     else
                     {
@@ -635,6 +653,10 @@ public sealed class PlaybackEngine : IDisposable
         finally
         {
             _ = TimeEndPeriod(1);
+            // Stop/pause mid-hold: release direct notes too, else they ring until the game's 4 s auto-release.
+            foreach (var (_, _, note, direct) in pendingUps)
+                if (direct)
+                    _directNoteSink?.Invoke(note, false);
             if (holdNotes)
                 _inputService.ReleaseAllHeldKeys();
         }
@@ -655,16 +677,24 @@ public sealed class PlaybackEngine : IDisposable
 
 
 
-    private void ReleasePendingUps(List<(long UpAtMs, string Combo)> pendingUps)
+    private void ReleaseNote(string combo, int note, bool direct)
     {
-        foreach (var (_, combo) in pendingUps)
+        if (direct)
+            _directNoteSink?.Invoke(note, false);
+        else
             _inputService.SendKeyUp(combo);
+    }
+
+    private void ReleasePendingUps(List<(long UpAtMs, string Combo, int Note, bool Direct)> pendingUps)
+    {
+        foreach (var (_, combo, note, direct) in pendingUps)
+            ReleaseNote(combo, note, direct);
         pendingUps.Clear();
     }
 
     /// <summary>Sends every pending key-up scheduled before <paramref name="untilMs"/>, waiting for each in song time.</summary>
     private async Task FlushPendingUpsAsync(
-        List<(long UpAtMs, string Combo)> pendingUps,
+        List<(long UpAtMs, string Combo, int Note, bool Direct)> pendingUps,
         long untilMs,
         CancellationToken cancellationToken)
     {
@@ -679,7 +709,7 @@ public sealed class PlaybackEngine : IDisposable
                 return;
 
             await WaitUntilSongTimeAsync(pendingUps[next].UpAtMs, cancellationToken);
-            _inputService.SendKeyUp(pendingUps[next].Combo);
+            ReleaseNote(pendingUps[next].Combo, pendingUps[next].Note, pendingUps[next].Direct);
             pendingUps.RemoveAt(next);
         }
     }
@@ -844,12 +874,26 @@ public sealed class PlaybackEngine : IDisposable
             if (monophonic)
             {
                 // BMP/LightAmp chord roll: low→high pre-roll, last (melody) note lands on the beat.
+                // Humanized strum: the roll starts unhurried and tightens toward the beat (the
+                // interval next to the melody note stays at base spacing, earlier ones widen up
+                // to +35%). Deterministic, and never below base spacing — keyboard-safe.
                 var spacing = Math.Max(chordRollDelayMs, MonophonicChordSpacingMs);
-                for (var i = 0; i < members.Count; i++)
+                long offset = 0;
+                for (var i = members.Count - 1; i >= 0; i--)
                 {
-                    members[i].StartMs = chord.Key - (long)(members.Count - 1 - i) * spacing;
+                    members[i].StartMs = chord.Key - offset;
                     if (i < members.Count - 1)
+                    {
+                        // Roll grace notes: tap length for keyboard, full musical length for legato.
+                        members[i].LegatoDurationMs = members[i].DurationMs;
                         members[i].DurationMs = MonophonicChordTapMs;
+                    }
+
+                    var stepsFromBeat = members.Count - 1 - i;
+                    var stretch = members.Count > 2
+                        ? 1.0 + 0.35 * stepsFromBeat / (members.Count - 2)
+                        : 1.0;
+                    offset += (long)Math.Round(spacing * stretch);
                 }
             }
             else
@@ -898,15 +942,25 @@ public sealed class PlaybackEngine : IDisposable
             var note = schedule[i];
             var gap = note.DurationMs >= MonophonicLongNoteMs ? MonophonicLongGapMs : MonophonicShortGapMs;
             var dur = Math.Clamp(note.DurationMs, MonophonicChordTapMs, MonophonicMaxHoldMs);
+
+            // Direct delivery has no key-up/key-down constraint: honor the note's musical length
+            // (staccato stays staccato) and let legato lines ring to just before the next onset.
+            var legato = Math.Clamp(
+                note.LegatoDurationMs > 0 ? note.LegatoDurationMs : note.DurationMs,
+                MonophonicChordTapMs,
+                MonophonicMaxHoldMs);
+
             if (i + 1 < schedule.Count)
             {
                 var toNext = schedule[i + 1].StartMs - note.StartMs;
                 if (dur > toNext - gap)
                     dur = Math.Max(MonophonicChordTapMs, toNext - gap);
                 dur = Math.Min(dur, toNext - 5);
+                legato = Math.Max(MonophonicChordTapMs, Math.Min(legato, toNext - 5));
             }
 
             note.DurationMs = dur;
+            note.LegatoDurationMs = legato;
         }
     }
 

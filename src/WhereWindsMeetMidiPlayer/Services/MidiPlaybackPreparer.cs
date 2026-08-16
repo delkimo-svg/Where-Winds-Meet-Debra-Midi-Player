@@ -44,6 +44,11 @@ public sealed class MidiPlaybackPreparer
             ? notes.Select(CloneNote).ToList()
             : MidiTransposeService.ApplyTranspose(notes, totalTranspose);
 
+        // Phrase Fold (additive with any mapping mode): shift out-of-range passages by whole
+        // octaves (contour preserved) before the per-note fold handles whatever still sticks out.
+        if (request.PhraseFold || request.MappingMode == NoteMappingMode.PhraseFold)
+            transposed = PhraseFoldService.Apply(transposed);
+
         var ranged = _noteRange.ApplyRange(
             transposed,
             smartTranspose: true,
@@ -97,6 +102,8 @@ public sealed class MidiPrepareRequest
     public int OctaveShift { get; init; }
     public int TrackIndex { get; init; } = -1;
     public NoteMappingMode MappingMode { get; init; } = NoteMappingMode.Chromatic36;
+    /// <summary>Additive on top of MappingMode: shift out-of-range passages as whole phrases.</summary>
+    public bool PhraseFold { get; init; }
     public int ChordRollDelayMs { get; init; }
     public int NoteDelayMs { get; init; }
     /// <summary>FFXIV: merge window (ms) for near-simultaneous chord notes. 0 = off.</summary>

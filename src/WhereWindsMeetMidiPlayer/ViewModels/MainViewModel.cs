@@ -106,6 +106,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] private int _chordRollDelayMs;
     [ObservableProperty] private int _modifierDelayMs;
     [ObservableProperty] private int _playbackOctaveShift;
+    [ObservableProperty] private bool _playbackPhraseFold;
     [ObservableProperty] private bool _showMidiTrackSelector;
     [ObservableProperty] private bool _isPlayerTuningPanelOpen;
     [ObservableProperty] private int _playerChromeOpacityPercent = 100;
@@ -3771,6 +3772,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 OctaveShift = PlaybackOctaveShift,
                 TrackIndex = SelectedMidiTrack?.TrackIndex ?? -1,
                 MappingMode = SelectedNoteMappingMode?.Mode ?? NoteMappingMode.Chromatic36,
+                PhraseFold = PlaybackPhraseFold,
                 ChordRollDelayMs = ChordRollDelayMs,
                 NoteDelayMs = NoteDelayMs,
                 FfxivChordAlignWindowMs = Math.Clamp(_settings.Settings.FfxivChordAlignWindowMs, 0, 200),
@@ -4123,6 +4125,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         MappingMode = IsAcademyPracticeMode
             ? NoteMappingMode.TransposeOnly
             : SelectedNoteMappingMode?.Mode ?? NoteMappingMode.Chromatic36,
+        PhraseFold = !IsAcademyPracticeMode && PlaybackPhraseFold,
         ChordRollDelayMs = ChordRollDelayMs,
         NoteDelayMs = NoteDelayMs
     };
@@ -5826,9 +5829,20 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         var settings = _settings.Settings;
         // Settings written before per-game themes only offered the two WWM themes: keep that choice
-        // for WWM, and let FFXIV pick up its own theme on the first launch after the update.
+        // for WWM. The FFXIV theme in the legacy slot only means the last session ran FFXIV —
+        // seeding it into the WWM slot would dress WWM in Eorzea colors.
         if (settings.UiThemeByGame.Count == 0 && !string.IsNullOrWhiteSpace(settings.UiTheme))
-            settings.UiThemeByGame[GameProfiles.WhereWindsMeet.Id] = ThemeService.Normalize(settings.UiTheme);
+        {
+            var legacy = ThemeService.Normalize(settings.UiTheme);
+            if (!legacy.Equals(ThemeService.Ffxiv, StringComparison.OrdinalIgnoreCase))
+                settings.UiThemeByGame[GameProfiles.WhereWindsMeet.Id] = legacy;
+        }
+
+        // Heal settings written by the earlier migration, which copied the FFXIV theme into WWM's slot.
+        if (settings.UiThemeByGame.Count == 1
+            && settings.UiThemeByGame.TryGetValue(GameProfiles.WhereWindsMeet.Id, out var wwmTheme)
+            && ThemeService.Normalize(wwmTheme).Equals(ThemeService.Ffxiv, StringComparison.OrdinalIgnoreCase))
+            settings.UiThemeByGame.Remove(GameProfiles.WhereWindsMeet.Id);
 
         ApplyThemeForGame(GameProfiles.Current);
     }
@@ -5844,6 +5858,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
         ThemeService.Apply(themeId, persist: false);
         _settings.Settings.UiTheme = ThemeService.CurrentId;
+        // Remember what each game is wearing, so switching games always restores its last theme.
+        _settings.Settings.UiThemeByGame[game.Id] = ThemeService.CurrentId;
         _suppressThemeChange = true;
         SelectedTheme = AvailableThemes.FirstOrDefault(t =>
                               t.Id.Equals(ThemeService.CurrentId, StringComparison.OrdinalIgnoreCase))
@@ -6123,6 +6139,15 @@ public partial class MainViewModel : ObservableObject, IDisposable
         SchedulePlaybackCalibrationReload();
     }
 
+    partial void OnPlaybackPhraseFoldChanged(bool value)
+    {
+        if (_suppressPlaybackCalibrationChange)
+            return;
+
+        SavePlaybackCalibration();
+        SchedulePlaybackCalibrationReload();
+    }
+
     partial void OnSelectedNoteMappingModeChanged(NoteMappingModeOption? value)
     {
         if (value is not null)
@@ -6218,6 +6243,15 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 calibration.OctaveShift,
                 SongPlaybackCalibration.MinOctaveShift,
                 SongPlaybackCalibration.MaxOctaveShift);
+
+            // Migration: Phrase Fold briefly shipped as a mapping mode; it is additive now.
+            if (calibration.MappingMode == NoteMappingMode.PhraseFold)
+            {
+                calibration.MappingMode = _settings.Settings.DefaultNoteMappingMode;
+                calibration.PhraseFold = true;
+            }
+
+            PlaybackPhraseFold = calibration.PhraseFold;
             SelectedNoteMappingMode = NoteMappingModes.FirstOrDefault(m => m.Mode == calibration.MappingMode)
                 ?? NoteMappingModes.FirstOrDefault();
             SelectedMidiTrack = MidiTrackOptions.FirstOrDefault(t => t.TrackIndex == calibration.TrackIndex)
@@ -6263,7 +6297,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         {
             OctaveShift = PlaybackOctaveShift,
             TrackIndex = SelectedMidiTrack?.TrackIndex ?? -1,
-            MappingMode = SelectedNoteMappingMode?.Mode ?? NoteMappingMode.Chromatic36
+            MappingMode = SelectedNoteMappingMode?.Mode ?? NoteMappingMode.Chromatic36,
+            PhraseFold = PlaybackPhraseFold
         });
         _songPlayback.Save();
     }

@@ -18,17 +18,7 @@
 
     <UserControl.Resources>
 
-        <Style TargetType="TextBlock">
 
-            <Setter Property="Opacity" Value="{Binding PlayerChromeOpacity, RelativeSource={RelativeSource AncestorType=Window}}"/>
-
-        </Style>
-
-        <Style TargetType="Image">
-
-            <Setter Property="Opacity" Value="{Binding PlayerChromeOpacity, RelativeSource={RelativeSource AncestorType=Window}}"/>
-
-        </Style>
 
         <Style x:Key="NowPlayingStatLabel" TargetType="TextBlock">
 
@@ -40,7 +30,6 @@
 
             <Setter Property="HorizontalAlignment" Value="Center"/>
 
-            <Setter Property="Opacity" Value="{Binding PlayerChromeOpacity, RelativeSource={RelativeSource AncestorType=Window}}"/>
 
         </Style>
 
@@ -56,7 +45,6 @@
 
             <Setter Property="HorizontalAlignment" Value="Center"/>
 
-            <Setter Property="Opacity" Value="{Binding PlayerChromeOpacity, RelativeSource={RelativeSource AncestorType=Window}}"/>
 
         </Style>
 
@@ -72,7 +60,6 @@
 
         <Border CornerRadius="12" Background="{DynamicResource Brush.NowPlayingCard}"
 
-                Opacity="{Binding PlayerChromeOpacity, RelativeSource={RelativeSource AncestorType=Window}}"
 
                 IsHitTestVisible="False"/>
 
@@ -80,9 +67,7 @@
 
                 Padding="14,12" ClipToBounds="False" VerticalAlignment="Top" HorizontalAlignment="Stretch"
 
-                Background="Transparent"
-
-                Opacity="{Binding PlayerChromeOpacity, RelativeSource={RelativeSource AncestorType=Window}}">
+                Background="Transparent">
 
             <DockPanel LastChildFill="False">
 
@@ -102,15 +87,12 @@
 
                     <Border CornerRadius="10" Background="{DynamicResource Brush.BgElevated}"
 
-                            Opacity="{Binding PlayerChromeOpacity, RelativeSource={RelativeSource AncestorType=Window}}"
 
                             IsHitTestVisible="False"/>
 
                     <Border CornerRadius="10" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1"
 
-                            Padding="6,8" Background="Transparent"
-
-                            Opacity="{Binding PlayerChromeOpacity, RelativeSource={RelativeSource AncestorType=Window}}">
+                            Padding="6,8" Background="Transparent">
 
                         <Grid>
 
@@ -188,9 +170,7 @@
 
                 <!-- Hero -->
 
-                <Grid DockPanel.Dock="Top" Margin="0,0,0,4"
-
-                      Opacity="{Binding PlayerChromeOpacity, RelativeSource={RelativeSource AncestorType=Window}}">
+                <Grid DockPanel.Dock="Top" Margin="0,0,0,4">
 
                     <Viewbox Stretch="Uniform" StretchDirection="DownOnly"
 

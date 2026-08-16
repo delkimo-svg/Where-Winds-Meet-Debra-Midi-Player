@@ -28,6 +28,8 @@ public sealed class AppSettings
     public string FfxivChatAnnounceTemplate { get; set; } = "♪ Now playing: {title} ♪";
     /// <summary>FFXIV Chat: announce the song automatically when playback starts.</summary>
     public bool FfxivChatAutoAnnounce { get; set; }
+    /// <summary>FFXIV: play notes directly through Hypnotoad when connected (keyboard fallback per note).</summary>
+    public bool FfxivNotesViaHypnotoad { get; set; } = true;
     public string KeyMappingFile { get; set; } = "debra-36-keys.json";
     /// <summary>Last selected keyboard layout preset (qwerty, qwertz, azerty). Empty when using a custom map.</summary>
     public string? KeyboardLayoutPresetId { get; set; } = "qwerty";

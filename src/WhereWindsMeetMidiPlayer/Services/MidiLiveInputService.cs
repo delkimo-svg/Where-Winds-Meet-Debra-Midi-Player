@@ -179,6 +179,12 @@ public sealed class MidiLiveInputService : IDisposable
         }
     }
 
+    /// <summary>Same contract as PlaybackEngine.DirectNoteSink: (midiNote, on) → handled.</summary>
+    public Func<int, bool, bool>? DirectNoteSink { get; set; }
+
+    // Live direct notes held in-game: source MIDI note → mapped game note (for the note-off).
+    private readonly Dictionary<int, int> _liveDirectHeld = new();
+
     private void HandleNoteOn(NoteOnEvent noteOn)
     {
         RawNoteOn?.Invoke(noteOn.NoteNumber, noteOn.Velocity);
@@ -198,6 +204,16 @@ public sealed class MidiLiveInputService : IDisposable
 
         if (!context.SuppressGameInput)
         {
+            // Direct delivery holds the note until the player releases the key (real sustain);
+            // keyboard fallback stays a tap like before.
+            var sink = DirectNoteSink;
+            if (sink is not null && sink(gameNote.Value, true))
+            {
+                _liveDirectHeld[noteOn.NoteNumber] = gameNote.Value;
+                MappedGameNoteOn?.Invoke(gameNote.Value);
+                return;
+            }
+
             var combo = _keyMapping.GetKeyCombo(gameNote.Value);
             if (combo is null)
                 return;
@@ -208,8 +224,13 @@ public sealed class MidiLiveInputService : IDisposable
         }
     }
 
-    private void HandleNoteOff(int midiNote) =>
+    private void HandleNoteOff(int midiNote)
+    {
+        if (_liveDirectHeld.Remove(midiNote, out var gameNote))
+            DirectNoteSink?.Invoke(gameNote, false);
+
         RawNoteOff?.Invoke(midiNote);
+    }
 
     public void Dispose()
     {

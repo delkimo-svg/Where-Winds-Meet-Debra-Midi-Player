@@ -226,6 +226,9 @@ public sealed partial class LocalizedUi : ObservableObject
     public string FfxivChatAutoAnnounceTooltip => L.T(UiText.FfxivChatAutoAnnounceTooltip);
     public string FfxivChatNeedPlugin => L.T(UiText.FfxivChatNeedPlugin);
     public string FfxivChatDownload => L.T(UiText.FfxivChatDownload);
+    public string FfxivChatDirectNotesTooltip => L.T(UiText.FfxivChatDirectNotesTooltip);
+    public string NoteMappingPhraseFold => L.T(UiText.NoteMappingPhraseFold);
+    public string NoteMappingPhraseFoldHint => L.T(UiText.NoteMappingPhraseFoldHint);
 
     public void Refresh() => OnPropertyChanged(string.Empty);
 }

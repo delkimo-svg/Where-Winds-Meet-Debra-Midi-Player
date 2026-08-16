@@ -35,6 +35,7 @@ public partial class MainViewModel
     [ObservableProperty] private string _ffxivChatStatusText = string.Empty;
     [ObservableProperty] private bool _isHypnotoadConnected;
     [ObservableProperty] private bool _isHypnotoadMissing = true;
+    [ObservableProperty] private bool _ffxivNotesDirect = true;
 
     public ObservableCollection<FfxivChatChannelOption> FfxivChatChannels { get; } = [];
     public ObservableCollection<FfxivChatChannelOption> FfxivAnnounceChannels { get; } = [];
@@ -68,6 +69,7 @@ public partial class MainViewModel
                 ? "♪ Now playing: {title} ♪"
                 : s.FfxivChatAnnounceTemplate;
             FfxivChatAutoAnnounce = s.FfxivChatAutoAnnounce;
+            FfxivNotesDirect = s.FfxivNotesViaHypnotoad;
             SelectedFfxivChatChannel = FfxivChatChannels.FirstOrDefault(c => c.Code == s.FfxivChatChannelCode)
                 ?? FfxivChatChannels[0];
             SelectedFfxivAnnounceChannel = FfxivAnnounceChannels.FirstOrDefault(c => c.Code == s.FfxivChatAnnounceChannelCode)
@@ -122,10 +124,20 @@ public partial class MainViewModel
         }
     }
 
+    /// <summary>Routes playback and live-MIDI notes through Hypnotoad when connected and enabled.</summary>
+    private void UpdateDirectNoteRouting()
+    {
+        var active = IsFfxivChatAvailable && FfxivNotesDirect && _hypnotoad.IsClientConnected;
+        Func<int, bool, bool>? sink = active ? (note, on) => _hypnotoad.SendNote(note, on) : null;
+        _playback.DirectNoteSink = sink;
+        _liveMidi.DirectNoteSink = sink;
+    }
+
     private void RefreshHypnotoadStatus()
     {
         IsHypnotoadConnected = _hypnotoad.IsClientConnected;
         IsHypnotoadMissing = !_hypnotoad.IsClientConnected;
+        UpdateDirectNoteRouting();
         if (_hypnotoad.IsClientConnected)
         {
             FfxivChatStatusText = string.IsNullOrEmpty(_hypnotoad.CharacterName)
@@ -216,6 +228,16 @@ public partial class MainViewModel
             return;
 
         _settings.Settings.FfxivChatPanelExpanded = value;
+        ScheduleSettingsSave();
+    }
+
+    partial void OnFfxivNotesDirectChanged(bool value)
+    {
+        UpdateDirectNoteRouting();
+        if (_suppressFfxivChatPersist)
+            return;
+
+        _settings.Settings.FfxivNotesViaHypnotoad = value;
         ScheduleSettingsSave();
     }
 

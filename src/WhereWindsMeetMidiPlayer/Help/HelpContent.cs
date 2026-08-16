@@ -6,27 +6,30 @@ public static class HelpContent
 {
     public static IReadOnlyList<HelpSection> GetSections() =>
     [
-        Section("Help_S00", 3, 0),
-        Section("Help_S01", 3, 3),
-        Section("Help_S02", 3, 5),
-        Section("Help_S03", 5, 0),
-        Section("Help_S04", 4, 0),
-        Section("Help_S05", 4, 0),
-        Section("Help_S06", 6, 0),
-        Section("Help_S07", 4, 0),
-        Section("Help_S08", 2, 0),
-        Section("Help_S09", 2, 0),
-        Section("Help_S10", 4, 2),
-        Section("Help_S11", 8, 0),
-        Section("Help_S12", 4, 0),
-        Section("Help_S13", 4, 0),
-        Section("Help_S14", 5, 0)
+        Section("Help_S00", 3, 0, "👋"),
+        Section("Help_S15", 3, 0, "🎮"),
+        Section("Help_S01", 3, 3, "🚀"),
+        Section("Help_S02", 3, 5, "🧭"),
+        Section("Help_S03", 5, 0, "🪟"),
+        Section("Help_S04", 4, 0, "♫"),
+        Section("Help_S05", 4, 0, "🌐"),
+        Section("Help_S06", 6, 0, "📋"),
+        Section("Help_S07", 4, 0, "♥"),
+        Section("Help_S08", 2, 0, "🕘"),
+        Section("Help_S09", 2, 0, "🖼"),
+        Section("Help_S10", 4, 2, "▶"),
+        Section("Help_S16", 3, 0, "💬"),
+        Section("Help_S17", 3, 0, "🎹"),
+        Section("Help_S11", 8, 0, "⚙"),
+        Section("Help_S12", 4, 0, "🎨"),
+        Section("Help_S13", 4, 0, "🖱"),
+        Section("Help_S14", 5, 0, "🛠")
     ];
 
     [Obsolete("Use GetSections() so strings follow the active UI language.")]
     public static IReadOnlyList<HelpSection> Sections => GetSections();
 
-    private static HelpSection Section(string prefix, int paragraphCount, int bulletCount)
+    private static HelpSection Section(string prefix, int paragraphCount, int bulletCount, string icon)
     {
         var paragraphs = new List<string>(paragraphCount);
         for (var i = 0; i < paragraphCount; i++)
@@ -41,6 +44,6 @@ public static class HelpContent
             bullets = list;
         }
 
-        return new HelpSection(L.T($"{prefix}_Title"), paragraphs, bullets);
+        return new HelpSection(L.T($"{prefix}_Title"), paragraphs, bullets, icon);
     }
 }

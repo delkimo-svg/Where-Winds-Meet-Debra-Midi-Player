@@ -113,16 +113,16 @@
         </DataTemplate>
     </Window.Resources>
 
-    <Grid FlowDirection="{Binding UiFlowDirection}" ClipToBounds="True" Background="Transparent">
+    <!-- Single fade layer for the whole UI: the chrome opacity slider is applied once here so
+         every surface dims at the same rate instead of compounding per element. -->
+    <Grid FlowDirection="{Binding UiFlowDirection}" ClipToBounds="True" Background="Transparent"
+          Opacity="{Binding PlayerChromeOpacity}">
         <Image x:Name="MainBackgroundImage" Stretch="UniformToFill"
                HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-               RenderOptions.BitmapScalingMode="HighQuality"
-               Opacity="{Binding PlayerChromeOpacity}"/>
+               RenderOptions.BitmapScalingMode="HighQuality"/>
         <Border Background="{DynamicResource Brush.WindowBackground}"
-                Opacity="{Binding PlayerChromeOpacity}"
                 IsHitTestVisible="False"/>
-        <Rectangle IsHitTestVisible="False" Fill="{DynamicResource Brush.BackgroundScrim}"
-                   Opacity="{Binding PlayerChromeOpacity}"/>
+        <Rectangle IsHitTestVisible="False" Fill="{DynamicResource Brush.BackgroundScrim}"/>
 
         <Grid AllowDrop="True" ClipToBounds="True" FlowDirection="{Binding UiFlowDirection}">
                 <Grid.RowDefinitions>
@@ -139,18 +139,11 @@
                 <!-- Title bar spans full width so body column 0 stays sidebar-narrow only -->
                 <Grid Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" ClipToBounds="False"
                       Background="Transparent">
-                    <Grid.Resources>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Opacity" Value="{Binding PlayerChromeOpacity}"/>
-                        </Style>
-                    </Grid.Resources>
                     <Border x:Name="TitleBarDecorHost" Panel.ZIndex="0" IsHitTestVisible="False"
                             VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
-                            Background="{DynamicResource Brush.BgDeep}"
-                            Opacity="{Binding PlayerChromeOpacity}"/>
+                            Background="{DynamicResource Brush.BgDeep}"/>
                     <Border x:Name="TitleBarVignette" Panel.ZIndex="0" IsHitTestVisible="False"
-                            VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
-                            Opacity="{Binding PlayerChromeOpacity}">
+                            VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
                         <Border.Background>
                             <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
                                 <GradientStop Color="#70141518" Offset="0"/>
@@ -161,8 +154,7 @@
                         </Border.Background>
                     </Border>
                     <Border x:Name="TitleBarEdgeFadeTop" Panel.ZIndex="1" Height="3" VerticalAlignment="Top"
-                            HorizontalAlignment="Stretch" IsHitTestVisible="False"
-                            Opacity="{Binding PlayerChromeOpacity}">
+                            HorizontalAlignment="Stretch" IsHitTestVisible="False">
                         <Border.Background>
                             <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                                 <GradientStop Color="{DynamicResource BgDeep}" Offset="0"/>
@@ -171,8 +163,7 @@
                         </Border.Background>
                     </Border>
                     <Border x:Name="TitleBarEdgeFadeBottom" Panel.ZIndex="1" Height="3" VerticalAlignment="Bottom"
-                            HorizontalAlignment="Stretch" IsHitTestVisible="False"
-                            Opacity="{Binding PlayerChromeOpacity}">
+                            HorizontalAlignment="Stretch" IsHitTestVisible="False">
                         <Border.Background>
                             <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                                 <GradientStop Color="#00000000" Offset="0"/>
@@ -196,8 +187,7 @@
                                Source="{asset:LocalAsset debra-wwm-header-logo.png}"
                                Height="32" Stretch="Uniform" VerticalAlignment="Center"
                                Margin="0,0,10,0" RenderOptions.BitmapScalingMode="HighQuality"
-                               SnapsToDevicePixels="True" IsHitTestVisible="False"
-                               Opacity="{Binding PlayerChromeOpacity}"/>
+                               SnapsToDevicePixels="True" IsHitTestVisible="False"/>
                         <TextBlock Grid.Column="1" VerticalAlignment="Center" FontFamily="{DynamicResource Font.HeaderTitle}"
                                    TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"
                                    TextOptions.TextFormattingMode="Display">
@@ -216,8 +206,7 @@
                     <StackPanel x:Name="TourTarget_Header" Grid.Column="1" Orientation="Horizontal"
                                 VerticalAlignment="Center" HorizontalAlignment="Right"
                                 Margin="0,0,6,0" Panel.ZIndex="10"
-                                shell:WindowChrome.IsHitTestVisibleInChrome="True"
-                                Opacity="{Binding PlayerChromeOpacity}">
+                                shell:WindowChrome.IsHitTestVisibleInChrome="True">
                         <Button Content="{Binding Ui.HeaderUpdate}" Style="{StaticResource Button.UpdatePulse}"
                                 Command="{Binding ShowUpdateOverlayCommand}"
                                 ToolTip="{Binding Ui.HeaderUpdateTooltip}"
@@ -260,8 +249,7 @@
                     <Border Grid.Column="2" x:Name="TitleBarWindowButtons" Background="{DynamicResource Brush.BgElevated}" CornerRadius="10"
                             BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" Padding="2,0"
                             Margin="0,0,6,0" VerticalAlignment="Center"
-                            Panel.ZIndex="10" shell:WindowChrome.IsHitTestVisibleInChrome="True"
-                            Opacity="{Binding PlayerChromeOpacity}">
+                            Panel.ZIndex="10" shell:WindowChrome.IsHitTestVisibleInChrome="True">
                         <StackPanel Orientation="Horizontal">
                             <Button Content="—" Style="{StaticResource Button.WindowChrome}" Click="Minimize_OnClick"/>
                             <Button Content="□" Style="{StaticResource Button.WindowChrome}" Click="Maximize_OnClick"/>
@@ -281,38 +269,6 @@
 
                 <Grid x:Name="MainContentStack" Grid.Row="1" Grid.Column="1" Margin="0,6,5,0"
                       HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                        <Grid.Resources>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Opacity" Value="{Binding PlayerChromeOpacity}"/>
-                            </Style>
-                            <Style TargetType="Button">
-                                <Setter Property="Opacity" Value="{Binding PlayerChromeOpacity}"/>
-                            </Style>
-                            <Style TargetType="ToggleButton">
-                                <Setter Property="Opacity" Value="{Binding PlayerChromeOpacity}"/>
-                            </Style>
-                            <Style TargetType="ComboBox">
-                                <Setter Property="Opacity" Value="{Binding PlayerChromeOpacity}"/>
-                            </Style>
-                            <Style TargetType="TextBox">
-                                <Setter Property="Opacity" Value="{Binding PlayerChromeOpacity}"/>
-                            </Style>
-                            <Style TargetType="Slider">
-                                <Setter Property="Opacity" Value="{Binding PlayerChromeOpacity}"/>
-                            </Style>
-                            <Style TargetType="ListBox">
-                                <Setter Property="Opacity" Value="{Binding PlayerChromeOpacity}"/>
-                            </Style>
-                            <Style TargetType="ProgressBar">
-                                <Setter Property="Opacity" Value="{Binding PlayerChromeOpacity}"/>
-                            </Style>
-                            <Style TargetType="controls:DebraFastDropdown">
-                                <Setter Property="Opacity" Value="{Binding PlayerChromeOpacity}"/>
-                            </Style>
-                            <Style TargetType="controls:SongTrashBin">
-                                <Setter Property="Opacity" Value="{Binding PlayerChromeOpacity}"/>
-                            </Style>
-                        </Grid.Resources>
                         <controls:ChromeFadeCard x:Name="TourTarget_Settings" SurfaceBackground="{DynamicResource Brush.SettingsShellBackground}" CornerRadius="16" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" Padding="10"
                                 Visibility="{Binding ShowSettingsPanel, Converter={StaticResource BoolToVis}}">
                             <ScrollViewer VerticalScrollBarVisibility="Auto" ClipToBounds="True">
@@ -1367,6 +1323,12 @@
                                           Padding="10,2"
                                           Content="{Binding Ui.FfxivChatHeader}"
                                           IsChecked="{Binding IsFfxivChatExpanded}"/>
+                            <ToggleButton DockPanel.Dock="Left" Style="{StaticResource Toggle.DebraPill}"
+                                          Margin="8,0,0,0" Padding="8,2"
+                                          Content="🎹"
+                                          IsChecked="{Binding FfxivNotesDirect}"
+                                          IsEnabled="{Binding IsHypnotoadConnected}"
+                                          ToolTip="{Binding Ui.FfxivChatDirectNotesTooltip}"/>
                             <TextBlock DockPanel.Dock="Right" Style="{StaticResource Text.Muted}"
                                        VerticalAlignment="Center"
                                        Text="{Binding FfxivChatStatusText}"/>
@@ -1393,6 +1355,7 @@
                                        Text="{Binding Ui.FfxivChatNeedPlugin}"/>
                             <Button DockPanel.Dock="Right" Padding="10,2" Margin="8,0,0,0"
                                     VerticalAlignment="Center"
+                                    Style="{StaticResource Button.Gold}"
                                     Content="{Binding Ui.FfxivChatDownload}"
                                     Command="{Binding OpenHypnotoadPageCommand}"
                                     ToolTip="https://github.com/GiR-Zippo/Hypnotoad-Plugin"/>
@@ -1412,11 +1375,13 @@
 
                             <!-- Free chat: channel + message + send + reply-to-tell -->
                             <ComboBox Grid.Row="0" Grid.Column="0" Width="86" Margin="0,0,6,0"
-                                      VerticalAlignment="Center"
+                                      Style="{StaticResource ComboBox.Debra}" Height="28"
+                                      VerticalAlignment="Center" VerticalContentAlignment="Center"
                                       ItemsSource="{Binding FfxivChatChannels}" DisplayMemberPath="Label"
                                       SelectedItem="{Binding SelectedFfxivChatChannel}"
                                       ToolTip="{Binding Ui.FfxivChatChannelTooltip}"/>
                             <TextBox Grid.Row="0" Grid.Column="1" Margin="0,0,6,0" MaxLength="450"
+                                     Style="{StaticResource TextBox.Search.Compact}" Height="28"
                                      VerticalAlignment="Center" VerticalContentAlignment="Center"
                                      Text="{Binding FfxivChatMessageText, UpdateSourceTrigger=PropertyChanged}"
                                      ToolTip="{Binding Ui.FfxivChatMessageTooltip}">
@@ -1424,26 +1389,32 @@
                                     <KeyBinding Key="Return" Command="{Binding SendFfxivChatCommand}"/>
                                 </TextBox.InputBindings>
                             </TextBox>
-                            <Button Grid.Row="0" Grid.Column="2" Content="➤" Padding="10,2" Margin="0,0,6,0"
+                            <Button Grid.Row="0" Grid.Column="2" Content="➤" Margin="0,0,6,0"
+                                    Style="{StaticResource Button.Icon}" Width="32" Height="28"
                                     VerticalAlignment="Center"
                                     Command="{Binding SendFfxivChatCommand}"
                                     ToolTip="{Binding Ui.FfxivChatSendTooltip}"/>
                             <Button Grid.Row="0" Grid.Column="3" Content="↩ /r" Padding="8,2"
+                                    Style="{StaticResource Button.Ghost}" Height="28"
+                                    Foreground="{DynamicResource Brush.GoldBright}" FontSize="11"
                                     VerticalAlignment="Center"
                                     Command="{Binding SendFfxivReplyCommand}"
                                     ToolTip="{Binding Ui.FfxivChatReplyTooltip}"/>
 
                             <!-- Now-playing announcement: channel + template + announce + auto -->
                             <ComboBox Grid.Row="1" Grid.Column="0" Width="86" Margin="0,6,6,0"
-                                      VerticalAlignment="Center"
+                                      Style="{StaticResource ComboBox.Debra}" Height="28"
+                                      VerticalAlignment="Center" VerticalContentAlignment="Center"
                                       ItemsSource="{Binding FfxivAnnounceChannels}" DisplayMemberPath="Label"
                                       SelectedItem="{Binding SelectedFfxivAnnounceChannel}"
                                       ToolTip="{Binding Ui.FfxivChatChannelTooltip}"/>
                             <TextBox Grid.Row="1" Grid.Column="1" Margin="0,6,6,0" MaxLength="300"
+                                     Style="{StaticResource TextBox.Search.Compact}" Height="28"
                                      VerticalAlignment="Center" VerticalContentAlignment="Center"
                                      Text="{Binding FfxivChatAnnounceTemplate, UpdateSourceTrigger=PropertyChanged}"
                                      ToolTip="{Binding Ui.FfxivChatTemplateTooltip}"/>
-                            <Button Grid.Row="1" Grid.Column="2" Content="📣" Padding="10,2" Margin="0,6,6,0"
+                            <Button Grid.Row="1" Grid.Column="2" Content="📣" Margin="0,6,6,0"
+                                    Style="{StaticResource Button.Icon}" Width="32" Height="28"
                                     VerticalAlignment="Center"
                                     Command="{Binding AnnounceNowPlayingCommand}"
                                     ToolTip="{Binding Ui.FfxivChatAnnounceTooltip}"/>
