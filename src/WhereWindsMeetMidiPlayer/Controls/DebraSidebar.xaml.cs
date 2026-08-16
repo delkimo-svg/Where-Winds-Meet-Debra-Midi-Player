@@ -274,11 +274,7 @@ public partial class DebraSidebar : UserControl
         return maxX <= minX ? (0, width - 1) : (minX, maxX);
     }
 
-    protected override Size MeasureOverride(Size availableSize)
-    {
-        var height = double.IsInfinity(availableSize.Height) || availableSize.Height <= 0
-            ? 442
-            : availableSize.Height;
-        return new Size(height * _bannerAspect, height);
-    }
+    // No MeasureOverride: the custom one froze SidebarRoot (and its clip) at the first
+    // measured size, painting a dead band beside the banner whenever the row resized.
+    // UpdateSidebarLayout drives Width explicitly; standard layout handles the rest.
 }
