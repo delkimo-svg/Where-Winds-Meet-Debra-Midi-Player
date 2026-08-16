@@ -109,17 +109,18 @@ var releaseNotes = File.Exists(notesArg)
 // Write operations use the maintainer-only publisher token when discord-publisher.json exists;
 // the shipped reader token stays read-only server-side.
 var publishToken = creds.BotToken;
+PublisherConfig? publisherConfig = null;
 var publisherConfigPath = FindUpwardFile("discord-publisher.json");
 if (publisherConfigPath is not null)
 {
     try
     {
-        var publisherJson = JsonSerializer.Deserialize<PublisherConfig>(
+        publisherConfig = JsonSerializer.Deserialize<PublisherConfig>(
             await File.ReadAllTextAsync(publisherConfigPath),
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-        if (!string.IsNullOrWhiteSpace(publisherJson?.BotToken))
+        if (!string.IsNullOrWhiteSpace(publisherConfig?.BotToken))
         {
-            publishToken = publisherJson.BotToken;
+            publishToken = publisherConfig.BotToken;
             Console.WriteLine($"Using publisher bot token from {publisherConfigPath}.");
         }
     }
@@ -186,6 +187,13 @@ try
         Console.WriteLine($"  Announcement: channel {result.AnnouncementChannelId} message {result.AnnouncementMessageId}");
     Console.WriteLine($"  Manifest:     channel {result.ManifestChannelId} message {result.ManifestMessageId}");
     Console.WriteLine($"  Download URL: {result.ArchiveAttachmentUrl}");
+
+    // Installs shipped before the publisher-owned manifest keep reading the reader bot's old
+    // pinned message; keep it patched on every release (configured in discord-publisher.json).
+    legacyManifestChannelId ??= publisherConfig?.LegacyManifestChannelId;
+    legacyManifestMessageId ??= publisherConfig?.LegacyManifestMessageId;
+    if (string.Equals(legacyManifestMessageId, result.ManifestMessageId, StringComparison.Ordinal))
+        legacyManifestMessageId = null;
 
     if (legacyManifestMessageId is not null && legacyManifestChannelId is not null)
     {
@@ -373,4 +381,7 @@ static string NormalizeVersionLabel(string value)
 internal sealed class PublisherConfig
 {
     public string? BotToken { get; set; }
+    /// <summary>Old reader-owned manifest message, kept updated for installs shipped before the split.</summary>
+    public string? LegacyManifestChannelId { get; set; }
+    public string? LegacyManifestMessageId { get; set; }
 }
