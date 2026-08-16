@@ -71,7 +71,7 @@ if (-not [string]::IsNullOrWhiteSpace($ArchivePath)) {
 
 if ([string]::IsNullOrWhiteSpace($Sha256)) {
     $hashSource = $resolvedArchive
-    if (-not $hashSource -and $ManifestOnly) {
+    if (-not $hashSource) {
         # GitHub flow: the zip was packed locally before upload — hash it if still present.
         $candidate = Join-Path $root "release\DebraMidiPlayer-$Version-portable.zip"
         if (Test-Path $candidate) { $hashSource = $candidate }
