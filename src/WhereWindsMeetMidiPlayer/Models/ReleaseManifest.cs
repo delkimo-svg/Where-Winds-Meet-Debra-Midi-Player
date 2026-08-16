@@ -10,4 +10,6 @@ public sealed class ReleaseManifest
     public string? FileName { get; set; }
     public string? ReleaseNotes { get; set; }
     public DateTime? PublishedAt { get; set; }
+    /// <summary>SHA-256 (hex) of the archive; verified after download when present.</summary>
+    public string? Sha256 { get; set; }
 }

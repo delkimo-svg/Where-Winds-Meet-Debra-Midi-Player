@@ -163,7 +163,8 @@ public sealed class DiscordReleaseService
             FileName = manifestFileName,
             DownloadUrl = downloadUrl,
             ReleaseNotes = notes,
-            PublishedAt = DateTime.UtcNow
+            PublishedAt = DateTime.UtcNow,
+            Sha256 = string.IsNullOrWhiteSpace(request.ArchiveSha256) ? null : request.ArchiveSha256.Trim()
         };
 
         var manifestJson = JsonSerializer.Serialize(manifest, JsonOptions);
@@ -352,6 +353,8 @@ public sealed class DiscordReleasePublishRequest
     public required string Version { get; init; }
     public required string ReleaseNotes { get; init; }
     public bool ManifestOnly { get; init; }
+    /// <summary>SHA-256 (hex) of the release archive, embedded in the manifest for client-side verification.</summary>
+    public string? ArchiveSha256 { get; init; }
 }
 
 public sealed class DiscordReleasePublishResult

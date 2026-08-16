@@ -122,6 +122,24 @@ public sealed class AppUpdateService
         return $"DebraMidiPlayer-{manifest.Version}-portable.rar";
     }
 
+    /// <summary>Hosts a release archive may be served from — blocks a tampered manifest
+    /// from redirecting the updater to an arbitrary server.</summary>
+    private static readonly string[] AllowedDownloadHostSuffixes =
+    [
+        "github.com",
+        "githubusercontent.com",
+        "discord.com",
+        "discordapp.com",
+        "discordapp.net"
+    ];
+
+    private static bool IsAllowedDownloadUrl(string url) =>
+        Uri.TryCreate(url, UriKind.Absolute, out var uri)
+        && uri.Scheme == Uri.UriSchemeHttps
+        && AllowedDownloadHostSuffixes.Any(suffix =>
+            uri.Host.Equals(suffix, StringComparison.OrdinalIgnoreCase) ||
+            uri.Host.EndsWith("." + suffix, StringComparison.OrdinalIgnoreCase));
+
     public async Task<string> DownloadPortableArchiveAsync(
         ReleaseManifest manifest,
         IProgress<double>? progress = null,
@@ -129,6 +147,10 @@ public sealed class AppUpdateService
     {
         if (string.IsNullOrWhiteSpace(manifest.DownloadUrl))
             throw new InvalidOperationException("No download URL in the release manifest.");
+
+        if (!IsAllowedDownloadUrl(manifest.DownloadUrl))
+            throw new InvalidOperationException(
+                $"Update download blocked: untrusted host in manifest URL ({manifest.DownloadUrl}).");
 
         var fileName = ResolveDownloadFileName(manifest);
         var targetPath = Path.Combine(InstallDirectory, fileName);
@@ -155,6 +177,28 @@ public sealed class AppUpdateService
         }
 
         progress?.Report(1);
+        await file.FlushAsync(cancellationToken).ConfigureAwait(false);
+        file.Close();
+
+        if (!string.IsNullOrWhiteSpace(manifest.Sha256))
+        {
+            var actual = await ComputeSha256Async(targetPath, cancellationToken).ConfigureAwait(false);
+            if (!actual.Equals(manifest.Sha256.Trim(), StringComparison.OrdinalIgnoreCase))
+            {
+                try { File.Delete(targetPath); } catch { /* best effort */ }
+                throw new InvalidOperationException(
+                    "Update download failed integrity check (SHA-256 mismatch) — the file was discarded. Try again or download from GitHub directly.");
+            }
+        }
+
         return targetPath;
+    }
+
+    private static async Task<string> ComputeSha256Async(string path, CancellationToken cancellationToken)
+    {
+        await using var stream = File.OpenRead(path);
+        using var sha = System.Security.Cryptography.SHA256.Create();
+        var hash = await sha.ComputeHashAsync(stream, cancellationToken).ConfigureAwait(false);
+        return Convert.ToHexString(hash);
     }
 }

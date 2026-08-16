@@ -40,6 +40,7 @@ var version = Get("--version");
 var notesArg = Get("--notes");
 var downloadUrl = Get("--download-url");
 var configPath = Get("--config");
+var sha256 = Get("--sha256");
 var updateConfig = argsList.Contains("--update-config");
 var manifestOnly = argsList.Contains("--manifest-only");
 
@@ -105,6 +106,59 @@ var releaseNotes = File.Exists(notesArg)
     ? await File.ReadAllTextAsync(notesArg)
     : notesArg;
 
+// Write operations use the maintainer-only publisher token when discord-publisher.json exists;
+// the shipped reader token stays read-only server-side.
+var publishToken = creds.BotToken;
+var publisherConfigPath = FindUpwardFile("discord-publisher.json");
+if (publisherConfigPath is not null)
+{
+    try
+    {
+        var publisherJson = JsonSerializer.Deserialize<PublisherConfig>(
+            await File.ReadAllTextAsync(publisherConfigPath),
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        if (!string.IsNullOrWhiteSpace(publisherJson?.BotToken))
+        {
+            publishToken = publisherJson.BotToken;
+            Console.WriteLine($"Using publisher bot token from {publisherConfigPath}.");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"Could not read {publisherConfigPath}: {ex.Message}");
+        return 1;
+    }
+}
+
+if (string.IsNullOrWhiteSpace(sha256) && !string.IsNullOrWhiteSpace(archive) && File.Exists(archive))
+{
+    sha256 = ComputeSha256(Path.GetFullPath(archive));
+    Console.WriteLine($"Archive SHA-256: {sha256}");
+}
+
+// Discord bots can only edit their own messages. If the pinned manifest belongs to the reader
+// bot, the publisher must create a fresh manifest message; the legacy one keeps being patched
+// (content-only) so installs shipped with the old message ID still see updates.
+var manifestChannelId = creds.ReleaseManifestChannelId ?? creds.ReleaseChannelId;
+var manifestMessageId = creds.ReleaseManifestMessageId;
+string? legacyManifestChannelId = null;
+string? legacyManifestMessageId = null;
+
+if (publishToken != creds.BotToken &&
+    !string.IsNullOrWhiteSpace(manifestChannelId) &&
+    !string.IsNullOrWhiteSpace(manifestMessageId))
+{
+    var publisherBotId = await GetBotUserIdAsync(publishToken);
+    var manifestAuthorId = await GetMessageAuthorIdAsync(creds.BotToken, manifestChannelId, manifestMessageId);
+    if (!string.Equals(publisherBotId, manifestAuthorId, StringComparison.Ordinal))
+    {
+        Console.WriteLine("Pinned manifest belongs to the reader bot — publisher will create a new manifest message and keep the legacy one updated.");
+        legacyManifestChannelId = manifestChannelId;
+        legacyManifestMessageId = manifestMessageId;
+        manifestMessageId = null;
+    }
+}
+
 var publisher = new DiscordReleaseService();
 var progress = new Progress<string>(msg => Console.WriteLine(msg));
 
@@ -113,15 +167,16 @@ try
     var result = await publisher.PublishReleaseAsync(
         new DiscordReleasePublishRequest
         {
-            BotToken = creds.BotToken,
+            BotToken = publishToken,
             ReleaseChannelId = creds.ReleaseChannelId,
-            ManifestChannelId = creds.ReleaseManifestChannelId ?? creds.ReleaseChannelId,
-            ManifestMessageId = creds.ReleaseManifestMessageId,
+            ManifestChannelId = manifestChannelId,
+            ManifestMessageId = manifestMessageId,
             ArchivePath = string.IsNullOrWhiteSpace(archive) ? null : Path.GetFullPath(archive),
             DownloadUrl = downloadUrl,
             Version = version,
             ReleaseNotes = releaseNotes,
-            ManifestOnly = manifestOnly
+            ManifestOnly = manifestOnly,
+            ArchiveSha256 = sha256
         },
         progress);
 
@@ -131,6 +186,32 @@ try
         Console.WriteLine($"  Announcement: channel {result.AnnouncementChannelId} message {result.AnnouncementMessageId}");
     Console.WriteLine($"  Manifest:     channel {result.ManifestChannelId} message {result.ManifestMessageId}");
     Console.WriteLine($"  Download URL: {result.ArchiveAttachmentUrl}");
+
+    if (legacyManifestMessageId is not null && legacyManifestChannelId is not null)
+    {
+        // Old installs cache the legacy message ID; keep that message current via the reader
+        // bot (a bot may always edit its own messages). Content-only patch, compact manifest
+        // (no release notes) so the JSON fence always fits Discord's 2000-char content limit —
+        // clients parse the content fence before falling back to the stale attachment.
+        var manifestJson = JsonSerializer.Serialize(new WhereWindsMeetMidiPlayer.Models.ReleaseManifest
+        {
+            Version = result.Manifest.Version,
+            DownloadUrl = result.Manifest.DownloadUrl,
+            FileName = result.Manifest.FileName,
+            PublishedAt = result.Manifest.PublishedAt,
+            Sha256 = result.Manifest.Sha256
+        }, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            WriteIndented = true
+        });
+        var legacyContent = BuildManifestContent(version, manifestJson);
+        await PatchMessageContentAsync(creds.BotToken, legacyManifestChannelId, legacyManifestMessageId, legacyContent);
+        Console.WriteLine($"  Legacy manifest message {legacyManifestMessageId} updated for older installs.");
+
+        // Persist the new publisher-owned manifest ID so future runs and shipped builds use it.
+        updateConfig = true;
+    }
 
     if (updateConfig && configFile is not null)
     {
@@ -174,6 +255,83 @@ static string? FindBundledConfigPath()
     return null;
 }
 
+static string? FindUpwardFile(string fileName)
+{
+    var dir = Directory.GetCurrentDirectory();
+    for (var i = 0; i < 10; i++)
+    {
+        var path = Path.Combine(dir, fileName);
+        if (File.Exists(path))
+            return path;
+        var parent = Directory.GetParent(dir);
+        if (parent is null)
+            break;
+        dir = parent.FullName;
+    }
+
+    return null;
+}
+
+static string ComputeSha256(string path)
+{
+    using var stream = File.OpenRead(path);
+    using var sha = System.Security.Cryptography.SHA256.Create();
+    return Convert.ToHexString(sha.ComputeHash(stream));
+}
+
+static string NormalizeBotAuth(string token) =>
+    token.StartsWith("Bot ", StringComparison.OrdinalIgnoreCase) ? token : "Bot " + token.Trim();
+
+static async Task<string> GetBotUserIdAsync(string token)
+{
+    using var http = new HttpClient();
+    using var request = new HttpRequestMessage(HttpMethod.Get, "https://discord.com/api/v10/users/@me");
+    request.Headers.TryAddWithoutValidation("Authorization", NormalizeBotAuth(token));
+    using var response = await http.SendAsync(request);
+    var body = await response.Content.ReadAsStringAsync();
+    if (!response.IsSuccessStatusCode)
+        throw new InvalidOperationException($"Discord /users/@me failed ({(int)response.StatusCode}): {body}");
+    using var doc = JsonDocument.Parse(body);
+    return doc.RootElement.GetProperty("id").GetString() ?? throw new InvalidOperationException("No bot id.");
+}
+
+static async Task<string> GetMessageAuthorIdAsync(string token, string channelId, string messageId)
+{
+    using var http = new HttpClient();
+    using var request = new HttpRequestMessage(HttpMethod.Get,
+        $"https://discord.com/api/v10/channels/{channelId}/messages/{messageId}");
+    request.Headers.TryAddWithoutValidation("Authorization", NormalizeBotAuth(token));
+    using var response = await http.SendAsync(request);
+    var body = await response.Content.ReadAsStringAsync();
+    if (!response.IsSuccessStatusCode)
+        throw new InvalidOperationException($"Could not read manifest message ({(int)response.StatusCode}): {body}");
+    using var doc = JsonDocument.Parse(body);
+    return doc.RootElement.GetProperty("author").GetProperty("id").GetString() ?? string.Empty;
+}
+
+static async Task PatchMessageContentAsync(string token, string channelId, string messageId, string content)
+{
+    using var http = new HttpClient();
+    using var request = new HttpRequestMessage(HttpMethod.Patch,
+        $"https://discord.com/api/v10/channels/{channelId}/messages/{messageId}");
+    request.Headers.TryAddWithoutValidation("Authorization", NormalizeBotAuth(token));
+    request.Content = new StringContent(
+        JsonSerializer.Serialize(new { content }),
+        System.Text.Encoding.UTF8,
+        "application/json");
+    using var response = await http.SendAsync(request);
+    var body = await response.Content.ReadAsStringAsync();
+    if (!response.IsSuccessStatusCode)
+        throw new InvalidOperationException($"Legacy manifest patch failed ({(int)response.StatusCode}): {body}");
+}
+
+static string BuildManifestContent(string version, string manifestJson)
+{
+    var header = $"📋 **Debra update manifest** (v{version}) — auto-updated by the release bot. Do not delete.";
+    var body = header + "\n```json\n" + manifestJson.Trim() + "\n```";
+    return body.Length <= 1990 ? body : header;
+}
+
 static string? FindProjectRoot()
 {
     var dir = Directory.GetCurrentDirectory();
@@ -209,4 +367,10 @@ static string NormalizeVersionLabel(string value)
     if (parts.Length == 2)
         return $"{parts[0]}.{parts[1]}.0";
     return parts.Length == 1 ? $"{parts[0]}.0.0" : value.Trim();
+}
+
+/// <summary>Maintainer-only write token (discord-publisher.json, git-ignored, never shipped).</summary>
+internal sealed class PublisherConfig
+{
+    public string? BotToken { get; set; }
 }

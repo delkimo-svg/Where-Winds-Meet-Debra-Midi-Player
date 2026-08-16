@@ -46,75 +46,17 @@ public static class DiscordCredentialStore
 
     public static DiscordCredentials? Load()
     {
+        // The bundled file ships with every release and is the developer's source of truth
+        // (token rotation, manifest message moves). The DPAPI cache is only a fallback for
+        // installs whose bundled file went missing.
         var bundled = LoadBundled();
-        var fromProtected = LoadProtected();
-        if (fromProtected is not null)
-        {
-            if (bundled is not null && MergeReleaseFields(fromProtected, bundled))
-            {
-                try { Save(fromProtected); } catch { /* use merged in memory */ }
-            }
-
-            return fromProtected;
-        }
-
         if (bundled is not null)
         {
-            try { Save(bundled); } catch { /* use bundled only */ }
+            try { Save(bundled); } catch { /* use bundled in memory */ }
             return bundled;
         }
 
-        return null;
-    }
-
-    /// <summary>Fills manifest/release IDs from a newer bundled json (v1.0 DPAPI cache often lacks these).</summary>
-    private static bool MergeReleaseFields(DiscordCredentials target, DiscordCredentials bundled)
-    {
-        var changed = false;
-
-        if (string.IsNullOrWhiteSpace(target.ReleaseChannelId) &&
-            !string.IsNullOrWhiteSpace(bundled.ReleaseChannelId))
-        {
-            target.ReleaseChannelId = bundled.ReleaseChannelId;
-            changed = true;
-        }
-
-        if (string.IsNullOrWhiteSpace(target.ReleaseManifestChannelId) &&
-            !string.IsNullOrWhiteSpace(bundled.ReleaseManifestChannelId))
-        {
-            target.ReleaseManifestChannelId = bundled.ReleaseManifestChannelId;
-            changed = true;
-        }
-
-        if (string.IsNullOrWhiteSpace(target.ReleaseManifestMessageId) &&
-            !string.IsNullOrWhiteSpace(bundled.ReleaseManifestMessageId))
-        {
-            target.ReleaseManifestMessageId = bundled.ReleaseManifestMessageId;
-            changed = true;
-        }
-
-        if (string.IsNullOrWhiteSpace(target.AcademyManifestChannelId) &&
-            !string.IsNullOrWhiteSpace(bundled.AcademyManifestChannelId))
-        {
-            target.AcademyManifestChannelId = bundled.AcademyManifestChannelId;
-            changed = true;
-        }
-
-        if (string.IsNullOrWhiteSpace(target.AcademyManifestMessageId) &&
-            !string.IsNullOrWhiteSpace(bundled.AcademyManifestMessageId))
-        {
-            target.AcademyManifestMessageId = bundled.AcademyManifestMessageId;
-            changed = true;
-        }
-
-        if (string.IsNullOrWhiteSpace(target.AcademyCategoryChannelId) &&
-            !string.IsNullOrWhiteSpace(bundled.AcademyCategoryChannelId))
-        {
-            target.AcademyCategoryChannelId = bundled.AcademyCategoryChannelId;
-            changed = true;
-        }
-
-        return changed;
+        return LoadProtected();
     }
 
     public static void Save(DiscordCredentials credentials)

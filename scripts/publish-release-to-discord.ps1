@@ -4,6 +4,7 @@ param(
     [string]$NotesFile,
     [string]$ArchivePath,
     [string]$DownloadUrl,
+    [string]$Sha256,
     [switch]$SkipBuild,
     [switch]$UpdateConfig,
     [switch]$ManifestOnly,
@@ -68,6 +69,19 @@ if (-not [string]::IsNullOrWhiteSpace($ArchivePath)) {
     }
 }
 
+if ([string]::IsNullOrWhiteSpace($Sha256)) {
+    $hashSource = $resolvedArchive
+    if (-not $hashSource -and $ManifestOnly) {
+        # GitHub flow: the zip was packed locally before upload — hash it if still present.
+        $candidate = Join-Path $root "release\DebraMidiPlayer-$Version-portable.zip"
+        if (Test-Path $candidate) { $hashSource = $candidate }
+    }
+    if ($hashSource) {
+        $Sha256 = (Get-FileHash $hashSource -Algorithm SHA256).Hash
+        Write-Host "  Archive SHA-256: $Sha256 ($hashSource)"
+    }
+}
+
 $publishArgs = @(
     'run', '--project', (Join-Path $root 'tools\PublishDebraRelease'), '-c', 'Release', '--',
     '--version', $Version,
@@ -79,6 +93,7 @@ if ($UpdateConfig) { $publishArgs += '--update-config' }
 if ($ManifestOnly) { $publishArgs += '--manifest-only' }
 if (-not [string]::IsNullOrWhiteSpace($DownloadUrl)) { $publishArgs += @('--download-url', $DownloadUrl) }
 if ($resolvedArchive) { $publishArgs += @('--archive', $resolvedArchive) }
+if (-not [string]::IsNullOrWhiteSpace($Sha256)) { $publishArgs += @('--sha256', $Sha256) }
 
 Write-Host 'Publishing to Discord...'
 dotnet @publishArgs
