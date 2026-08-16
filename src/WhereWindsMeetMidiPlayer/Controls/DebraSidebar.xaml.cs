@@ -11,8 +11,11 @@ namespace WhereWindsMeetMidiPlayer.Controls;
 
 public partial class DebraSidebar : UserControl
 {
+    /// <summary>Visible-art aspect (opaque width / height) — the control hugs the art, not the PNG canvas.</summary>
     private double _bannerAspect = 682.0 / 1024.0;
-    private double _bannerCenterBiasX;
+    private double _bannerCanvasAspect = 682.0 / 1024.0;
+    /// <summary>Left transparent canvas margin as a fraction of the PNG width.</summary>
+    private double _bannerCropLeftRatio;
 
     public static readonly DependencyProperty NavItemsProperty =
         DependencyProperty.Register(
@@ -51,10 +54,12 @@ public partial class DebraSidebar : UserControl
         BannerArt.Source = banner;
         if (banner is BitmapSource bmp && bmp.PixelWidth > 0 && bmp.PixelHeight > 0)
         {
-            _bannerAspect = bmp.PixelWidth / (double)bmp.PixelHeight;
-            _bannerCenterBiasX = ThemeService.UsesSlimSidebarBanner
-                ? MeasureBannerHorizontalBias(bmp)
-                : 0;
+            // Some banner PNGs carry transparent canvas margins; sizing on the canvas leaves a
+            // dark dead band beside the frame. Hug the opaque art instead.
+            var (minX, maxX) = MeasureBannerOpaqueColumns(bmp);
+            _bannerCanvasAspect = bmp.PixelWidth / (double)bmp.PixelHeight;
+            _bannerAspect = (maxX - minX + 1) / (double)bmp.PixelHeight;
+            _bannerCropLeftRatio = minX / (double)bmp.PixelWidth;
         }
 
         ApplyNavItemTemplate();
@@ -82,8 +87,13 @@ public partial class DebraSidebar : UserControl
         BannerHost.Width = hostWidth;
         BannerHost.Margin = new Thickness(0);
         BannerHost.HorizontalAlignment = HorizontalAlignment.Left;
+        // Render the full canvas at art scale, shifted so the opaque art fills the host;
+        // transparent canvas margins overflow and are clipped by BannerHost.
         BannerArt.Stretch = System.Windows.Media.Stretch.Uniform;
-        BannerArt.HorizontalAlignment = HorizontalAlignment.Center;
+        BannerArt.HorizontalAlignment = HorizontalAlignment.Left;
+        BannerArt.Width = h * _bannerCanvasAspect;
+        BannerArt.Height = h;
+        BannerArt.Margin = new Thickness(-h * _bannerCanvasAspect * _bannerCropLeftRatio, 0, 0, 0);
         SidebarRoot.ClipToBounds = true;
         Width = hostWidth;
 
@@ -101,11 +111,8 @@ public partial class DebraSidebar : UserControl
 
         if (isSlimBanner)
         {
-            var group = new TransformGroup();
-            group.Children.Add(new ScaleTransform(nav.MenuScale, nav.MenuScale));
-            group.Children.Add(new TranslateTransform(_bannerCenterBiasX, 0));
             NavOverlay.LayoutTransform = null;
-            NavOverlay.RenderTransform = group;
+            NavOverlay.RenderTransform = new ScaleTransform(nav.MenuScale, nav.MenuScale);
         }
         else
         {
@@ -114,39 +121,39 @@ public partial class DebraSidebar : UserControl
         }
     }
 
-    /// <summary>Pixels to shift nav so its center matches opaque art center (not PNG canvas center).</summary>
-    private static double MeasureBannerHorizontalBias(BitmapSource bmp)
+    /// <summary>Opaque column range of the banner art — ignores stray glow pixels so a padded
+    /// canvas doesn't inflate the measured art width.</summary>
+    private static (int MinX, int MaxX) MeasureBannerOpaqueColumns(BitmapSource bmp)
     {
         var width = bmp.PixelWidth;
         var height = bmp.PixelHeight;
         if (width <= 0 || height <= 0)
-            return 0;
+            return (0, Math.Max(0, width - 1));
 
         var stride = width * 4;
         var pixels = new byte[stride * height];
         bmp.CopyPixels(pixels, stride, 0);
 
-        var minX = width;
-        var maxX = 0;
+        var columnCounts = new int[width];
         for (var y = 0; y < height; y++)
         {
             var row = y * stride;
             for (var x = 0; x < width; x++)
             {
-                if (pixels[row + x * 4 + 3] > 20)
-                {
-                    if (x < minX) minX = x;
-                    if (x > maxX) maxX = x;
-                }
+                if (pixels[row + x * 4 + 3] > 128)
+                    columnCounts[x]++;
             }
         }
 
-        if (maxX < minX)
-            return 0;
+        var minVisible = Math.Max(2, height / 100);
+        var minX = 0;
+        var maxX = width - 1;
+        while (minX < maxX && columnCounts[minX] < minVisible)
+            minX++;
+        while (maxX > minX && columnCounts[maxX] < minVisible)
+            maxX--;
 
-        var visualCenter = (minX + maxX) / 2.0;
-        var geoCenter = width / 2.0;
-        return visualCenter - geoCenter;
+        return maxX <= minX ? (0, width - 1) : (minX, maxX);
     }
 
     protected override Size MeasureOverride(Size availableSize)
