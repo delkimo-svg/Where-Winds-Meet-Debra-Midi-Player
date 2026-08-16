@@ -37,6 +37,7 @@ The biggest update yet: **Debra now plays in Final Fantasy XIV** — with in-gam
 
 ### Fixes
 
+- **Settings loading hardened**: settings written by a newer version can no longer crash an older exe at startup ("The JSON value could not be converted…") — unknown values now fall back to defaults, and an unreadable settings file starts the app with defaults instead of failing (the old file is kept as `settings.json.bad`).
 - FFXIV sidebar: menu highlight no longer paints over the golden frame.
 - Theme-per-game settings corrupted by an earlier migration self-heal on launch.
 
@@ -47,4 +48,5 @@ The biggest update yet: **Debra now plays in Final Fantasy XIV** — with in-gam
 1. On **v1.1.2+**: use the header **Update** button, or download **DebraMidiPlayer-1.3.0-portable.zip** from GitHub.
 2. Close Debra. Extract **over** your portable folder — same level as your current `DebraMidiPlayer.exe`, not into a new subfolder.
 3. Run **DebraMidiPlayer.exe**. Header should show **v1.3.0**.
+   ⚠️ If you still have an **old copy** somewhere (an old folder, an old shortcut, or a leftover `WhereWindsMeetMidiPlayer.exe`), delete it — launching an old exe after using 1.3.0 crashed at startup on versions before this one.
 4. For FFXIV chat & direct notes: install **Hypnotoad** via XIVLauncher → Dalamud (repo: `https://raw.githubusercontent.com/GiR-Zippo/Hypnotoad-Plugin/master/PluginDir/pluginmaster.json`).

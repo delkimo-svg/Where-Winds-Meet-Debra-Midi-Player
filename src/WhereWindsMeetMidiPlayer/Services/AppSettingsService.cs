@@ -10,15 +10,50 @@ public sealed class AppSettingsService
     public void Load()
     {
         AppPaths.EnsureCreated();
-        Settings = JsonFileStore.Read<AppSettings>(AppPaths.SettingsFile) ?? new AppSettings();
+        try
+        {
+            Settings = JsonFileStore.Read<AppSettings>(AppPaths.SettingsFile) ?? new AppSettings();
+        }
+        catch (Exception ex)
+        {
+            // An unreadable settings file must never keep the app from starting: keep the bad
+            // file for inspection and boot with defaults.
+            AppPaths.WriteDiagnosticLog("settings-load", ex);
+            TryBackupCorruptSettings();
+            Settings = new AppSettings();
+        }
+
         Sanitize(Settings);
     }
 
     public async Task LoadAsync(CancellationToken cancellationToken = default)
     {
         AppPaths.EnsureCreated();
-        Settings = await JsonFileStore.ReadAsync<AppSettings>(AppPaths.SettingsFile, cancellationToken) ?? new AppSettings();
+        try
+        {
+            Settings = await JsonFileStore.ReadAsync<AppSettings>(AppPaths.SettingsFile, cancellationToken) ?? new AppSettings();
+        }
+        catch (Exception ex)
+        {
+            AppPaths.WriteDiagnosticLog("settings-load", ex);
+            TryBackupCorruptSettings();
+            Settings = new AppSettings();
+        }
+
         Sanitize(Settings);
+    }
+
+    private static void TryBackupCorruptSettings()
+    {
+        try
+        {
+            if (File.Exists(AppPaths.SettingsFile))
+                File.Copy(AppPaths.SettingsFile, AppPaths.SettingsFile + ".bad", overwrite: true);
+        }
+        catch
+        {
+            // Best effort — defaults still load.
+        }
     }
 
     public void Save()

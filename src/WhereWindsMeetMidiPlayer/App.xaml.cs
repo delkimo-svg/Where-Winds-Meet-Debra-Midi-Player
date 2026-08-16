@@ -122,7 +122,7 @@ public partial class App : Application
 
         MessageBox.Show(
             "Debra MIDI Player is not installed correctly.\n\n" +
-            "Extract the full portable folder, then run WhereWindsMeetMidiPlayer.exe from inside it.\n\n" +
+            "Extract the full portable folder, then run DebraMidiPlayer.exe from inside it.\n\n" +
             "Missing:\n• " + string.Join("\n• ", missing) +
             $"\n\nApp folder:\n{baseDir}",
             "Debra MIDI Player",
@@ -137,7 +137,7 @@ public partial class App : Application
         var root = ex.GetBaseException();
         return
             $"Debra MIDI Player could not start.\n\n{root.Message}\n\n" +
-            "Extract the full portable folder and run WhereWindsMeetMidiPlayer.exe from inside it (Assets must be beside the exe).\n\n" +
+            "Extract the full portable folder and run DebraMidiPlayer.exe from inside it (Assets must be beside the exe).\n\n" +
             "Details saved to %AppData%\\WhereWindsMeetMidiPlayer\\crash.log";
     }
 

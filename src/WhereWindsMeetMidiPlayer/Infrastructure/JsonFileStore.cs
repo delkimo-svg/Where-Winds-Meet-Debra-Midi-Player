@@ -12,7 +12,7 @@ public static class JsonFileStore
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
-        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
+        Converters = { new LenientStringEnumConverterFactory() }
     };
 
     public static async Task<T?> ReadAsync<T>(string path, CancellationToken cancellationToken = default)
