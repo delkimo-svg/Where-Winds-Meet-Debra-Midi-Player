@@ -56,7 +56,35 @@ public sealed class LocalizationService
         if (_languages.TryGetValue("en", out var en) && en.TryGetValue(key, out var fallback))
             return fallback;
 
+        // Disk files can be stale when a player updates only the exe — the embedded English
+        // baked into the assembly always matches the code's keys.
+        if (EmbeddedEnglish.TryGetValue(key, out var embedded))
+            return embedded;
+
         return key;
+    }
+
+    private Dictionary<string, string>? _embeddedEnglish;
+
+    private Dictionary<string, string> EmbeddedEnglish => _embeddedEnglish ??= LoadEmbeddedEnglish();
+
+    private static Dictionary<string, string> LoadEmbeddedEnglish()
+    {
+        try
+        {
+            using var stream = typeof(LocalizationService).Assembly
+                .GetManifestResourceStream("embedded-en.json");
+            if (stream is null)
+                return new Dictionary<string, string>(StringComparer.Ordinal);
+
+            using var reader = new StreamReader(stream, Encoding.UTF8);
+            return JsonSerializer.Deserialize<Dictionary<string, string>>(reader.ReadToEnd())
+                   ?? new Dictionary<string, string>(StringComparer.Ordinal);
+        }
+        catch
+        {
+            return new Dictionary<string, string>(StringComparer.Ordinal);
+        }
     }
 
     public string Format(string key, params object[] args) =>

@@ -54,6 +54,10 @@
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
     </Content>
 
+    <!-- Last-resort localization fallback baked into the exe: players who update only the
+         exe (stale Assets folder) get English instead of raw resource keys. -->
+    <EmbeddedResource Include="Assets\Localization\en.json" LogicalName="embedded-en.json" />
+
   </ItemGroup>
 
 
