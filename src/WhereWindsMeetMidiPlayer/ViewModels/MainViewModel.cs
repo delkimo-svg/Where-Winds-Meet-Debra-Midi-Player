@@ -1261,6 +1261,11 @@ public partial class MainViewModel : ObservableObject, IDisposable
         try
         {
             await RefreshUpdateAvailabilityAsync().ConfigureAwait(false);
+
+            // Warn right away: pop the download overlay at startup (unless this
+            // version was already dismissed with "Later" — availability is false then).
+            if (IsUpdateAvailable)
+                await UiDispatcher.RunAsync(ShowUpdateOverlay).ConfigureAwait(false);
         }
         catch (Exception ex)
         {

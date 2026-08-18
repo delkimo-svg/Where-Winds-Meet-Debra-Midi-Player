@@ -482,6 +482,7 @@
   "UpdateOverlay_Ready": "准备下载最新便携压缩包。",
   "UpdateOverlay_Downloading": "正在下载…",
   "UpdateOverlay_Saved": "已保存 {0}。用 WinRAR 或 7-Zip 解压到此文件夹，然后运行 DebraMidiPlayer.exe。",
+  "UpdateOverlay_Closing": "正在打开文件夹 — Debra 将关闭，以便你解压更新…",
   "UpdateOverlay_Failed": "下载失败：{0}",
   "UpdateOverlay_ExtractHint": "便携更新保持单文件夹：DebraMidiPlayer.exe、Assets 和 discord-catalogue.json 须在一起。解压 .rar 时覆盖文件。",
   "Sort_Label": "排序",

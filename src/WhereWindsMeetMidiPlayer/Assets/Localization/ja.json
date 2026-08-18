@@ -482,6 +482,7 @@
   "UpdateOverlay_Ready": "最新のポータブルアーカイブをダウンロードする準備ができました。",
   "UpdateOverlay_Downloading": "ダウンロード中…",
   "UpdateOverlay_Saved": "{0} を保存しました。WinRAR または 7-Zip でこのフォルダに展開し、DebraMidiPlayer.exe を実行してください。",
+  "UpdateOverlay_Closing": "フォルダを開いています — 更新を展開できるようDebraは終了します…",
   "UpdateOverlay_Failed": "ダウンロード失敗：{0}",
   "UpdateOverlay_ExtractHint": "ポータブル更新は単一フォルダのまま：DebraMidiPlayer.exe、Assets、discord-catalogue.json を一緒に保ち、.rar 展開時にファイルを上書きしてください。",
   "Sort_Label": "並べ替え",

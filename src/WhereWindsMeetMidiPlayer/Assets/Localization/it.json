@@ -482,6 +482,7 @@
   "UpdateOverlay_Ready": "Pronto per scaricare l'archivio portable più recente.",
   "UpdateOverlay_Downloading": "Download in corso…",
   "UpdateOverlay_Saved": "Salvato {0}. Estrai con WinRAR o 7-Zip in questa cartella, poi avvia DebraMidiPlayer.exe.",
+  "UpdateOverlay_Closing": "Apertura della cartella — Debra si chiuderà per lasciarti estrarre l'aggiornamento…",
   "UpdateOverlay_Failed": "Download non riuscito: {0}",
   "UpdateOverlay_ExtractHint": "Gli aggiornamenti portable sono una cartella: DebraMidiPlayer.exe, Assets e discord-catalogue.json devono stare insieme. Sovrascrivi i file estraendo il .rar.",
   "Sort_Label": "Ordina",

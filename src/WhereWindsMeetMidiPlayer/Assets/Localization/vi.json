@@ -482,6 +482,7 @@
     "UpdateOverlay_Ready": "Sẵn sàng tải bản portable mới nhất.",
     "UpdateOverlay_Downloading": "Đang tải…",
     "UpdateOverlay_Saved": "Đã lưu {0}. Giải nén bằng WinRAR hoặc 7-Zip vào thư mục này, rồi chạy DebraMidiPlayer.exe.",
+    "UpdateOverlay_Closing": "Đang mở thư mục — Debra sẽ đóng để bạn giải nén bản cập nhật…",
     "UpdateOverlay_Failed": "Tải thất bại: {0}",
     "UpdateOverlay_ExtractHint": "Cập nhật portable là một thư mục: DebraMidiPlayer.exe, Assets và discord-catalogue.json phải ở cùng chỗ. Ghi đè file khi giải nén .rar.",
     "Sort_Label": "Sắp xếp",

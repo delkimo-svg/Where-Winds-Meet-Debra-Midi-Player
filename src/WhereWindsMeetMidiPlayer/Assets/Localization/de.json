@@ -482,6 +482,7 @@
   "UpdateOverlay_Ready": "Bereit zum Download der neuesten Portable-Archiv.",
   "UpdateOverlay_Downloading": "Wird heruntergeladen…",
   "UpdateOverlay_Saved": "{0} gespeichert. Mit WinRAR oder 7-Zip in diesen Ordner extrahieren, dann DebraMidiPlayer.exe starten.",
+  "UpdateOverlay_Closing": "Ordner wird geöffnet — Debra schließt sich, damit du das Update extrahieren kannst…",
   "UpdateOverlay_Failed": "Download fehlgeschlagen: {0}",
   "UpdateOverlay_ExtractHint": "Portable Updates bleiben ein Ordner: DebraMidiPlayer.exe, Assets und discord-catalogue.json zusammenhalten. Dateien beim Extrahieren der .rar überschreiben.",
   "Sort_Label": "Sortieren",

@@ -15,6 +15,11 @@ Your bard now handles instruments for you:
 
 Double-clicking a song (any list — Library, Catalogue, Community, Favorites, Playlists) now **loads it ready at 0:00** instead of playing immediately: adjust the track mixer, pick your instrument, then press Play. The ▶ button on each row still plays instantly.
 
+## 🔔 Smoother Updates
+
+- When a new version is available, the **download window now opens right at startup** — no more missing updates.
+- After the download finishes, Debra **opens the folder with the archive selected and closes itself**, so the extraction never fights a locked exe.
+
 ## 🛠️ Fixes
 
 - **Community filters** — fixed a flicker loop where the list kept flipping between "All songs" and a genre, making songs impossible to select.

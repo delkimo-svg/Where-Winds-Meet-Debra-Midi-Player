@@ -329,6 +329,7 @@ public static class UiText
     public const string UpdateOverlayReady = "UpdateOverlay_Ready";
     public const string UpdateOverlayDownloading = "UpdateOverlay_Downloading";
     public const string UpdateOverlaySaved = "UpdateOverlay_Saved";
+    public const string UpdateOverlayClosing = "UpdateOverlay_Closing";
     public const string UpdateOverlayFailed = "UpdateOverlay_Failed";
     public const string UpdateOverlayExtractHint = "UpdateOverlay_ExtractHint";
     public const string PatreonRewardsTitle = "PatreonRewards_Title";

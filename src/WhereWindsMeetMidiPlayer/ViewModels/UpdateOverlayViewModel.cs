@@ -62,6 +62,14 @@ public partial class UpdateOverlayViewModel : ObservableObject
 
             DownloadComplete = true;
             StatusText = L.F(UiText.UpdateOverlaySaved, Path.GetFileName(path));
+
+            // Hand off to the extraction: reveal the archive in Explorer, then close the
+            // player so DebraMidiPlayer.exe is no longer locked when the user extracts.
+            OpenDownloadedArchive(path);
+            StatusText = L.T(UiText.UpdateOverlayClosing);
+            await Task.Delay(1800);
+            _onClose();
+            System.Windows.Application.Current?.Shutdown();
         }
         catch (Exception ex)
         {
@@ -75,6 +83,23 @@ public partial class UpdateOverlayViewModel : ObservableObject
     }
 
     partial void OnIsDownloadingChanged(bool value) => OnPropertyChanged(nameof(CanDownload));
+
+    private void OpenDownloadedArchive(string path)
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "explorer.exe",
+                Arguments = $"/select,\"{path}\"",
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            StatusText = ex.Message;
+        }
+    }
 
     [RelayCommand]
     private void OpenFolder()
