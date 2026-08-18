@@ -154,9 +154,10 @@ public partial class MainViewModel
 
     /// <summary>
     /// Recomputes the effective FFXIV instrument. A manual pick (saved per song) wins;
-    /// otherwise "Auto" equips the default instrument from Settings (Harp out of the box).
-    /// Slot 0 of the picker always reads "Auto — <default>". Empty outside FFXIV mode
-    /// or with nothing loaded — that hides the picker.
+    /// otherwise a recognizable unmuted track name decides ("Auto — <recommended>"), and
+    /// with nothing recognizable "Auto" falls back to the default instrument from Settings —
+    /// slot 0 then shows just its name (e.g. "Harp"). Empty outside FFXIV mode or with
+    /// nothing loaded — that hides the picker.
     /// </summary>
     private void UpdateFfxivInstrumentSuggestion()
     {
@@ -167,12 +168,17 @@ public partial class MainViewModel
             return;
         }
 
-        var fallback = FfxivInstrumentResolver.FromId((uint)_settings.Settings.FfxivDefaultInstrumentId);
+        var recommended = FfxivInstrumentResolver.ResolveOrNull(
+            PlaybackTrackMixItems.Where(t => !t.IsMuted).Select(t => t.DisplayName));
+        var fallback = recommended
+            ?? FfxivInstrumentResolver.FromId((uint)_settings.Settings.FfxivDefaultInstrumentId);
 
         var wasAuto = SelectedFfxivInstrument is null or { Id: 0 };
         if (FfxivInstrumentOptions.Count > 0)
         {
-            var autoOption = new FfxivInstrumentOption(0, $"{L.T(UiText.FfxivInstrumentAuto)} — {fallback.Name}");
+            var autoOption = new FfxivInstrumentOption(0, recommended is not null
+                ? $"{L.T(UiText.FfxivInstrumentAuto)} — {recommended.Name}"
+                : fallback.Name);
             _suppressFfxivInstrumentPersist = true;
             try
             {

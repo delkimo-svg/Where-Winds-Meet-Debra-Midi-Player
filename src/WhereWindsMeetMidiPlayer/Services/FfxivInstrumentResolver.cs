@@ -127,9 +127,9 @@ public static class FfxivInstrumentResolver
 
     /// <summary>
     /// Picks the instrument for the given track names (pass unmuted tracks, playback order).
-    /// First track with a recognizable name wins; no match at all → Harp.
+    /// First track with a recognizable name wins; null when nothing is recognizable.
     /// </summary>
-    public static FfxivInstrument Resolve(IEnumerable<string> activeTrackNames)
+    public static FfxivInstrument? ResolveOrNull(IEnumerable<string> activeTrackNames)
     {
         foreach (var name in activeTrackNames)
         {
@@ -138,8 +138,12 @@ public static class FfxivInstrumentResolver
                 return match;
         }
 
-        return Harp;
+        return null;
     }
+
+    /// <summary>Like <see cref="ResolveOrNull"/> but falls back to the Harp.</summary>
+    public static FfxivInstrument Resolve(IEnumerable<string> activeTrackNames) =>
+        ResolveOrNull(activeTrackNames) ?? Harp;
 
     private static FfxivInstrument? ResolveSingle(string trackName)
     {
