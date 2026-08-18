@@ -366,6 +366,13 @@ public static class UiText
     public const string FfxivChatNeedPlugin = "FfxivChat_NeedPlugin";
     public const string FfxivChatDownload = "FfxivChat_Download";
     public const string FfxivChatDirectNotesTooltip = "FfxivChat_DirectNotesTooltip";
+    public const string FfxivInstrumentTooltip = "Ffxiv_InstrumentTooltip";
+    public const string FfxivInstrumentAuto = "Ffxiv_InstrumentAuto";
+    public const string FfxivAutoEquip = "Ffxiv_AutoEquip";
+    public const string SettingsFfxivDefaultInstrument = "Settings_FfxivDefaultInstrument";
+    public const string SettingsFfxivToneKeys = "Settings_FfxivToneKeys";
+    public const string SettingsFfxivToneKeysHint = "Settings_FfxivToneKeysHint";
+    public const string FfxivAutoEquipTooltip = "Ffxiv_AutoEquipTooltip";
     public const string NoteMappingPhraseFold = "NoteMapping_PhraseFold";
     public const string NoteMappingPhraseFoldHint = "NoteMapping_PhraseFoldHint";
 }

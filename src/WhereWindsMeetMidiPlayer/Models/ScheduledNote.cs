@@ -10,4 +10,6 @@ public sealed class ScheduledNote
     /// clipped just before the next onset — no forced inter-note gap. 0 = not computed.</summary>
     public long LegatoDurationMs { get; set; }
     public string KeyCombo { get; set; } = string.Empty;
+    /// <summary>FFXIV electric guitar tone to switch to at StartMs (0–4); null = regular note.</summary>
+    public int? GuitarTone { get; set; }
 }

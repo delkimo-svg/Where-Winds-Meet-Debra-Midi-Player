@@ -1886,7 +1886,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
     }
 
     [RelayCommand]
-    private async Task PlayCatalogueTrack(CatalogueTrack? track)
+    private Task PlayCatalogueTrack(CatalogueTrack? track) => PlayCatalogueTrackCoreAsync(track, startPlayback: true);
+
+    /// <summary>Double-click: download + load the track paused at 0:00 without starting it.</summary>
+    public Task PrepareCatalogueTrackAsync(CatalogueTrack? track) => PlayCatalogueTrackCoreAsync(track, startPlayback: false);
+
+    private async Task PlayCatalogueTrackCoreAsync(CatalogueTrack? track, bool startPlayback)
     {
         track ??= GetNavigationCatalogueTrack();
         if (track is null)
@@ -1906,7 +1911,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             _nowPlayingCatalogueTrack = track;
             SetPrimaryListSelection(PrimarySelectionSource.Catalogue, null, track);
             SetActivePlaybackContext(ActivePlaybackList.Catalogue, track);
-            await StartSongAsync(song);
+            await StartSongAsync(song, startPlayback);
             CatalogueStatusText = "Ready.";
         }
         catch (Exception ex)
@@ -3315,11 +3320,11 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
-    public async Task PlaySongFromListAsync(Song song, ActivePlaybackList list)
+    public async Task PlaySongFromListAsync(Song song, ActivePlaybackList list, bool startPlayback = true)
     {
         SetActivePlaybackContext(list, song);
         SyncListSelectionForActivePlayback(list, song);
-        await StartSongAsync(song);
+        await StartSongAsync(song, startPlayback);
     }
 
     [RelayCommand]
@@ -3347,7 +3352,42 @@ public partial class MainViewModel : ObservableObject, IDisposable
             return;
         }
 
+        if (_songPreparedNotStarted && _nowPlaying is not null)
+        {
+            await StartPreparedSongAsync();
+            return;
+        }
+
         await PlayPrimarySelectionAsync();
+    }
+
+    /// <summary>Starts a song loaded via double-click prepare: equips the FFXIV instrument
+    /// (auto-equip permitting), then plays from the current position.</summary>
+    private async Task StartPreparedSongAsync()
+    {
+        _songPreparedNotStarted = false;
+        await MaybeOpenFfxivInstrumentAsync();
+
+        var song = _nowPlaying;
+        if (song is null)
+            return;
+
+        CancelAutoAdvanceTimer();
+        StartPlaybackFromCurrentPosition();
+        AutoAnnounceNowPlayingIfEnabled();
+
+        _activeHistoryItem = new HistoryItem
+        {
+            SongTitle = CatalogueTitleHelper.GetDisplayTitle(song.Title, song.FilePath),
+            FilePath = song.FilePath,
+            DurationMs = song.DurationMs,
+            PlayedAt = DateTime.UtcNow,
+            Status = PlaybackStatus.Completed
+        };
+
+        IsPlaying = true;
+        UpdatePlaybackStatus();
+        UpdateProgress();
     }
 
     private void RefreshPlayPauseUi() => NotifyTransportTooltips();
@@ -3504,6 +3544,14 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
         var targetMs = (long)(Math.Clamp(normalizedPosition, 0, 1) * _playback.TotalDurationMs);
         _playback.SeekToMs(targetMs);
+
+        // Seeking a double-click-prepared song counts as starting it (equip + history).
+        if (_songPreparedNotStarted)
+        {
+            _ = StartPreparedSongAsync();
+            return;
+        }
+
         StartPlaybackFromCurrentPosition();
         IsPlaying = true;
         UpdateProgress();
@@ -3535,6 +3583,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private void Stop()
     {
         CancelAutoAdvanceTimer();
+        _songPreparedNotStarted = false;
         _playback.Stop();
         FinalizeHistory(PlaybackStatus.Stopped);
         IsPlaying = false;
@@ -3637,7 +3686,10 @@ public partial class MainViewModel : ObservableObject, IDisposable
             SetPrimaryListSelection(PrimarySelectionSource.Favorites, song);
     }
 
-    private async Task StartSongAsync(Song song)
+    /// <summary>True when a song is fully loaded (double-click) but playback hasn't been started yet.</summary>
+    private bool _songPreparedNotStarted;
+
+    private async Task StartSongAsync(Song song, bool startPlayback = true)
     {
         try
         {
@@ -3647,6 +3699,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                     DisableLiveMidiForFilePlayback();
 
                 _suppressPlaybackUi = true;
+                _songPreparedNotStarted = false;
                 _playback.Stop();
                 FinalizeHistory(PlaybackStatus.Stopped);
 
@@ -3680,6 +3733,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 await UiDispatcher.RunAsync(() => _suppressPlaybackUi = false).ConfigureAwait(false);
                 return;
             }
+
+            if (startPlayback)
+                await MaybeOpenFfxivInstrumentAsync().ConfigureAwait(false);
 
             await UiDispatcher.RunAsync(() =>
             {
@@ -3731,19 +3787,30 @@ public partial class MainViewModel : ObservableObject, IDisposable
                     _input.ResetDiagnostics();
 
                     CancelAutoAdvanceTimer();
-                    StartPlaybackFromCurrentPosition();
-                    AutoAnnounceNowPlayingIfEnabled();
-
-                    _activeHistoryItem = new HistoryItem
+                    if (startPlayback)
                     {
-                        SongTitle = CatalogueTitleHelper.GetDisplayTitle(song.Title, song.FilePath),
-                        FilePath = song.FilePath,
-                        DurationMs = song.DurationMs,
-                        PlayedAt = DateTime.UtcNow,
-                        Status = PlaybackStatus.Completed
-                    };
+                        StartPlaybackFromCurrentPosition();
+                        AutoAnnounceNowPlayingIfEnabled();
 
-                    IsPlaying = true;
+                        _activeHistoryItem = new HistoryItem
+                        {
+                            SongTitle = CatalogueTitleHelper.GetDisplayTitle(song.Title, song.FilePath),
+                            FilePath = song.FilePath,
+                            DurationMs = song.DurationMs,
+                            PlayedAt = DateTime.UtcNow,
+                            Status = PlaybackStatus.Completed
+                        };
+
+                        IsPlaying = true;
+                    }
+                    else
+                    {
+                        // Double-click prepare: loaded at 0:00 with mixer/instrument ready — Play starts it.
+                        _activeHistoryItem = null;
+                        _songPreparedNotStarted = true;
+                        IsPlaying = false;
+                    }
+
                     UpdatePlaybackStatus();
                     UpdateProgress();
                 }
@@ -6243,6 +6310,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             .Select(t => t.TrackIndex)
             .ToArray();
         OnPropertyChanged(nameof(TrackMixerSummary));
+        UpdateFfxivInstrumentSuggestion();
 
         if (_suppressPlaybackCalibrationChange)
             return;
@@ -6373,6 +6441,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
             SelectedNoteMappingMode = NoteMappingModes.FirstOrDefault(m => m.Mode == calibration.MappingMode)
                 ?? NoteMappingModes.FirstOrDefault();
             ShowMidiTrackSelector = PlaybackTrackMixItems.Count > 1;
+            SelectFfxivInstrumentFromCalibration(calibration.FfxivInstrumentId);
+            UpdateFfxivInstrumentSuggestion();
             OnPropertyChanged(nameof(PlaybackOctaveShiftLabel));
         }
         finally
@@ -6414,7 +6484,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
             TrackIndex = -1,
             MutedTracks = [.. _mutedTrackSnapshot],
             MappingMode = SelectedNoteMappingMode?.Mode ?? NoteMappingMode.Chromatic36,
-            PhraseFold = PlaybackPhraseFold
+            PhraseFold = PlaybackPhraseFold,
+            FfxivInstrumentId = (int)(SelectedFfxivInstrument?.Id ?? 0)
         });
         _songPlayback.Save();
     }

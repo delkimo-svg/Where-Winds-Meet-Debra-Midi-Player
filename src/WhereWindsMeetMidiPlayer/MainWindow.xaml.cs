@@ -303,7 +303,7 @@ public partial class MainWindow : Window
     private void Library_OnDoubleClick(object sender, MouseButtonEventArgs e)
     {
         if (sender is ListBox { SelectedItem: Song song })
-            _ = Vm.PlaySongFromListAsync(song, ActivePlaybackList.Library);
+            _ = Vm.PlaySongFromListAsync(song, ActivePlaybackList.Library, startPlayback: false);
     }
 
     private void DisarmListDrag()
@@ -869,13 +869,13 @@ public partial class MainWindow : Window
     private void Catalogue_OnDoubleClick(object sender, MouseButtonEventArgs e)
     {
         if (sender is ListBox { SelectedItem: CatalogueTrack track })
-            Vm.PlayCatalogueTrackCommand.Execute(track);
+            _ = Vm.PrepareCatalogueTrackAsync(track);
     }
 
     private void Community_OnDoubleClick(object sender, MouseButtonEventArgs e)
     {
         if (sender is ListBox { SelectedItem: CommunitySong song })
-            Vm.PlayCommunitySongCommand.Execute(song);
+            _ = Vm.PrepareCommunitySongAsync(song);
     }
 
     private void CommunityList_OnPreviewMouseWheel(object sender, MouseWheelEventArgs e) =>
@@ -884,13 +884,13 @@ public partial class MainWindow : Window
     private void Favorites_OnDoubleClick(object sender, MouseButtonEventArgs e)
     {
         if (sender is ListBox { SelectedItem: Song song })
-            _ = Vm.PlaySongFromListAsync(song, ActivePlaybackList.Favorites);
+            _ = Vm.PlaySongFromListAsync(song, ActivePlaybackList.Favorites, startPlayback: false);
     }
 
     private void Playlist_OnDoubleClick(object sender, MouseButtonEventArgs e)
     {
         if (sender is ListBox { SelectedItem: Song song })
-            _ = Vm.PlaySongFromListAsync(song, ActivePlaybackList.Playlist);
+            _ = Vm.PlaySongFromListAsync(song, ActivePlaybackList.Playlist, startPlayback: false);
     }
 
     private void LibraryList_OnPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)

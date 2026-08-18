@@ -53,9 +53,11 @@
                     CornerRadius="10"
                     Margin="0,2,0,0"
                     SnapsToDevicePixels="True">
+                <!-- No SelectedItem binding: SyncListSelection is the single writer. A binding here
+                     re-fired SelectionChanged on every programmatic filter write, and the handler's
+                     delayed re-post could ping-pong two in-flight values forever (list flicker). -->
                 <ListBox x:Name="ItemsList"
                          ItemsSource="{Binding ItemsSource, ElementName=Root}"
-                         SelectedItem="{Binding SelectedItem, ElementName=Root, Mode=OneWay}"
                          DisplayMemberPath="{Binding DisplayMemberPath, ElementName=Root}"
                          Foreground="{DynamicResource Brush.ComboBoxPopupForeground}"
                          Focusable="True"

@@ -79,6 +79,38 @@ public sealed class PlaybackEngine : IDisposable
         set => _directNoteSink = value;
     }
 
+    private volatile Func<int, bool>? _guitarToneSink;
+    private volatile string[] _guitarToneKeyCombos = ["1", "2", "3", "4", "5"];
+
+    /// <summary>
+    /// Direct guitar tone delivery (FFXIV via Hypnotoad): called with the tone index (0–4),
+    /// returns true when handled. False (or null) falls back to the Tone keybinds below.
+    /// </summary>
+    public Func<int, bool>? GuitarToneSink
+    {
+        get => _guitarToneSink;
+        set => _guitarToneSink = value;
+    }
+
+    /// <summary>Keyboard fallback: combos matching the game's Performance "Tone 1–5" keybinds.
+    /// A blank entry disables that tone's fallback.</summary>
+    public string[] GuitarToneKeyCombos
+    {
+        get => _guitarToneKeyCombos;
+        set => _guitarToneKeyCombos = value;
+    }
+
+    private void DeliverGuitarTone(int tone)
+    {
+        var sink = _guitarToneSink;
+        if (sink is not null && sink(tone))
+            return;
+
+        var combos = _guitarToneKeyCombos;
+        if (tone >= 0 && tone < combos.Length && !string.IsNullOrWhiteSpace(combos[tone]))
+            _inputService.PressKeyCombo(combos[tone]);
+    }
+
 
 
     public PlaybackState State
@@ -595,7 +627,12 @@ public sealed class PlaybackEngine : IDisposable
 
                 var evt = events[index];
 
-
+                if (evt.GuitarTone is int guitarTone)
+                {
+                    DeliverGuitarTone(guitarTone);
+                    index++;
+                    continue;
+                }
 
                 if (!string.IsNullOrEmpty(evt.KeyCombo))
 

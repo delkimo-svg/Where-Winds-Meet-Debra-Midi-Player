@@ -12,6 +12,9 @@ namespace WhereWindsMeetMidiPlayer.ViewModels;
 /// <summary>A chat channel choice in the FFXIV Chat panel (labels are game terms, not localized).</summary>
 public sealed record FfxivChatChannelOption(string Label, int Code);
 
+/// <summary>An entry of the FFXIV instrument picker; Id 0 = auto-detect from track names.</summary>
+public sealed record FfxivInstrumentOption(uint Id, string Label);
+
 /// <summary>
 /// FFXIV Chat panel: sends in-game chat through the Hypnotoad Dalamud plugin, so messages
 /// land without opening the game's input box — playback never pauses or drops notes.
@@ -36,6 +39,19 @@ public partial class MainViewModel
     [ObservableProperty] private bool _isHypnotoadConnected;
     [ObservableProperty] private bool _isHypnotoadMissing = true;
     [ObservableProperty] private bool _ffxivNotesDirect = true;
+    [ObservableProperty] private string _ffxivInstrumentName = string.Empty;
+    [ObservableProperty] private bool _ffxivAutoOpenInstrument = true;
+    [ObservableProperty] private FfxivInstrumentOption? _selectedFfxivInstrument;
+    [ObservableProperty] private FfxivInstrumentOption? _selectedFfxivDefaultInstrument;
+    [ObservableProperty] private string _ffxivGuitarToneKeys = "1,2,3,4,5";
+
+    private uint _ffxivInstrumentId;
+    private uint _lastOpenedInstrumentId;
+    private bool _suppressFfxivInstrumentPersist;
+
+    public ObservableCollection<FfxivInstrumentOption> FfxivInstrumentOptions { get; } = [];
+    /// <summary>Settings picker for what "Auto" equips (no Auto entry).</summary>
+    public ObservableCollection<FfxivInstrumentOption> FfxivDefaultInstrumentOptions { get; } = [];
 
     public ObservableCollection<FfxivChatChannelOption> FfxivChatChannels { get; } = [];
     public ObservableCollection<FfxivChatChannelOption> FfxivAnnounceChannels { get; } = [];
@@ -47,6 +63,32 @@ public partial class MainViewModel
 
     private void InitializeFfxivChat()
     {
+        _suppressFfxivInstrumentPersist = true;
+        try
+        {
+            FfxivInstrumentOptions.Add(new FfxivInstrumentOption(0, L.T(UiText.FfxivInstrumentAuto)));
+            foreach (var instrument in FfxivInstrumentResolver.All)
+            {
+                FfxivInstrumentOptions.Add(new FfxivInstrumentOption(instrument.Id, instrument.Name));
+                FfxivDefaultInstrumentOptions.Add(new FfxivInstrumentOption(instrument.Id, instrument.Name));
+            }
+
+            SelectedFfxivInstrument = FfxivInstrumentOptions[0];
+            var defaultId = (uint)_settings.Settings.FfxivDefaultInstrumentId;
+            SelectedFfxivDefaultInstrument =
+                FfxivDefaultInstrumentOptions.FirstOrDefault(o => o.Id == defaultId)
+                ?? FfxivDefaultInstrumentOptions[0];
+
+            FfxivGuitarToneKeys = string.IsNullOrWhiteSpace(_settings.Settings.FfxivGuitarToneKeys)
+                ? "1,2,3,4,5"
+                : _settings.Settings.FfxivGuitarToneKeys;
+            ApplyGuitarToneKeys(FfxivGuitarToneKeys);
+        }
+        finally
+        {
+            _suppressFfxivInstrumentPersist = false;
+        }
+
         foreach (var option in new FfxivChatChannelOption[]
         {
             new("Say", HypnotoadChatChannel.Say),
@@ -70,6 +112,7 @@ public partial class MainViewModel
                 : s.FfxivChatAnnounceTemplate;
             FfxivChatAutoAnnounce = s.FfxivChatAutoAnnounce;
             FfxivNotesDirect = s.FfxivNotesViaHypnotoad;
+            FfxivAutoOpenInstrument = s.FfxivAutoOpenInstrument;
             SelectedFfxivChatChannel = FfxivChatChannels.FirstOrDefault(c => c.Code == s.FfxivChatChannelCode)
                 ?? FfxivChatChannels[0];
             SelectedFfxivAnnounceChannel = FfxivAnnounceChannels.FirstOrDefault(c => c.Code == s.FfxivChatAnnounceChannelCode)
@@ -104,7 +147,183 @@ public partial class MainViewModel
         else
             _ = _hypnotoad.StopAsync();
 
+        _lastOpenedInstrumentId = 0;
+        UpdateFfxivInstrumentSuggestion();
         RefreshHypnotoadStatus();
+    }
+
+    /// <summary>
+    /// Recomputes the effective FFXIV instrument. A manual pick (saved per song) wins;
+    /// otherwise "Auto" equips the default instrument from Settings (Harp out of the box).
+    /// Slot 0 of the picker always reads "Auto — <default>". Empty outside FFXIV mode
+    /// or with nothing loaded — that hides the picker.
+    /// </summary>
+    private void UpdateFfxivInstrumentSuggestion()
+    {
+        if (!IsFfxivChatAvailable || PlaybackTrackMixItems.Count == 0)
+        {
+            _ffxivInstrumentId = 0;
+            FfxivInstrumentName = string.Empty;
+            return;
+        }
+
+        var fallback = FfxivInstrumentResolver.FromId((uint)_settings.Settings.FfxivDefaultInstrumentId);
+
+        var wasAuto = SelectedFfxivInstrument is null or { Id: 0 };
+        if (FfxivInstrumentOptions.Count > 0)
+        {
+            var autoOption = new FfxivInstrumentOption(0, $"{L.T(UiText.FfxivInstrumentAuto)} — {fallback.Name}");
+            _suppressFfxivInstrumentPersist = true;
+            try
+            {
+                FfxivInstrumentOptions[0] = autoOption;
+                if (wasAuto)
+                    SelectedFfxivInstrument = autoOption;
+            }
+            finally
+            {
+                _suppressFfxivInstrumentPersist = false;
+            }
+        }
+
+        var effective = wasAuto ? fallback : FfxivInstrumentResolver.FromId(SelectedFfxivInstrument!.Id);
+        _ffxivInstrumentId = effective.Id;
+        FfxivInstrumentName = effective.Name;
+    }
+
+    private void ApplyGuitarToneKeys(string value) =>
+        _playback.GuitarToneKeyCombos = (value ?? string.Empty)
+            .Split(',')
+            .Select(s => s.Trim())
+            .ToArray();
+
+    partial void OnFfxivGuitarToneKeysChanged(string value)
+    {
+        ApplyGuitarToneKeys(value);
+        if (_suppressFfxivInstrumentPersist)
+            return;
+
+        _settings.Settings.FfxivGuitarToneKeys = value;
+        ScheduleSettingsSave();
+    }
+
+    partial void OnSelectedFfxivDefaultInstrumentChanged(FfxivInstrumentOption? value)
+    {
+        if (value is null || _suppressFfxivInstrumentPersist)
+            return;
+
+        _settings.Settings.FfxivDefaultInstrumentId = (int)value.Id;
+        ScheduleSettingsSave();
+        UpdateFfxivInstrumentSuggestion();
+    }
+
+    /// <summary>Restores the per-song instrument pick when a song loads (0 = auto).</summary>
+    private void SelectFfxivInstrumentFromCalibration(int instrumentId)
+    {
+        if (FfxivInstrumentOptions.Count == 0)
+            return;
+
+        _suppressFfxivInstrumentPersist = true;
+        try
+        {
+            SelectedFfxivInstrument = instrumentId > 0
+                ? FfxivInstrumentOptions.FirstOrDefault(o => o.Id == (uint)instrumentId) ?? FfxivInstrumentOptions[0]
+                : FfxivInstrumentOptions[0];
+        }
+        finally
+        {
+            _suppressFfxivInstrumentPersist = false;
+        }
+    }
+
+    partial void OnSelectedFfxivInstrumentChanged(FfxivInstrumentOption? value)
+    {
+        if (value is null || _suppressFfxivInstrumentPersist)
+            return;
+
+        UpdateFfxivInstrumentSuggestion();
+
+        if (_suppressPlaybackCalibrationChange)
+            return;
+
+        // Browsing the list only selects and saves — the instrument is equipped when Play
+        // starts the song. The one exception: switching mid-performance pauses, re-equips
+        // and resumes so the new pick is heard right away.
+        SavePlaybackCalibration();
+        if (_playback.State == PlaybackState.Playing)
+            _ = SwitchInstrumentDuringPlaybackAsync();
+    }
+
+    private bool _ffxivInstrumentSwitchInFlight;
+
+    /// <summary>Mid-song instrument change: pause, equip the new pick, resume where we were.</summary>
+    private async Task SwitchInstrumentDuringPlaybackAsync()
+    {
+        if (_ffxivInstrumentSwitchInFlight || !FfxivAutoOpenInstrument
+            || !_hypnotoad.IsClientConnected || _ffxivInstrumentId == 0)
+            return;
+
+        _ffxivInstrumentSwitchInFlight = true;
+        try
+        {
+            _playback.Pause();
+            IsPlaying = false;
+            RefreshPlayPauseUi();
+
+            // Quits the current performance, equips the new pick, then lets the UI settle.
+            if (await EquipInstrumentAsync(_ffxivInstrumentId))
+                await Task.Delay(2000);
+
+            ResumePlayback();
+            IsPlaying = true;
+            UpdatePlaybackStatus();
+        }
+        finally
+        {
+            _ffxivInstrumentSwitchInFlight = false;
+        }
+    }
+
+    /// <summary>
+    /// Equips the detected instrument through Hypnotoad before the first notes fly.
+    /// Waits for the game's performance UI to open — a longer settle when the instrument
+    /// changed, a short one when re-sending the same id (cheap no-op if already equipped,
+    /// reopens the UI if the player closed it). Without the plugin this is a no-op; the
+    /// chip in the FFXIV panel still tells the player which instrument to pick manually.
+    /// </summary>
+    private async Task MaybeOpenFfxivInstrumentAsync()
+    {
+        if (!IsFfxivChatAvailable || !FfxivAutoOpenInstrument
+            || _ffxivInstrumentId == 0 || !_hypnotoad.IsClientConnected)
+            return;
+
+        var settleMs = _ffxivInstrumentId == _lastOpenedInstrumentId ? 800 : 2000;
+        if (!await EquipInstrumentAsync(_ffxivInstrumentId).ConfigureAwait(false))
+            return;
+
+        await Task.Delay(settleMs).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Equips an instrument through Hypnotoad. The game ignores an instrument change while
+    /// already performing, so when we know another instrument is open we quit performance
+    /// first (instrument 0) and give the UI a beat to close before opening the new one.
+    /// </summary>
+    private async Task<bool> EquipInstrumentAsync(uint instrumentId)
+    {
+        if (_lastOpenedInstrumentId != 0 && _lastOpenedInstrumentId != instrumentId)
+        {
+            if (!await _hypnotoad.OpenInstrumentAsync(0).ConfigureAwait(false))
+                return false;
+
+            await Task.Delay(900).ConfigureAwait(false);
+        }
+
+        if (!await _hypnotoad.OpenInstrumentAsync(instrumentId).ConfigureAwait(false))
+            return false;
+
+        _lastOpenedInstrumentId = instrumentId;
+        return true;
     }
 
     /// <summary>Opens the Hypnotoad plugin page (install instructions + custom Dalamud repo URL).</summary>
@@ -131,12 +350,17 @@ public partial class MainViewModel
         Func<int, bool, bool>? sink = active ? (note, on) => _hypnotoad.SendNote(note, on) : null;
         _playback.DirectNoteSink = sink;
         _liveMidi.DirectNoteSink = sink;
+        // Guitar tone changes ride the same route; without the plugin the engine falls back
+        // to the configured Tone keybinds.
+        _playback.GuitarToneSink = active ? tone => _hypnotoad.SendProgramChange(tone) : null;
     }
 
     private void RefreshHypnotoadStatus()
     {
         IsHypnotoadConnected = _hypnotoad.IsClientConnected;
         IsHypnotoadMissing = !_hypnotoad.IsClientConnected;
+        if (!_hypnotoad.IsClientConnected)
+            _lastOpenedInstrumentId = 0;
         UpdateDirectNoteRouting();
         if (_hypnotoad.IsClientConnected)
         {
@@ -238,6 +462,15 @@ public partial class MainViewModel
             return;
 
         _settings.Settings.FfxivNotesViaHypnotoad = value;
+        ScheduleSettingsSave();
+    }
+
+    partial void OnFfxivAutoOpenInstrumentChanged(bool value)
+    {
+        if (_suppressFfxivChatPersist)
+            return;
+
+        _settings.Settings.FfxivAutoOpenInstrument = value;
         ScheduleSettingsSave();
     }
 

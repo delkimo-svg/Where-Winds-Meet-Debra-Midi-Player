@@ -426,7 +426,12 @@ public partial class MainViewModel
     }
 
     [RelayCommand]
-    private async Task PlayCommunitySong(CommunitySong? song)
+    private Task PlayCommunitySong(CommunitySong? song) => PlayCommunitySongCoreAsync(song, startPlayback: true);
+
+    /// <summary>Double-click: download + load the song paused at 0:00 without starting it.</summary>
+    public Task PrepareCommunitySongAsync(CommunitySong? song) => PlayCommunitySongCoreAsync(song, startPlayback: false);
+
+    private async Task PlayCommunitySongCoreAsync(CommunitySong? song, bool startPlayback)
     {
         song ??= GetNavigationCommunitySong();
         if (song is null)
@@ -448,7 +453,7 @@ public partial class MainViewModel
             SetPrimaryListSelection(PrimarySelectionSource.Community, null, communitySong: song);
             SetActivePlaybackContext(ActivePlaybackList.Community, song);
             CommunityStatusText = string.Empty;
-            await StartSongAsync(librarySong);
+            await StartSongAsync(librarySong, startPlayback);
         }
         catch (Exception ex)
         {

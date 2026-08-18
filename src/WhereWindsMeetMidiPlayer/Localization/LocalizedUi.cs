@@ -235,6 +235,12 @@ public sealed partial class LocalizedUi : ObservableObject
     public string FfxivChatNeedPlugin => L.T(UiText.FfxivChatNeedPlugin);
     public string FfxivChatDownload => L.T(UiText.FfxivChatDownload);
     public string FfxivChatDirectNotesTooltip => L.T(UiText.FfxivChatDirectNotesTooltip);
+    public string FfxivInstrumentTooltip => L.T(UiText.FfxivInstrumentTooltip);
+    public string FfxivAutoEquip => L.T(UiText.FfxivAutoEquip);
+    public string SettingsFfxivDefaultInstrument => L.T(UiText.SettingsFfxivDefaultInstrument);
+    public string SettingsFfxivToneKeys => L.T(UiText.SettingsFfxivToneKeys);
+    public string SettingsFfxivToneKeysHint => L.T(UiText.SettingsFfxivToneKeysHint);
+    public string FfxivAutoEquipTooltip => L.T(UiText.FfxivAutoEquipTooltip);
     public string NoteMappingPhraseFold => L.T(UiText.NoteMappingPhraseFold);
     public string NoteMappingPhraseFoldHint => L.T(UiText.NoteMappingPhraseFoldHint);
 

@@ -27,7 +27,8 @@ public sealed class SongPlaybackCalibrationStore
                 TrackIndex = entry.TrackIndex,
                 MappingMode = entry.MappingMode,
                 PhraseFold = entry.PhraseFold,
-                MutedTracks = [.. entry.MutedTracks]
+                MutedTracks = [.. entry.MutedTracks],
+                FfxivInstrumentId = entry.FfxivInstrumentId
             }
             : new SongPlaybackCalibration();
     }
@@ -58,11 +59,14 @@ public sealed class SongPlaybackCalibration
   public bool PhraseFold { get; set; }
   /// <summary>MIDI track indexes muted in the player's track mixer.</summary>
   public List<int> MutedTracks { get; set; } = [];
+  /// <summary>FFXIV instrument chosen for this song (Perform-sheet id); 0 = auto-detect from track names.</summary>
+  public int FfxivInstrumentId { get; set; }
 
   public bool IsDefault =>
       OctaveShift == 0
       && TrackIndex == -1
       && MappingMode == NoteMappingMode.Chromatic36
       && !PhraseFold
-      && MutedTracks.Count == 0;
+      && MutedTracks.Count == 0
+      && FfxivInstrumentId == 0;
 }

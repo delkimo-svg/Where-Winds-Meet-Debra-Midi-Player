@@ -39,7 +39,9 @@ public sealed class HypnotoadService : IDisposable
     private const string PipeName = "Hypnotoad";
     private const int MsgTypeHandshake = 1;
     private const int MsgTypeNameAndHomeWorld = 11;
+    private const int MsgTypeInstrument = 20;
     private const int MsgTypeNoteOn = 21;
+    private const int MsgTypeProgramChange = 23;
     private const int MsgTypeNoteOff = 22;
     private const int MsgTypeChat = 40;
     // Note wire value = MIDI − 48 (C3 = 0 … C6 = 36), same scheme as MidiBard/LightAmp:
@@ -133,6 +135,33 @@ public sealed class HypnotoadService : IDisposable
         }
     }
 
+    /// <summary>Equips a performance instrument in-game (Perform-sheet row id, 1 = Harp).
+    /// The plugin runs the game's DoPerformAction on the next framework tick, which opens
+    /// the performance UI with that instrument — same call LightAmp's "open instrument" makes.</summary>
+    public async Task<bool> OpenInstrumentAsync(uint instrumentId)
+    {
+        var server = _server;
+        if (server is null || !IsClientConnected)
+            return false;
+
+        try
+        {
+            await server.WriteAsync(new HypnotoadIpcMessage
+            {
+                msgType = MsgTypeInstrument,
+                msgChannel = 0,
+                message = instrumentId.ToString()
+            }).ConfigureAwait(false);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            LastError = ex.Message;
+            RaiseStateChanged();
+            return false;
+        }
+    }
+
     /// <summary>
     /// Plays/releases a note in-game through the plugin (no keyboard involved). Fire-and-forget:
     /// returns false when not connected or out of the game's C3–C6 range so the caller can fall
@@ -150,6 +179,37 @@ public sealed class HypnotoadService : IDisposable
 
         _ = WriteNoteAsync(server, wire, on);
         return true;
+    }
+
+    /// <summary>Switches the electric-guitar tone in-game (0 Overdriven … 4 Special).
+    /// Fire-and-forget like notes; false when not connected so the caller can fall back
+    /// to the game's Tone keybinds.</summary>
+    public bool SendProgramChange(int tone)
+    {
+        var server = _server;
+        if (server is null || !IsClientConnected || tone is < 0 or > 4)
+            return false;
+
+        _ = WriteToneAsync(server, tone);
+        return true;
+    }
+
+    private async Task WriteToneAsync(PipeServer<HypnotoadIpcMessage> server, int tone)
+    {
+        try
+        {
+            await server.WriteAsync(new HypnotoadIpcMessage
+            {
+                msgType = MsgTypeProgramChange,
+                msgChannel = 0,
+                message = tone.ToString()
+            }).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            LastError = ex.Message;
+            RaiseStateChanged();
+        }
     }
 
     private async Task WriteNoteAsync(PipeServer<HypnotoadIpcMessage> server, int wireNote, bool on)

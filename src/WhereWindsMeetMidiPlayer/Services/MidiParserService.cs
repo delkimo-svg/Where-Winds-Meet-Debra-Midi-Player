@@ -80,6 +80,52 @@ public sealed class MidiParserService
         };
     }
 
+    /// <summary>
+    /// FFXIV electric guitar: MIDI program changes 27–31 select the five in-game tones.
+    /// Same convention as BMP/LightAmp: 29 Overdriven→0, 27 Clean→1, 28 Muted→2,
+    /// 30 Power Chords→3, 31 Special→4.
+    /// </summary>
+    public List<GuitarToneEvent> GetGuitarToneEvents(string filePath)
+    {
+        if (!File.Exists(filePath))
+            return [];
+
+        var midiFile = MidiFile.Read(filePath, MidiTextEncoding.ReadingSettings);
+        var tempoMap = midiFile.GetTempoMap();
+        var events = new List<GuitarToneEvent>();
+        var trackIndex = 0;
+
+        foreach (var trackChunk in midiFile.GetTrackChunks())
+        {
+            foreach (var timed in trackChunk.GetTimedEvents())
+            {
+                if (timed.Event is not ProgramChangeEvent programChange)
+                    continue;
+
+                var tone = (int)programChange.ProgramNumber switch
+                {
+                    29 => 0,
+                    27 => 1,
+                    28 => 2,
+                    30 => 3,
+                    31 => 4,
+                    _ => -1
+                };
+                if (tone < 0)
+                    continue;
+
+                var startMs = (long)Math.Round(
+                    timed.TimeAs<MetricTimeSpan>(tempoMap).TotalMicroseconds / 1000.0);
+                events.Add(new GuitarToneEvent { StartMs = startMs, TrackIndex = trackIndex, Tone = tone });
+            }
+
+            trackIndex++;
+        }
+
+        events.Sort((a, b) => a.StartMs.CompareTo(b.StartMs));
+        return events;
+    }
+
     public IReadOnlyList<MidiTrackInfo> GetTracks(string filePath)
     {
         if (!File.Exists(filePath))

@@ -48,6 +48,9 @@ public partial class DebraFastDropdown : UserControl
             typeof(DebraFastDropdown),
             new PropertyMetadata(280.0));
 
+    /// <summary>True while code (not the user) is moving the popup list's selection.</summary>
+    private bool _syncingSelection;
+
     public DebraFastDropdown() => InitializeComponent();
 
     public IEnumerable? ItemsSource
@@ -143,25 +146,31 @@ public partial class DebraFastDropdown : UserControl
 
     private void ItemsList_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (e.AddedItems.Count == 0 || e.AddedItems[0] is null)
+        // Only a real user pick may write back; programmatic syncs would otherwise re-enter
+        // here and re-post the value — two in-flight values then ping-pong forever.
+        if (_syncingSelection || e.AddedItems.Count == 0 || e.AddedItems[0] is null)
             return;
 
         var picked = e.AddedItems[0];
         IsDropDownOpen = false;
-
-        Dispatcher.BeginInvoke(DispatcherPriority.Background, () =>
-        {
-            SelectedItem = picked;
-            UpdateSelectionText();
-        });
+        SelectedItem = picked;
+        UpdateSelectionText();
     }
 
     private void SyncListSelection()
     {
-        if (ItemsList.SelectedItem == SelectedItem)
+        if (Equals(ItemsList.SelectedItem, SelectedItem))
             return;
 
-        ItemsList.SelectedItem = SelectedItem;
+        _syncingSelection = true;
+        try
+        {
+            ItemsList.SelectedItem = SelectedItem;
+        }
+        finally
+        {
+            _syncingSelection = false;
+        }
     }
 
     private void UpdateSelectionText()

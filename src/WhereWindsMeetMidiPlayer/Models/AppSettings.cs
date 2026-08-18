@@ -30,6 +30,13 @@ public sealed class AppSettings
     public bool FfxivChatAutoAnnounce { get; set; }
     /// <summary>FFXIV: play notes directly through Hypnotoad when connected (keyboard fallback per note).</summary>
     public bool FfxivNotesViaHypnotoad { get; set; } = true;
+    /// <summary>FFXIV: equip the selected instrument when playback starts (Hypnotoad only).</summary>
+    public bool FfxivAutoOpenInstrument { get; set; } = true;
+    /// <summary>FFXIV: instrument the "Auto" pick equips (Perform-sheet id, 1 = Harp).</summary>
+    public int FfxivDefaultInstrumentId { get; set; } = 1;
+    /// <summary>FFXIV: comma-separated keys matching the game's Performance "Tone 1–5" keybinds —
+    /// keyboard fallback for electric-guitar tone changes when Hypnotoad isn't connected.</summary>
+    public string FfxivGuitarToneKeys { get; set; } = "1,2,3,4,5";
     public string KeyMappingFile { get; set; } = "debra-36-keys.json";
     /// <summary>Last selected keyboard layout preset (qwerty, qwertz, azerty). Empty when using a custom map.</summary>
     public string? KeyboardLayoutPresetId { get; set; } = "qwerty";

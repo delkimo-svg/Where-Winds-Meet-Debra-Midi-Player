@@ -354,6 +354,22 @@
                                                 Margin="6,0,0,0" Command="{Binding RefreshMidiInputDevicesCommand}"/>
                                     </Grid>
                                     <TextBlock Text="{Binding LiveMidiStatusText}" Style="{StaticResource Text.Muted}" FontSize="9" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                    <!-- FFXIV only: what the instrument picker's "Auto" equips -->
+                                    <TextBlock Text="{Binding Ui.SettingsFfxivDefaultInstrument}" Style="{StaticResource Text.Muted}" Margin="0,12,0,4"
+                                               Visibility="{Binding IsFfxivChatAvailable, Converter={StaticResource BoolToVis}}"/>
+                                    <ComboBox ItemsSource="{Binding FfxivDefaultInstrumentOptions}" DisplayMemberPath="Label"
+                                              SelectedItem="{Binding SelectedFfxivDefaultInstrument, Mode=TwoWay}"
+                                              Style="{StaticResource ComboBox.Debra}"
+                                              Visibility="{Binding IsFfxivChatAvailable, Converter={StaticResource BoolToVis}}"/>
+                                    <!-- FFXIV only: keyboard fallback for electric-guitar tone changes -->
+                                    <TextBlock Text="{Binding Ui.SettingsFfxivToneKeys}" Style="{StaticResource Text.Muted}" Margin="0,12,0,4"
+                                               Visibility="{Binding IsFfxivChatAvailable, Converter={StaticResource BoolToVis}}"/>
+                                    <TextBox Text="{Binding FfxivGuitarToneKeys, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource TextBox.Search}"
+                                             Visibility="{Binding IsFfxivChatAvailable, Converter={StaticResource BoolToVis}}"/>
+                                    <TextBlock Text="{Binding Ui.SettingsFfxivToneKeysHint}" Style="{StaticResource Text.Muted}" FontSize="9"
+                                               Margin="0,2,0,0" TextWrapping="Wrap"
+                                               Visibility="{Binding IsFfxivChatAvailable, Converter={StaticResource BoolToVis}}"/>
                                     <TextBlock Text="{Binding Ui.SettingsPlayerHotkeys}" Style="{StaticResource Text.Title}" Margin="0,16,0,4"/>
                                     <TextBlock Text="{Binding Ui.SettingsPlayerHotkeysHint}" Style="{StaticResource Text.Muted}" FontSize="9" Margin="0,0,0,8" TextWrapping="Wrap"/>
                                     <Grid Margin="0,0,0,6">
@@ -1430,6 +1446,21 @@
                                           IsChecked="{Binding FfxivNotesDirect}"
                                           IsEnabled="{Binding IsHypnotoadConnected}"
                                           ToolTip="{Binding Ui.FfxivChatDirectNotesTooltip}"/>
+                            <!-- FFXIV instrument picker: "Auto — <detected>" or a manual pick saved per song -->
+                            <TextBlock DockPanel.Dock="Left" Text="🎻" Margin="8,0,4,0" VerticalAlignment="Center"
+                                       Visibility="{Binding FfxivInstrumentName, Converter={StaticResource BoolToVis}}"/>
+                            <controls:DebraFastDropdown DockPanel.Dock="Left" MinWidth="150" MaxWidth="230"
+                                                        VerticalAlignment="Center"
+                                                        ItemsSource="{Binding FfxivInstrumentOptions}"
+                                                        SelectedItem="{Binding SelectedFfxivInstrument, Mode=TwoWay}"
+                                                        DisplayMemberPath="Label"
+                                                        ToolTip="{Binding Ui.FfxivInstrumentTooltip}"
+                                                        Visibility="{Binding FfxivInstrumentName, Converter={StaticResource BoolToVis}}"/>
+                            <CheckBox DockPanel.Dock="Left" Margin="8,0,0,0" VerticalAlignment="Center"
+                                      Foreground="{DynamicResource Brush.TextPrimary}" FontSize="11"
+                                      IsChecked="{Binding FfxivAutoOpenInstrument}"
+                                      Content="{Binding Ui.FfxivAutoEquip}"
+                                      ToolTip="{Binding Ui.FfxivAutoEquipTooltip}"/>
                             <TextBlock DockPanel.Dock="Right" Style="{StaticResource Text.Muted}"
                                        VerticalAlignment="Center"
                                        Text="{Binding FfxivChatStatusText}"/>

@@ -63,6 +63,11 @@ public sealed class MidiPlaybackPreparer
             request.NoteDelayMs,
             request.FfxivMinNoteSpacingMs);
 
+        // FFXIV electric guitar: weave tone-change events (program changes 27–31) into the
+        // schedule so the engine fires them in time — before any note at the same instant.
+        if (GameProfiles.Current.Monophonic)
+            schedule = MergeGuitarTones(schedule, filePath, request);
+
         return new MidiPrepareResult
         {
             Parsed = parsed,
@@ -71,6 +76,42 @@ public sealed class MidiPlaybackPreparer
             AppliedTransposeSemitones = totalTranspose,
             Tracks = tracks
         };
+    }
+
+    private List<ScheduledNote> MergeGuitarTones(
+        List<ScheduledNote> schedule, string filePath, MidiPrepareRequest request)
+    {
+        var tones = new List<ScheduledNote>();
+        var lastTone = -1;
+        foreach (var tone in _midiParser.GetGuitarToneEvents(filePath))
+        {
+            if (request.TrackIndex >= 0 && tone.TrackIndex != request.TrackIndex)
+                continue;
+            if (request.MutedTracks is { Count: > 0 } && request.MutedTracks.Contains(tone.TrackIndex))
+                continue;
+            if (tone.Tone == lastTone)
+                continue;
+
+            lastTone = tone.Tone;
+            tones.Add(new ScheduledNote { StartMs = tone.StartMs, GuitarTone = tone.Tone });
+        }
+
+        if (tones.Count == 0)
+            return schedule;
+
+        // Stable merge of two sorted lists; ties put the tone change ahead of the notes it colors.
+        var merged = new List<ScheduledNote>(schedule.Count + tones.Count);
+        int noteIdx = 0, toneIdx = 0;
+        while (noteIdx < schedule.Count || toneIdx < tones.Count)
+        {
+            if (toneIdx < tones.Count &&
+                (noteIdx >= schedule.Count || tones[toneIdx].StartMs <= schedule[noteIdx].StartMs))
+                merged.Add(tones[toneIdx++]);
+            else
+                merged.Add(schedule[noteIdx++]);
+        }
+
+        return merged;
     }
 
     private static List<NormalizedNote> FilterTracks(
